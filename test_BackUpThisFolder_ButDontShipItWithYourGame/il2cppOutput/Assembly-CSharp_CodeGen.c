@@ -1,0 +1,117 @@
+﻿#include "pch-c.h"
+
+
+#include "codegen/il2cpp-codegen-metadata.h"
+
+
+
+
+
+extern void ARPlaceCube_OnEnable_mB63B9E88A4DB9365E94102BE2AFEE425AFE47449 (void);
+extern void ARPlaceCube_OnDisable_m2A33A03CB12004EBB223BF211BDCAFF307657C0F (void);
+extern void ARPlaceCube_Update_m1F3172574FC109F902655ACB7A4DE155BB21938E (void);
+extern void ARPlaceCube_PlaceObject_m004F9B593178681BF60B2AF1F0CEE2DD4DD7B7A3 (void);
+extern void ARPlaceCube_SetIsPlacingToFalseWithDelay_m2FC550892EA84197793A2C55106CF0C618D4E15C (void);
+extern void ARPlaceCube__ctor_m2D47204EA20B63752561BAA82C0FB3F75D6DA2AC (void);
+extern void U3CSetIsPlacingToFalseWithDelayU3Ed__6__ctor_m587D5B7E35D829F5B4C02A35C9850F72AB73F7E7 (void);
+extern void U3CSetIsPlacingToFalseWithDelayU3Ed__6_System_IDisposable_Dispose_mA7886176E101A2FF9C06533E60A3418D0CE6BB74 (void);
+extern void U3CSetIsPlacingToFalseWithDelayU3Ed__6_MoveNext_mEEB34687C91148386BA4A76200CC03AD3FDAB67D (void);
+extern void U3CSetIsPlacingToFalseWithDelayU3Ed__6_System_Collections_Generic_IEnumeratorU3CSystem_ObjectU3E_get_Current_m566220124C6AD95DA8D23A480AC5789CFCC310BA (void);
+extern void U3CSetIsPlacingToFalseWithDelayU3Ed__6_System_Collections_IEnumerator_Reset_m5B2599360AA7EC48958DAF8F332EEDD17FD3AC67 (void);
+extern void U3CSetIsPlacingToFalseWithDelayU3Ed__6_System_Collections_IEnumerator_get_Current_mA8C4D0AC8A930BC1B08174673CBB745817B988F4 (void);
+extern void EarthInteraction_OnEnable_m7EC964D884607E701C35BA129D2F1906C64C602A (void);
+extern void EarthInteraction_OnDisable_mAD00E3DB8FF5776B10AAAC75AE47B3AC5A3A67C6 (void);
+extern void EarthInteraction_Update_m8E38BC2FFDAF3AE6168D8E8A3839729B7869BE79 (void);
+extern void EarthInteraction_HandleRotation_m4A605502CE5B22D1762DDE5B0188FE8B082A13D3 (void);
+extern void EarthInteraction_HandlePinchScale_m7E50814CEA01FEED9CBC3559081FB9FC8A2FE854 (void);
+extern void EarthInteraction__ctor_mB43C992FFD12C5AF501A40735C58902BE4772284 (void);
+extern void EarthPlacement_get_SpawnedEarth_mC8C1DFBF85DEC8CCE16856596E40B57E4B64E64B (void);
+extern void EarthPlacement_set_SpawnedEarth_m5E980F2B3839E34E5561A699C437D93B691221EB (void);
+extern void EarthPlacement_OnEnable_m699AEFC8396700390C256C67CB419B93648F0A73 (void);
+extern void EarthPlacement_OnDisable_mBB1D2587D3DFB2A40336B302EC4DA601329E0BA2 (void);
+extern void EarthPlacement_OnTrackedImagesChanged_m5E6C194FCB7C8F8D5BFF422655BFECD060141E88 (void);
+extern void EarthPlacement_UpdateCoachingText_mC58639E60AE2967C1BE46580E55D59CDDA7BD4B9 (void);
+extern void EarthPlacement__ctor_mAC2CACD46C1260DE8F1EA6C9CECC8A7970E3926E (void);
+extern void UnitySourceGeneratedAssemblyMonoScriptTypes_v1_Get_mBEB95BEB954BB63E9710BBC7AD5E78C4CB0A0033 (void);
+extern void UnitySourceGeneratedAssemblyMonoScriptTypes_v1__ctor_mE70FB23ACC1EA12ABC948AA22C2E78B2D0AA39B1 (void);
+static Il2CppMethodPointer s_methodPointers[27] = 
+{
+	ARPlaceCube_OnEnable_mB63B9E88A4DB9365E94102BE2AFEE425AFE47449,
+	ARPlaceCube_OnDisable_m2A33A03CB12004EBB223BF211BDCAFF307657C0F,
+	ARPlaceCube_Update_m1F3172574FC109F902655ACB7A4DE155BB21938E,
+	ARPlaceCube_PlaceObject_m004F9B593178681BF60B2AF1F0CEE2DD4DD7B7A3,
+	ARPlaceCube_SetIsPlacingToFalseWithDelay_m2FC550892EA84197793A2C55106CF0C618D4E15C,
+	ARPlaceCube__ctor_m2D47204EA20B63752561BAA82C0FB3F75D6DA2AC,
+	U3CSetIsPlacingToFalseWithDelayU3Ed__6__ctor_m587D5B7E35D829F5B4C02A35C9850F72AB73F7E7,
+	U3CSetIsPlacingToFalseWithDelayU3Ed__6_System_IDisposable_Dispose_mA7886176E101A2FF9C06533E60A3418D0CE6BB74,
+	U3CSetIsPlacingToFalseWithDelayU3Ed__6_MoveNext_mEEB34687C91148386BA4A76200CC03AD3FDAB67D,
+	U3CSetIsPlacingToFalseWithDelayU3Ed__6_System_Collections_Generic_IEnumeratorU3CSystem_ObjectU3E_get_Current_m566220124C6AD95DA8D23A480AC5789CFCC310BA,
+	U3CSetIsPlacingToFalseWithDelayU3Ed__6_System_Collections_IEnumerator_Reset_m5B2599360AA7EC48958DAF8F332EEDD17FD3AC67,
+	U3CSetIsPlacingToFalseWithDelayU3Ed__6_System_Collections_IEnumerator_get_Current_mA8C4D0AC8A930BC1B08174673CBB745817B988F4,
+	EarthInteraction_OnEnable_m7EC964D884607E701C35BA129D2F1906C64C602A,
+	EarthInteraction_OnDisable_mAD00E3DB8FF5776B10AAAC75AE47B3AC5A3A67C6,
+	EarthInteraction_Update_m8E38BC2FFDAF3AE6168D8E8A3839729B7869BE79,
+	EarthInteraction_HandleRotation_m4A605502CE5B22D1762DDE5B0188FE8B082A13D3,
+	EarthInteraction_HandlePinchScale_m7E50814CEA01FEED9CBC3559081FB9FC8A2FE854,
+	EarthInteraction__ctor_mB43C992FFD12C5AF501A40735C58902BE4772284,
+	EarthPlacement_get_SpawnedEarth_mC8C1DFBF85DEC8CCE16856596E40B57E4B64E64B,
+	EarthPlacement_set_SpawnedEarth_m5E980F2B3839E34E5561A699C437D93B691221EB,
+	EarthPlacement_OnEnable_m699AEFC8396700390C256C67CB419B93648F0A73,
+	EarthPlacement_OnDisable_mBB1D2587D3DFB2A40336B302EC4DA601329E0BA2,
+	EarthPlacement_OnTrackedImagesChanged_m5E6C194FCB7C8F8D5BFF422655BFECD060141E88,
+	EarthPlacement_UpdateCoachingText_mC58639E60AE2967C1BE46580E55D59CDDA7BD4B9,
+	EarthPlacement__ctor_mAC2CACD46C1260DE8F1EA6C9CECC8A7970E3926E,
+	UnitySourceGeneratedAssemblyMonoScriptTypes_v1_Get_mBEB95BEB954BB63E9710BBC7AD5E78C4CB0A0033,
+	UnitySourceGeneratedAssemblyMonoScriptTypes_v1__ctor_mE70FB23ACC1EA12ABC948AA22C2E78B2D0AA39B1,
+};
+static const int32_t s_InvokerIndices[27] = 
+{
+	16335,
+	16335,
+	16335,
+	12601,
+	16120,
+	16335,
+	12343,
+	16335,
+	15915,
+	16120,
+	16335,
+	16120,
+	16335,
+	16335,
+	16335,
+	12412,
+	12412,
+	16335,
+	16120,
+	12412,
+	16335,
+	16335,
+	11037,
+	12412,
+	16335,
+	28112,
+	16335,
+};
+IL2CPP_EXTERN_C const Il2CppCodeGenModule g_AssemblyU2DCSharp_CodeGenModule;
+const Il2CppCodeGenModule g_AssemblyU2DCSharp_CodeGenModule = 
+{
+	"Assembly-CSharp.dll",
+	27,
+	s_methodPointers,
+	0,
+	NULL,
+	s_InvokerIndices,
+	0,
+	NULL,
+	0,
+	NULL,
+	0,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+};
