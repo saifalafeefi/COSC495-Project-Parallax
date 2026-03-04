@@ -165,7 +165,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DesktopInteraction
   desktopPlacement: {fileID: 776120560}
   mainCamera: {fileID: 854968235}
-  orbitSpeed: 2
+  orbitSpeed: 0.5
   zoomSpeed: 100
   minDistance: 10
   maxDistance: 40
