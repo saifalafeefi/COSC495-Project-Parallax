@@ -11,9 +11,9 @@ public class RegionManager : MonoBehaviour
     [SerializeField, Range(0.001f, 0.3f)]
     private float colorMergeThreshold = 0.05f;
 
-    [Tooltip("Max triangles per region. Regions larger than this get split via Voronoi.")]
-    [SerializeField, Range(10, 500)]
-    private int maxTrianglesPerRegion = 60;
+    [Tooltip("Min dot product between face normal and outward direction. Higher = stricter, filters more side faces.")]
+    [SerializeField, Range(0f, 0.9f)]
+    private float normalThreshold = 0.3f;
 
     [Tooltip("Color of the highlight glow when hovering a region.")]
     [SerializeField]
@@ -122,7 +122,6 @@ public class RegionManager : MonoBehaviour
         }
     }
 
-    // Called by editor bake button AND at runtime if no baked data
     public void RunDiscovery()
     {
         if (allVertices == null) FetchMeshData();
@@ -141,7 +140,7 @@ public class RegionManager : MonoBehaviour
 
         var remap = BuildVertexRemap(allVertices);
 
-        // Step 1: Classify each triangle by color
+        // go through each triangle and figure out what color it is, skip ocean and side faces
         var colorClusters = new List<Color>();
         var triColorIdx = new int[triCount];
 
@@ -157,11 +156,11 @@ public class RegionManager : MonoBehaviour
                 continue;
             }
 
-            // Skip triangles not facing outward (side faces for elevation detail)
+            // skip triangles that face sideways, they are just height detail not actual land
             Vector3 v0 = allVertices[i0], v1 = allVertices[i1], v2 = allVertices[i2];
             Vector3 faceNormal = Vector3.Cross(v1 - v0, v2 - v0).normalized;
             Vector3 outward = ((v0 + v1 + v2) / 3f).normalized;
-            if (Vector3.Dot(faceNormal, outward) < 0.3f)
+            if (Vector3.Dot(faceNormal, outward) < normalThreshold)
             {
                 triColorIdx[t] = -1;
                 continue;
@@ -184,7 +183,7 @@ public class RegionManager : MonoBehaviour
             triColorIdx[t] = clusterIdx;
         }
 
-        // Step 2: Build edge-based adjacency
+        // build a map of which triangles share edges so we know what's connected
         var edgeToTris = new Dictionary<(int, int), List<int>>();
 
         for (int t = 0; t < triCount; t++)
@@ -214,7 +213,7 @@ public class RegionManager : MonoBehaviour
                 }
         }
 
-        // Step 3: Flood fill connected same-color components
+        // walk through connected triangles of the same color to find each landmass
         var components = new List<(int colorIdx, List<int> tris)>();
         var visited = new bool[triCount];
 
@@ -246,111 +245,29 @@ public class RegionManager : MonoBehaviour
             components.Add((colorIdx, componentTris));
         }
 
-        // Step 4: Split large components via Voronoi, keep small ones as-is
+        // turn each landmass into a region with a random name
         Regions = new List<Region>();
         triangleToRegion = new Dictionary<int, Region>();
         var usedNames = new HashSet<string>();
 
+        // sort so the biggest regions show up first
+        components.Sort((a, b) => b.tris.Count.CompareTo(a.tris.Count));
+
         foreach (var (colorIdx, componentTris) in components)
         {
+            // ignore tiny scraps that are too small to be a real region
+            if (componentTris.Count < 3) continue;
+
             Color clusterColor = colorClusters[colorIdx];
+            string name = GenerateUniqueName(clusterColor, componentTris[0], usedNames);
+            usedNames.Add(name);
 
-            if (componentTris.Count <= maxTrianglesPerRegion)
-            {
-                string name = GenerateUniqueName(clusterColor, componentTris[0], usedNames);
-                usedNames.Add(name);
+            var region = new Region(name, clusterColor, componentTris);
+            region.HighlightMesh = BuildHighlightMesh(componentTris);
+            Regions.Add(region);
 
-                var region = new Region(name, clusterColor, componentTris);
-                region.HighlightMesh = BuildHighlightMesh(componentTris);
-                Regions.Add(region);
-
-                foreach (int tri in componentTris)
-                    triangleToRegion[tri] = region;
-            }
-            else
-            {
-                int numSplits = Mathf.CeilToInt((float)componentTris.Count / maxTrianglesPerRegion);
-                numSplits = Mathf.Max(2, numSplits);
-
-                // Furthest-point sampling for maximum geographic spread
-                var seeds = new Vector3[numSplits];
-                var triCenters = new Vector3[componentTris.Count];
-                for (int i = 0; i < componentTris.Count; i++)
-                    triCenters[i] = TriCenter(componentTris[i]);
-
-                seeds[0] = triCenters[0];
-                var minDistToSeed = new float[componentTris.Count];
-                for (int i = 0; i < componentTris.Count; i++)
-                    minDistToSeed[i] = (triCenters[i] - seeds[0]).sqrMagnitude;
-
-                for (int s = 1; s < numSplits; s++)
-                {
-                    int farthest = 0;
-                    float farthestDist = -1f;
-                    for (int i = 0; i < componentTris.Count; i++)
-                    {
-                        if (minDistToSeed[i] > farthestDist)
-                        {
-                            farthestDist = minDistToSeed[i];
-                            farthest = i;
-                        }
-                    }
-                    seeds[s] = triCenters[farthest];
-
-                    for (int i = 0; i < componentTris.Count; i++)
-                    {
-                        float d = (triCenters[i] - seeds[s]).sqrMagnitude;
-                        if (d < minDistToSeed[i]) minDistToSeed[i] = d;
-                    }
-                }
-
-                // Lloyd relaxation (3 iterations)
-                for (int iter = 0; iter < 3; iter++)
-                {
-                    var sums = new Vector3[numSplits];
-                    var counts = new int[numSplits];
-
-                    foreach (int t in componentTris)
-                    {
-                        Vector3 center = TriCenter(t);
-                        int nearest = NearestSeed(center, seeds);
-                        sums[nearest] += center;
-                        counts[nearest]++;
-                    }
-
-                    for (int i = 0; i < numSplits; i++)
-                    {
-                        if (counts[i] > 0)
-                            seeds[i] = (sums[i] / counts[i]).normalized;
-                    }
-                }
-
-                var splitGroups = new List<int>[numSplits];
-                for (int i = 0; i < numSplits; i++)
-                    splitGroups[i] = new List<int>();
-
-                foreach (int t in componentTris)
-                {
-                    Vector3 center = TriCenter(t);
-                    int nearest = NearestSeed(center, seeds);
-                    splitGroups[nearest].Add(t);
-                }
-
-                for (int i = 0; i < numSplits; i++)
-                {
-                    if (splitGroups[i].Count == 0) continue;
-
-                    string name = GenerateUniqueName(clusterColor, splitGroups[i][0], usedNames);
-                    usedNames.Add(name);
-
-                    var region = new Region(name, clusterColor, splitGroups[i]);
-                    region.HighlightMesh = BuildHighlightMesh(splitGroups[i]);
-                    Regions.Add(region);
-
-                    foreach (int tri in splitGroups[i])
-                        triangleToRegion[tri] = region;
-                }
-            }
+            foreach (int tri in componentTris)
+                triangleToRegion[tri] = region;
         }
     }
 
@@ -379,22 +296,6 @@ public class RegionManager : MonoBehaviour
     {
         int i0 = allTriangles[triIdx * 3], i1 = allTriangles[triIdx * 3 + 1], i2 = allTriangles[triIdx * 3 + 2];
         return ((allVertices[i0] + allVertices[i1] + allVertices[i2]) / 3f).normalized;
-    }
-
-    int NearestSeed(Vector3 point, Vector3[] seeds)
-    {
-        int best = 0;
-        float bestDist = float.MaxValue;
-        for (int i = 0; i < seeds.Length; i++)
-        {
-            float dist = (point - seeds[i]).sqrMagnitude;
-            if (dist < bestDist)
-            {
-                bestDist = dist;
-                best = i;
-            }
-        }
-        return best;
     }
 
     void AddEdge(Dictionary<(int, int), List<int>> edgeToTris, int v0, int v1, int triIdx)

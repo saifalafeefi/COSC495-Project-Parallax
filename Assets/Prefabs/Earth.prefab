@@ -68,8 +68,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RegionManager
   bakedRegionData: {fileID: 0}
-  colorMergeThreshold: 0.3
-  maxTrianglesPerRegion: 70
+  colorMergeThreshold: 0.05
+  normalThreshold: 0.3
   highlightColor: {r: 1, g: 1, b: 1, a: 0.4}
 --- !u!1 &2100348791094012262
 GameObject:
