@@ -303,6 +303,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DesktopPlacement
   earthPrefab: {fileID: 1406784529821176, guid: 57d277fd15f819c4c894aab4c8bb3dfa, type: 3}
   spawnPosition: {x: 0, y: 0, z: 6}
+  autoRotateSpeed: 5
+  resumeDelay: 0
+  resumeRampTime: 2
 --- !u!114 &776120561
 MonoBehaviour:
   m_ObjectHideFlags: 0
