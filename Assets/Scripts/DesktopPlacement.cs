@@ -21,6 +21,7 @@ public class DesktopPlacement : MonoBehaviour
     // tracks how long since the player let go of the mouse
     private float timeSinceRelease;
     private bool playerControlling;
+    private DesktopInteraction cachedInteraction;
 
     void Start()
     {
@@ -35,6 +36,15 @@ public class DesktopPlacement : MonoBehaviour
     void Update()
     {
         if (SpawnedEarth == null) return;
+
+        // don't spin while the camera is focused on a region
+        if (cachedInteraction == null)
+            cachedInteraction = FindFirstObjectByType<DesktopInteraction>();
+        if (cachedInteraction != null && cachedInteraction.IsFocused)
+        {
+            timeSinceRelease = 0f;
+            return;
+        }
 
         // check if the player is dragging the mouse
         bool mouseDown = Mouse.current != null && Mouse.current.leftButton.isPressed;

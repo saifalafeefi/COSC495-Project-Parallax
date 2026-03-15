@@ -379,6 +379,16 @@ public class RegionManager : MonoBehaviour
         return region;
     }
 
+    // returns the average center of a region's triangles in world space
+    public Vector3 GetRegionWorldCenter(Region region)
+    {
+        Vector3 sum = Vector3.zero;
+        foreach (int t in region.TriangleIndices)
+            sum += TriCenter(t);
+        Vector3 localDir = (sum / region.TriangleIndices.Count).normalized;
+        return transform.TransformPoint(localDir);
+    }
+
     bool IsOceanColor(Color color)
     {
         return color.b > 0.4f && color.b > color.r * 1.3f && color.b > color.g * 1.2f;

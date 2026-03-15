@@ -6,6 +6,7 @@ public class RegionSelector : MonoBehaviour
     [SerializeField] private Camera mainCamera;
 
     private RegionManager regionManager;
+    private DesktopInteraction desktopInteraction;
 
     void Update()
     {
@@ -14,6 +15,9 @@ public class RegionSelector : MonoBehaviour
             regionManager = FindFirstObjectByType<RegionManager>();
             if (regionManager == null) return;
         }
+
+        if (desktopInteraction == null)
+            desktopInteraction = FindFirstObjectByType<DesktopInteraction>();
 
         if (mainCamera == null)
             mainCamera = Camera.main;
@@ -31,7 +35,18 @@ public class RegionSelector : MonoBehaviour
                 regionManager.SetHighlight(region);
 
                 if (Mouse.current.rightButton.wasPressedThisFrame)
+                {
                     regionManager.SelectedRegion = region;
+
+                    // get the direction from earth center to the region and focus the camera there
+                    if (region != null && desktopInteraction != null)
+                    {
+                        Vector3 earthPos = regionManager.transform.position;
+                        Vector3 regionCenter = regionManager.GetRegionWorldCenter(region);
+                        Vector3 dir = (regionCenter - earthPos).normalized;
+                        desktopInteraction.FocusOnDirection(dir);
+                    }
+                }
 
                 return;
             }
@@ -39,5 +54,13 @@ public class RegionSelector : MonoBehaviour
 
         regionManager.HoveredRegion = null;
         regionManager.SetHighlight(null);
+
+        // right-click on empty space or ocean to unfocus and deselect
+        if (Mouse.current.rightButton.wasPressedThisFrame)
+        {
+            regionManager.SelectedRegion = null;
+            if (desktopInteraction != null)
+                desktopInteraction.Unfocus();
+        }
     }
 }
