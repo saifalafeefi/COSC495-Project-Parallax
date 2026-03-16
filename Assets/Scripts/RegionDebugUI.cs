@@ -20,17 +20,22 @@ public class RegionDebugUI : MonoBehaviour
 
         if (selected != null)
         {
-            displayText.text = $"<b>{selected.RegionName}</b>\n"
+            string neighborNames = selected.Neighbors.Count > 0
+                ? string.Join(", ", selected.Neighbors.ConvertAll(n => n.RegionName))
+                : "none";
+
+            displayText.text = $"<b>{selected.RegionName}</b>  [{selected.Trait}]\n"
                 + $"Carbon:    {selected.CarbonLevel:F0}\n"
                 + $"Economy:   {selected.EconomyLevel:F0}\n"
-                + $"Stability: {selected.StabilityLevel:F0}";
+                + $"Stability: {selected.StabilityLevel:F0}\n"
+                + $"Neighbors: {neighborNames}";
 
             if (hovered != null && hovered != selected)
-                displayText.text += $"\n\n<i>Hovering: {hovered.RegionName}</i>";
+                displayText.text += $"\n\n<i>Hovering: {hovered.RegionName} [{hovered.Trait}]</i>";
         }
         else if (hovered != null)
         {
-            displayText.text = $"<i>{hovered.RegionName}</i>\nRight-click to select";
+            displayText.text = $"<i>{hovered.RegionName}</i>  [{hovered.Trait}]\nRight-click to select";
         }
         else
         {

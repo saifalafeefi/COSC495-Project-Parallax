@@ -10,6 +10,7 @@ public class RegionData : ScriptableObject
     {
         public string regionName;
         public Color regionColor;
+        public RegionTrait trait;
         public int[] triangleIndices;
     }
 

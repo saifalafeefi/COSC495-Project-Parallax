@@ -18,6 +18,14 @@ public class DesktopInteraction : MonoBehaviour
     [SerializeField, Range(0.5f, 20f)]
     private float focusSmoothSpeed = 4f;
 
+    [Tooltip("orbit speed multiplier while focused on a region (0.3 = 30% of normal speed)")]
+    [SerializeField, Range(0.05f, 1f)]
+    private float focusedOrbitMultiplier = 0.3f;
+
+    [Tooltip("max degrees the camera can drift from the focused region center before stopping")]
+    [SerializeField, Range(5f, 60f)]
+    private float focusDeadzoneAngle = 25f;
+
     private float currentDistance;
     private float yaw;
     private float pitch;
@@ -32,6 +40,9 @@ public class DesktopInteraction : MonoBehaviour
     private float unfocusedDistance;
     // true while we're tweening back out after unfocusing
     private bool isReturning;
+    // the yaw/pitch of the region center, used for deadzone clamping
+    private float focusCenterYaw;
+    private float focusCenterPitch;
 
     public bool IsFocused => isFocused;
 
@@ -58,6 +69,55 @@ public class DesktopInteraction : MonoBehaviour
             yaw = Mathf.LerpAngle(yaw, targetYaw, focusSmoothSpeed * Time.deltaTime);
             pitch = Mathf.Lerp(pitch, targetPitch, focusSmoothSpeed * Time.deltaTime);
             currentDistance = Mathf.Lerp(currentDistance, targetDistance, focusSmoothSpeed * Time.deltaTime);
+
+            // let the player orbit slowly while focused, with deadzone limit
+            var mouse = Mouse.current;
+            if (mouse != null && mouse.leftButton.isPressed)
+            {
+                Vector2 delta = mouse.delta.ReadValue();
+                float baseSpeed = orbitSpeed * focusedOrbitMultiplier;
+
+                // how far we currently are from region center
+                float dYaw = Mathf.DeltaAngle(yaw, focusCenterYaw);
+                float dPitch = pitch - focusCenterPitch;
+                float angleDist = Mathf.Sqrt(dYaw * dYaw + dPitch * dPitch);
+
+                // apply the drag at full speed first
+                float newYaw = yaw + delta.x * baseSpeed * 0.1f;
+                float newPitch = pitch - delta.y * baseSpeed * 0.1f;
+                newPitch = Mathf.Clamp(newPitch, -89f, 89f);
+
+                // check if this move goes further from center or closer
+                float newDYaw = Mathf.DeltaAngle(newYaw, focusCenterYaw);
+                float newDPitch = newPitch - focusCenterPitch;
+                float newDist = Mathf.Sqrt(newDYaw * newDYaw + newDPitch * newDPitch);
+
+                if (newDist > angleDist && angleDist > focusDeadzoneAngle * 0.5f)
+                {
+                    // moving away from center and past halfway — slow down
+                    float edgeFactor = 1f - Mathf.Clamp01((angleDist - focusDeadzoneAngle * 0.5f) / (focusDeadzoneAngle * 0.5f));
+                    newYaw = yaw + delta.x * baseSpeed * edgeFactor * 0.1f;
+                    newPitch = pitch - delta.y * baseSpeed * edgeFactor * 0.1f;
+                    newPitch = Mathf.Clamp(newPitch, -89f, 89f);
+
+                    newDYaw = Mathf.DeltaAngle(newYaw, focusCenterYaw);
+                    newDPitch = newPitch - focusCenterPitch;
+                    newDist = Mathf.Sqrt(newDYaw * newDYaw + newDPitch * newDPitch);
+                }
+
+                // hard clamp at the edge
+                if (newDist > focusDeadzoneAngle)
+                {
+                    float scale = focusDeadzoneAngle / newDist;
+                    newYaw = focusCenterYaw - newDYaw * scale;
+                    newPitch = focusCenterPitch + newDPitch * scale;
+                }
+
+                yaw = newYaw;
+                pitch = newPitch;
+                targetYaw = yaw;
+                targetPitch = pitch;
+            }
 
             HandleZoom();
 
@@ -165,8 +225,10 @@ public class DesktopInteraction : MonoBehaviour
 
         // the orbit offset is Euler(pitch,yaw) * (0,0,-dist), so we need to
         // flip the direction to place the camera on the region's side of the earth
-        targetYaw = Mathf.Atan2(-dir.x, -dir.z) * Mathf.Rad2Deg;
-        targetPitch = Mathf.Asin(Mathf.Clamp(dir.y, -1f, 1f)) * Mathf.Rad2Deg;
+        focusCenterYaw = Mathf.Atan2(-dir.x, -dir.z) * Mathf.Rad2Deg;
+        focusCenterPitch = Mathf.Asin(Mathf.Clamp(dir.y, -1f, 1f)) * Mathf.Rad2Deg;
+        targetYaw = focusCenterYaw;
+        targetPitch = focusCenterPitch;
         targetDistance = focusDistance;
     }
 

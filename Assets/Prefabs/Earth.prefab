@@ -67,10 +67,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6d9f4ac8dbf2a944bbb2b6e6b4b5313a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RegionManager
-  bakedRegionData: {fileID: 0}
+  bakedRegionData: {fileID: 11400000, guid: d07e437b8be4f0c4596083c1b43cef0e, type: 2}
   colorMergeThreshold: 0.05
   normalThreshold: 0.3
   highlightColor: {r: 1, g: 1, b: 1, a: 0.4}
+  frozenLatitude: 60
+  tropicalLatitude: 25
+  aridLatitude: 40
+  coastalMaxTris: 35
+  neighborProximity: 0.15
 --- !u!1 &2100348791094012262
 GameObject:
   m_ObjectHideFlags: 0

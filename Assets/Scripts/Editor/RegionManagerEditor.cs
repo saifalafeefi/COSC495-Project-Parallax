@@ -18,10 +18,10 @@ public class RegionManagerEditor : Editor
         }
 
         EditorGUILayout.HelpBox(
-            "1. Hit Play, tweak settings until regions look right\n" +
-            "2. Stop Play, click 'Bake Regions to Asset'\n" +
-            "3. Assign the saved asset to 'Baked Region Data'\n" +
-            "4. At runtime, baked data is used instead of algorithms",
+            "Click 'Bake Regions to Asset' while NOT in Play mode.\n" +
+            "The prefab must have a child with MeshFilter + Renderer.\n" +
+            "The texture must have Read/Write enabled in import settings.\n" +
+            "After baking, the asset auto-assigns to 'Baked Region Data'.",
             MessageType.Info);
     }
 
@@ -44,6 +44,7 @@ public class RegionManagerEditor : Editor
             {
                 regionName = region.RegionName,
                 regionColor = region.RegionColor,
+                trait = region.Trait,
                 triangleIndices = region.TriangleIndices.ToArray()
             };
             asset.regions.Add(entry);

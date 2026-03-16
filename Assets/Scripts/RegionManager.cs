@@ -19,6 +19,31 @@ public class RegionManager : MonoBehaviour
     [SerializeField]
     private Color highlightColor = new Color(1f, 1f, 1f, 0.4f);
 
+    [Tooltip("Color of the selection glow for the currently selected region.")]
+    [SerializeField]
+    private Color selectionColor = new Color(0.2f, 0.8f, 1f, 0.5f);
+
+    [Header("Trait Assignment Thresholds")]
+    [Tooltip("latitude above this is frozen (absolute value)")]
+    [SerializeField, Range(30f, 80f)]
+    private float frozenLatitude = 60f;
+
+    [Tooltip("latitude below this qualifies for tropical (absolute value)")]
+    [SerializeField, Range(10f, 40f)]
+    private float tropicalLatitude = 25f;
+
+    [Tooltip("latitude below this qualifies for arid (absolute value)")]
+    [SerializeField, Range(15f, 50f)]
+    private float aridLatitude = 40f;
+
+    [Tooltip("regions with fewer triangles than this may be tagged coastal")]
+    [SerializeField, Range(5, 80)]
+    private int coastalMaxTris = 35;
+
+    [Tooltip("how close two region centers must be to count as neighbors (angular distance squared)")]
+    [SerializeField, Range(0.01f, 0.5f)]
+    private float neighborProximity = 0.15f;
+
     public List<Region> Regions { get; private set; }
     public Region SelectedRegion { get; set; }
     public Region HoveredRegion { get; set; }
@@ -30,6 +55,10 @@ public class RegionManager : MonoBehaviour
 
     private GameObject highlightObject;
     private MeshFilter highlightMeshFilter;
+
+    private GameObject selectionObject;
+    private MeshFilter selectionMeshFilter;
+    private Region currentlyShownSelection;
 
     private Vector3[] allVertices;
     private int[] allTriangles;
@@ -58,18 +87,17 @@ public class RegionManager : MonoBehaviour
         Debug.Log($"[RegionManager] {Regions.Count} regions ({(bakedRegionData != null ? "baked" : "runtime")})");
         foreach (var r in Regions)
         {
-            float minLat = 90, maxLat = -90, minLon = 180, maxLon = -180;
+            float latSum = 0f;
             foreach (int t in r.TriangleIndices)
             {
                 Vector3 c = TriCenter(t);
-                float lat = Mathf.Asin(Mathf.Clamp(c.y, -1f, 1f)) * Mathf.Rad2Deg;
-                float lon = Mathf.Atan2(c.x, c.z) * Mathf.Rad2Deg;
-                if (lat < minLat) minLat = lat;
-                if (lat > maxLat) maxLat = lat;
-                if (lon < minLon) minLon = lon;
-                if (lon > maxLon) maxLon = lon;
+                latSum += Mathf.Asin(Mathf.Clamp(c.y, -1f, 1f)) * Mathf.Rad2Deg;
             }
-            Debug.Log($"  {r.RegionName} | Tris: {r.TriangleIndices.Count} | Lat: {minLat:F0} to {maxLat:F0} | Lon: {minLon:F0} to {maxLon:F0}");
+            float avgLat = latSum / r.TriangleIndices.Count;
+            string neighborNames = r.Neighbors.Count > 0
+                ? string.Join(", ", r.Neighbors.ConvertAll(n => n.RegionName))
+                : "none";
+            Debug.Log($"  {r.RegionName} | {r.Trait} | Tris: {r.TriangleIndices.Count} | Lat: {avgLat:F0} | Neighbors: {neighborNames}");
         }
     }
 
@@ -94,7 +122,7 @@ public class RegionManager : MonoBehaviour
 
     void LoadBakedRegions()
     {
-        if (allVertices == null) FetchMeshData();
+        FetchMeshData();
 
         Regions = new List<Region>();
         triangleToRegion = new Dictionary<int, Region>();
@@ -103,12 +131,48 @@ public class RegionManager : MonoBehaviour
         {
             var tris = new List<int>(entry.triangleIndices);
             var region = new Region(entry.regionName, entry.regionColor, tris);
+            region.Trait = entry.trait;
             region.HighlightMesh = BuildHighlightMesh(tris);
             Regions.Add(region);
+
+            if (region.Trait == RegionTrait.Industrial)
+                region.CarbonLevel = 60f;
 
             foreach (int tri in tris)
                 triangleToRegion[tri] = region;
         }
+
+        // rebuild neighbor graph from triangle adjacency
+        int triCount = allTriangles.Length / 3;
+        var remap = BuildVertexRemap(allVertices);
+        var edgeToTris = new Dictionary<(int, int), List<int>>();
+
+        for (int t = 0; t < triCount; t++)
+        {
+            if (!triangleToRegion.ContainsKey(t)) continue;
+            int r0 = remap[allTriangles[t * 3]];
+            int r1 = remap[allTriangles[t * 3 + 1]];
+            int r2 = remap[allTriangles[t * 3 + 2]];
+            AddEdge(edgeToTris, r0, r1, t);
+            AddEdge(edgeToTris, r1, r2, t);
+            AddEdge(edgeToTris, r2, r0, t);
+        }
+
+        var adjacency = new List<int>[triCount];
+        for (int t = 0; t < triCount; t++)
+            adjacency[t] = new List<int>();
+
+        foreach (var tris in edgeToTris.Values)
+        {
+            for (int a = 0; a < tris.Count; a++)
+                for (int b = a + 1; b < tris.Count; b++)
+                {
+                    adjacency[tris[a]].Add(tris[b]);
+                    adjacency[tris[b]].Add(tris[a]);
+                }
+        }
+
+        BuildNeighborGraph(adjacency, triCount);
     }
 
     void FetchMeshData()
@@ -124,13 +188,33 @@ public class RegionManager : MonoBehaviour
 
     public void RunDiscovery()
     {
-        if (allVertices == null) FetchMeshData();
+        FetchMeshData();
+
+        if (earthMesh == null)
+        {
+            Debug.LogError("[RegionManager] no mesh found on any child MeshFilter");
+            return;
+        }
 
         var renderer = GetComponentInChildren<Renderer>();
-        if (renderer == null) return;
+        if (renderer == null)
+        {
+            Debug.LogError("[RegionManager] no Renderer found on any child");
+            return;
+        }
 
         earthTexture = renderer.sharedMaterial.mainTexture as Texture2D;
-        if (earthTexture == null || earthMesh == null) return;
+        if (earthTexture == null)
+        {
+            Debug.LogError("[RegionManager] texture is null or not a Texture2D. Make sure isReadable is enabled on the texture.");
+            return;
+        }
+
+        if (!earthTexture.isReadable)
+        {
+            Debug.LogError("[RegionManager] texture is not readable. Enable Read/Write in the texture import settings.");
+            return;
+        }
 
         var uvList = new List<Vector2>();
         earthMesh.GetUVs(0, uvList);
@@ -269,6 +353,118 @@ public class RegionManager : MonoBehaviour
             foreach (int tri in componentTris)
                 triangleToRegion[tri] = region;
         }
+
+        // assign a trait to each region based on its color and latitude
+        foreach (var region in Regions)
+            region.Trait = AssignTrait(region);
+
+        // set starting carbon higher for industrial regions
+        foreach (var region in Regions)
+        {
+            if (region.Trait == RegionTrait.Industrial)
+                region.CarbonLevel = 60f;
+        }
+
+        // figure out which regions are neighbors by checking if they share triangle edges
+        BuildNeighborGraph(adjacency, triCount);
+    }
+
+    RegionTrait AssignTrait(Region region)
+    {
+        // get the average latitude of this region
+        float latSum = 0f;
+        foreach (int t in region.TriangleIndices)
+        {
+            Vector3 c = TriCenter(t);
+            latSum += Mathf.Asin(Mathf.Clamp(c.y, -1f, 1f)) * Mathf.Rad2Deg;
+        }
+        float avgLat = latSum / region.TriangleIndices.Count;
+        float absLat = Mathf.Abs(avgLat);
+
+        // use color hue + latitude to pick a trait
+        Color.RGBToHSV(region.RegionColor, out float h, out float s, out float v);
+
+        // frozen: high latitude regions (near poles)
+        if (absLat > frozenLatitude)
+            return RegionTrait.Frozen;
+
+        // arid: yellow/brown hues in mid-low latitudes
+        if (h >= 0.05f && h < 0.18f && absLat < aridLatitude)
+            return RegionTrait.Arid;
+
+        // tropical: green hues near equator
+        if (h >= 0.18f && h < 0.45f && s > 0.2f && absLat < tropicalLatitude)
+            return RegionTrait.Tropical;
+
+        // coastal: smaller regions at mid latitudes tend to be along coastlines
+        if (region.TriangleIndices.Count < coastalMaxTris && absLat < 50f)
+            return RegionTrait.Coastal;
+
+        // industrial: brown/dark hues at mid latitudes
+        if ((h < 0.05f || h > 0.85f || (h >= 0.05f && h < 0.12f && s > 0.2f)) && absLat >= tropicalLatitude && absLat < frozenLatitude)
+            return RegionTrait.Industrial;
+
+        // everything else is temperate
+        return RegionTrait.Temperate;
+    }
+
+    void BuildNeighborGraph(List<int>[] adjacency, int triCount)
+    {
+        // two regions are neighbors if any of their triangles share an edge with
+        // a triangle from a different region (including across ocean/filtered gaps)
+        // we check direct triangle adjacency first, then also check if regions are
+        // close enough geographically to be considered neighbors
+
+        // first pass: direct adjacency through the triangle graph
+        var neighborSet = new Dictionary<Region, HashSet<Region>>();
+        foreach (var region in Regions)
+            neighborSet[region] = new HashSet<Region>();
+
+        foreach (var region in Regions)
+        {
+            foreach (int tri in region.TriangleIndices)
+            {
+                foreach (int adj in adjacency[tri])
+                {
+                    if (triangleToRegion.TryGetValue(adj, out Region other) && other != region)
+                    {
+                        neighborSet[region].Add(other);
+                        neighborSet[other].Add(region);
+                    }
+                }
+            }
+        }
+
+        // second pass: regions within a certain angular distance are also neighbors
+        // this catches regions separated by thin ocean strips or filtered triangles
+        float proximityThreshold = neighborProximity;
+        for (int i = 0; i < Regions.Count; i++)
+        {
+            Vector3 centerA = RegionCenter(Regions[i]);
+            for (int j = i + 1; j < Regions.Count; j++)
+            {
+                if (neighborSet[Regions[i]].Contains(Regions[j])) continue;
+
+                Vector3 centerB = RegionCenter(Regions[j]);
+                if ((centerA - centerB).sqrMagnitude < proximityThreshold)
+                {
+                    neighborSet[Regions[i]].Add(Regions[j]);
+                    neighborSet[Regions[j]].Add(Regions[i]);
+                }
+            }
+        }
+
+        foreach (var region in Regions)
+            region.Neighbors = new List<Region>(neighborSet[region]);
+    }
+
+    // gets the average direction of a region on the unit sphere (local space)
+    Vector3 RegionCenter(Region region)
+    {
+        Vector3 sum = Vector3.zero;
+        foreach (int t in region.TriangleIndices)
+            sum += TriCenter(t);
+        return (sum / region.TriangleIndices.Count).normalized;
     }
 
     int[] BuildVertexRemap(Vector3[] vertices)
@@ -312,21 +508,60 @@ public class RegionManager : MonoBehaviour
 
     Mesh BuildHighlightMesh(List<int> tris)
     {
-        var newVerts = new List<Vector3>();
-        var newTris = new List<int>();
+        // build an outline mesh from the boundary edges of this region
+        // a boundary edge is one where the neighboring triangle is not in the same set
+        var triSet = new HashSet<int>(tris);
+        var remap = BuildVertexRemap(allVertices);
 
+        // find boundary edges: edges where only one side belongs to this region
+        var edgeCount = new Dictionary<(int, int), int>();
         foreach (int t in tris)
         {
+            int r0 = remap[allTriangles[t * 3]];
+            int r1 = remap[allTriangles[t * 3 + 1]];
+            int r2 = remap[allTriangles[t * 3 + 2]];
+
+            IncrementEdge(edgeCount, r0, r1);
+            IncrementEdge(edgeCount, r1, r2);
+            IncrementEdge(edgeCount, r2, r0);
+        }
+
+        // edges that appear only once are boundary edges
+        var newVerts = new List<Vector3>();
+        var newTris = new List<int>();
+        float outlineWidth = 0.006f;
+        float outlineHeight = 0.003f;
+
+        foreach (var (edge, count) in edgeCount)
+        {
+            if (count > 1) continue;
+
+            // find the actual vertex positions for this edge
+            Vector3 a = FindVertexByRemap(remap, edge.Item1);
+            Vector3 b = FindVertexByRemap(remap, edge.Item2);
+
+            // push both points outward from sphere center
+            Vector3 aOut = a + a.normalized * outlineHeight;
+            Vector3 bOut = b + b.normalized * outlineHeight;
+
+            // widen the edge into a thin quad strip
+            Vector3 mid = ((a + b) / 2f).normalized;
+            Vector3 edgeDir = (b - a).normalized;
+            Vector3 widthDir = Vector3.Cross(edgeDir, mid).normalized * outlineWidth;
+
             int baseIdx = newVerts.Count;
-            for (int j = 0; j < 3; j++)
-            {
-                Vector3 v = allVertices[allTriangles[t * 3 + j]];
-                v += v.normalized * 0.002f;
-                newVerts.Add(v);
-            }
+            newVerts.Add(aOut - widthDir);
+            newVerts.Add(aOut + widthDir);
+            newVerts.Add(bOut + widthDir);
+            newVerts.Add(bOut - widthDir);
+
+            // two triangles for the quad
             newTris.Add(baseIdx);
             newTris.Add(baseIdx + 1);
             newTris.Add(baseIdx + 2);
+            newTris.Add(baseIdx);
+            newTris.Add(baseIdx + 2);
+            newTris.Add(baseIdx + 3);
         }
 
         var mesh = new Mesh();
@@ -336,39 +571,99 @@ public class RegionManager : MonoBehaviour
         return mesh;
     }
 
+    void IncrementEdge(Dictionary<(int, int), int> edgeCount, int v0, int v1)
+    {
+        var key = v0 < v1 ? (v0, v1) : (v1, v0);
+        if (edgeCount.ContainsKey(key))
+            edgeCount[key]++;
+        else
+            edgeCount[key] = 1;
+    }
+
+    Vector3 FindVertexByRemap(int[] remap, int remappedIdx)
+    {
+        // the remapped index IS an original vertex index (the first one found at that position)
+        return allVertices[remappedIdx];
+    }
+
     void SetupHighlightOverlay()
     {
+        // hover highlight (subtle white glow)
         highlightObject = new GameObject("RegionHighlight");
         highlightObject.transform.SetParent(transform, false);
 
         highlightMeshFilter = highlightObject.AddComponent<MeshFilter>();
         var highlightRenderer = highlightObject.AddComponent<MeshRenderer>();
 
-        var mat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-        mat.SetColor("_BaseColor", highlightColor);
-        mat.SetFloat("_Surface", 1);
-        mat.SetFloat("_Blend", 0);
-        mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-        mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
-        mat.SetInt("_ZWrite", 0);
-        mat.renderQueue = 3000;
+        var hoverMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+        hoverMat.SetColor("_BaseColor", highlightColor);
+        hoverMat.SetFloat("_Surface", 1);
+        hoverMat.SetFloat("_Blend", 0);
+        hoverMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        hoverMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
+        hoverMat.SetInt("_ZWrite", 0);
+        hoverMat.renderQueue = 3000;
 
-        highlightRenderer.material = mat;
+        highlightRenderer.material = hoverMat;
         highlightObject.SetActive(false);
+
+        // selection highlight (stronger colored glow, renders behind hover)
+        selectionObject = new GameObject("RegionSelection");
+        selectionObject.transform.SetParent(transform, false);
+
+        selectionMeshFilter = selectionObject.AddComponent<MeshFilter>();
+        var selectionRenderer = selectionObject.AddComponent<MeshRenderer>();
+
+        var selectMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+        selectMat.SetColor("_BaseColor", selectionColor);
+        selectMat.SetFloat("_Surface", 1);
+        selectMat.SetFloat("_Blend", 0);
+        selectMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        selectMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
+        selectMat.SetInt("_ZWrite", 0);
+        selectMat.renderQueue = 2999;
+
+        selectionRenderer.material = selectMat;
+        selectionObject.SetActive(false);
     }
 
     public void SetHighlight(Region region)
     {
-        if (highlightObject == null) return;
-
-        if (region != null && region.HighlightMesh != null)
+        // hover highlight
+        if (highlightObject != null)
         {
-            highlightMeshFilter.mesh = region.HighlightMesh;
-            highlightObject.SetActive(true);
+            if (region != null && region.HighlightMesh != null)
+            {
+                highlightMeshFilter.mesh = region.HighlightMesh;
+                highlightObject.SetActive(true);
+            }
+            else
+            {
+                highlightObject.SetActive(false);
+            }
+        }
+
+        // selection highlight stays on the selected region
+        UpdateSelectionHighlight();
+    }
+
+    void UpdateSelectionHighlight()
+    {
+        if (selectionObject == null) return;
+
+        if (SelectedRegion != null && SelectedRegion.HighlightMesh != null)
+        {
+            if (currentlyShownSelection != SelectedRegion)
+            {
+                selectionMeshFilter.mesh = SelectedRegion.HighlightMesh;
+                currentlyShownSelection = SelectedRegion;
+            }
+            selectionObject.SetActive(true);
         }
         else
         {
-            highlightObject.SetActive(false);
+            selectionObject.SetActive(false);
+            currentlyShownSelection = null;
         }
     }
 
