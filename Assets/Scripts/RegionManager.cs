@@ -84,21 +84,6 @@ public class RegionManager : MonoBehaviour
             RunDiscovery();
 
         SetupHighlightOverlay();
-        Debug.Log($"[RegionManager] {Regions.Count} regions ({(bakedRegionData != null ? "baked" : "runtime")})");
-        foreach (var r in Regions)
-        {
-            float latSum = 0f;
-            foreach (int t in r.TriangleIndices)
-            {
-                Vector3 c = TriCenter(t);
-                latSum += Mathf.Asin(Mathf.Clamp(c.y, -1f, 1f)) * Mathf.Rad2Deg;
-            }
-            float avgLat = latSum / r.TriangleIndices.Count;
-            string neighborNames = r.Neighbors.Count > 0
-                ? string.Join(", ", r.Neighbors.ConvertAll(n => n.RegionName))
-                : "none";
-            Debug.Log($"  {r.RegionName} | {r.Trait} | Tris: {r.TriangleIndices.Count} | Lat: {avgLat:F0} | Neighbors: {neighborNames}");
-        }
     }
 
     void SetupMeshCollider()

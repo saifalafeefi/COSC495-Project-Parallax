@@ -119,8 +119,6 @@ public class DesktopInteraction : MonoBehaviour
                 targetPitch = pitch;
             }
 
-            HandleZoom();
-
             if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
                 Unfocus();
         }
