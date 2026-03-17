@@ -24,9 +24,10 @@ public class Region
 
     public List<int> TriangleIndices;
     public Mesh HighlightMesh;
+    public Mesh FillMesh;
 
     // regions that share edges with this one
-    public List<Region> Neighbors;
+    [NonSerialized] public List<Region> Neighbors;
 
     public Region(string name, Color color, List<int> triangleIndices)
     {

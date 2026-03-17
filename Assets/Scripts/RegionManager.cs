@@ -53,6 +53,18 @@ public class RegionManager : MonoBehaviour
 
     private Dictionary<int, Region> triangleToRegion;
 
+    [Header("Status Pulse")]
+    [SerializeField] private float pulseSpeed = 2.5f;
+    [SerializeField] private StatusBorderConfig[] stressedBorders = new StatusBorderConfig[]
+    {
+        new StatusBorderConfig { width = 0.012f, height = 0.004f, color = new Color(1f, 0.6f, 0.2f, 0.4f) }
+    };
+    [SerializeField] private StatusBorderConfig[] crisisBorders = new StatusBorderConfig[]
+    {
+        new StatusBorderConfig { width = 0.010f, height = 0.004f, color = new Color(1f, 0.2f, 0.1f, 0.5f) },
+        new StatusBorderConfig { width = 0.020f, height = 0.006f, color = new Color(1f, 0.1f, 0.05f, 0.25f) }
+    };
+
     private GameObject highlightObject;
     private MeshFilter highlightMeshFilter;
 
@@ -60,8 +72,34 @@ public class RegionManager : MonoBehaviour
     private MeshFilter selectionMeshFilter;
     private Region currentlyShownSelection;
 
+    // one overlay object per border ring per status level
+    private List<PulseLayer> stressedLayers = new List<PulseLayer>();
+    private List<PulseLayer> crisisLayers = new List<PulseLayer>();
+
     private Vector3[] allVertices;
     private int[] allTriangles;
+
+    // cached outline meshes per region, keyed by (width, height) so we don't rebuild every frame
+    private Dictionary<(float, float), Dictionary<Region, Mesh>> outlineMeshCache
+        = new Dictionary<(float, float), Dictionary<Region, Mesh>>();
+
+    [System.Serializable]
+    public struct StatusBorderConfig
+    {
+        [Tooltip("thickness of the border line")]
+        public float width;
+        [Tooltip("how far the border floats above the surface")]
+        public float height;
+        public Color color;
+    }
+
+    private class PulseLayer
+    {
+        public GameObject obj;
+        public MeshFilter meshFilter;
+        public MeshRenderer meshRenderer;
+        public Color baseColor;
+    }
 
     private static readonly string[] GreenPrefixes = { "Verd", "Sylv", "Moss", "Fern", "Leaf", "Ivy", "Elm", "Thorn" };
     private static readonly string[] GreenSuffixes = { "ania", "grove", "reach", "wood", "vale", "glen", "holm", "mire" };
@@ -84,6 +122,93 @@ public class RegionManager : MonoBehaviour
             RunDiscovery();
 
         SetupHighlightOverlay();
+    }
+
+    void Update()
+    {
+        UpdateStatusPulse();
+    }
+
+    void UpdateStatusPulse()
+    {
+        if (Regions == null) return;
+
+        // split regions by status
+        var stressedRegions = new List<Region>();
+        var crisisRegions = new List<Region>();
+
+        foreach (var r in Regions)
+        {
+            if (r.CarbonLevel > 85f)
+                crisisRegions.Add(r);
+            else if (r.CarbonLevel > 70f)
+                stressedRegions.Add(r);
+        }
+
+        float pulse = (Mathf.Sin(Time.time * pulseSpeed) + 1f) / 2f;
+        float fastPulse = (Mathf.Sin(Time.time * pulseSpeed * 1.8f) + 1f) / 2f;
+
+        UpdatePulseLayers(stressedLayers, stressedBorders, stressedRegions, pulse);
+        UpdatePulseLayers(crisisLayers, crisisBorders, crisisRegions, fastPulse);
+    }
+
+    void UpdatePulseLayers(List<PulseLayer> layers, StatusBorderConfig[] configs, List<Region> regions, float pulse)
+    {
+        for (int i = 0; i < layers.Count; i++)
+        {
+            var layer = layers[i];
+            if (i >= configs.Length) { layer.obj.SetActive(false); continue; }
+
+            var config = configs[i];
+
+            if (regions.Count > 0)
+            {
+                // get or build cached outline meshes for this width/height combo
+                var key = (config.width, config.height);
+                var combined = GetCombinedOutlineMesh(key, regions);
+
+                layer.meshFilter.mesh = combined;
+                float alpha = Mathf.Lerp(0.05f, config.color.a, pulse);
+                layer.meshRenderer.material.SetColor("_BaseColor",
+                    new Color(config.color.r, config.color.g, config.color.b, alpha));
+                layer.obj.SetActive(true);
+            }
+            else
+            {
+                layer.obj.SetActive(false);
+            }
+        }
+    }
+
+    Mesh GetCombinedOutlineMesh((float, float) key, List<Region> regions)
+    {
+        // build per-region outline meshes for this size if not cached
+        if (!outlineMeshCache.ContainsKey(key))
+            outlineMeshCache[key] = new Dictionary<Region, Mesh>();
+
+        var cache = outlineMeshCache[key];
+        var meshes = new List<Mesh>();
+
+        foreach (var r in regions)
+        {
+            if (!cache.TryGetValue(r, out Mesh m))
+            {
+                m = BuildOutlineMesh(r.TriangleIndices, key.Item1, key.Item2);
+                cache[r] = m;
+            }
+            meshes.Add(m);
+        }
+
+        var combine = new CombineInstance[meshes.Count];
+        for (int i = 0; i < meshes.Count; i++)
+        {
+            combine[i].mesh = meshes[i];
+            combine[i].transform = Matrix4x4.identity;
+        }
+
+        var combined = new Mesh();
+        combined.CombineMeshes(combine, true, true);
+        return combined;
     }
 
     void SetupMeshCollider()
@@ -118,6 +243,7 @@ public class RegionManager : MonoBehaviour
             var region = new Region(entry.regionName, entry.regionColor, tris);
             region.Trait = entry.trait;
             region.HighlightMesh = BuildHighlightMesh(tris);
+            region.FillMesh = BuildFillMesh(tris);
             Regions.Add(region);
 
             if (region.Trait == RegionTrait.Industrial)
@@ -333,6 +459,7 @@ public class RegionManager : MonoBehaviour
 
             var region = new Region(name, clusterColor, componentTris);
             region.HighlightMesh = BuildHighlightMesh(componentTris);
+            region.FillMesh = BuildFillMesh(componentTris);
             Regions.Add(region);
 
             foreach (int tri in componentTris)
@@ -493,9 +620,12 @@ public class RegionManager : MonoBehaviour
 
     Mesh BuildHighlightMesh(List<int> tris)
     {
+        return BuildOutlineMesh(tris, 0.006f, 0.003f);
+    }
+
+    Mesh BuildOutlineMesh(List<int> tris, float outlineWidth, float outlineHeight)
+    {
         // build an outline mesh from the boundary edges of this region
-        // a boundary edge is one where the neighboring triangle is not in the same set
-        var triSet = new HashSet<int>(tris);
         var remap = BuildVertexRemap(allVertices);
 
         // find boundary edges: edges where only one side belongs to this region
@@ -514,8 +644,6 @@ public class RegionManager : MonoBehaviour
         // edges that appear only once are boundary edges
         var newVerts = new List<Vector3>();
         var newTris = new List<int>();
-        float outlineWidth = 0.006f;
-        float outlineHeight = 0.003f;
 
         foreach (var (edge, count) in edgeCount)
         {
@@ -552,6 +680,41 @@ public class RegionManager : MonoBehaviour
         var mesh = new Mesh();
         mesh.SetVertices(newVerts);
         mesh.SetTriangles(newTris, 0);
+        mesh.RecalculateNormals();
+        return mesh;
+    }
+
+    Mesh BuildFillMesh(List<int> tris)
+    {
+        // solid fill mesh: duplicates each triangle pushed slightly outward from the sphere
+        float offset = 0.002f;
+        var verts = new List<Vector3>();
+        var indices = new List<int>();
+
+        foreach (int t in tris)
+        {
+            int i0 = allTriangles[t * 3];
+            int i1 = allTriangles[t * 3 + 1];
+            int i2 = allTriangles[t * 3 + 2];
+
+            Vector3 v0 = allVertices[i0];
+            Vector3 v1 = allVertices[i1];
+            Vector3 v2 = allVertices[i2];
+
+            // push outward along each vertex normal (radial direction on a sphere)
+            int baseIdx = verts.Count;
+            verts.Add(v0 + v0.normalized * offset);
+            verts.Add(v1 + v1.normalized * offset);
+            verts.Add(v2 + v2.normalized * offset);
+
+            indices.Add(baseIdx);
+            indices.Add(baseIdx + 1);
+            indices.Add(baseIdx + 2);
+        }
+
+        var mesh = new Mesh();
+        mesh.SetVertices(verts);
+        mesh.SetTriangles(indices, 0);
         mesh.RecalculateNormals();
         return mesh;
     }
@@ -610,6 +773,36 @@ public class RegionManager : MonoBehaviour
 
         selectionRenderer.material = selectMat;
         selectionObject.SetActive(false);
+
+        // create pulse layers for each border config
+        int queue = 2995;
+        foreach (var config in stressedBorders)
+            stressedLayers.Add(CreatePulseLayer($"StressedBorder_{stressedLayers.Count}", config.color, queue++));
+        foreach (var config in crisisBorders)
+            crisisLayers.Add(CreatePulseLayer($"CrisisBorder_{crisisLayers.Count}", config.color, queue++));
+    }
+
+    PulseLayer CreatePulseLayer(string name, Color color, int renderQueue)
+    {
+        var obj = new GameObject(name);
+        obj.transform.SetParent(transform, false);
+
+        var mf = obj.AddComponent<MeshFilter>();
+        var mr = obj.AddComponent<MeshRenderer>();
+
+        var mat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+        mat.SetColor("_BaseColor", color);
+        mat.SetFloat("_Surface", 1);
+        mat.SetFloat("_Blend", 0);
+        mat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        mat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.One);
+        mat.SetInt("_ZWrite", 0);
+        mat.renderQueue = renderQueue;
+
+        mr.material = mat;
+        obj.SetActive(false);
+
+        return new PulseLayer { obj = obj, meshFilter = mf, meshRenderer = mr, baseColor = color };
     }
 
     public void SetHighlight(Region region)

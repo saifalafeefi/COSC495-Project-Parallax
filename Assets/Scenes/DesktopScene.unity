@@ -312,6 +312,9 @@ MonoBehaviour:
   gameStateText: {fileID: 19542590}
   eventDisplayDuration: 6
   cardPlayDisplayDuration: 4
+  stressedTextColor: {r: 1, g: 0.67, b: 0.27, a: 1}
+  crisisTextColor: {r: 1, g: 0.27, b: 0.27, a: 1}
+  cooldownTextColor: {r: 0.53, g: 0.53, b: 0.53, a: 1}
 --- !u!114 &207634239
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -552,13 +555,27 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HandDisplay
   cardBackground: {r: 0.12, g: 0.12, b: 0.16, a: 0.95}
-  cardBorder: {r: 0.3, g: 0.3, b: 0.4, a: 1}
   commonColor: {r: 0.6, g: 0.6, b: 0.6, a: 1}
   uncommonColor: {r: 0.2, g: 0.8, b: 0.2, a: 1}
   rareColor: {r: 0.9, g: 0.7, b: 0.1, a: 1}
+  selectedGlow: {r: 1, g: 0.9, b: 0.4, a: 1}
   carbonColor: {r: 0.75, g: 0.45, b: 0.3, a: 1}
   economyColor: {r: 0.85, g: 0.75, b: 0.3, a: 1}
   stabilityColor: {r: 0.4, g: 0.6, b: 0.85, a: 1}
+  bonusColor: {r: 0.4, g: 0.9, b: 0.4, a: 1}
+  penaltyColor: {r: 0.9, g: 0.4, b: 0.4, a: 1}
+  cardWidth: 190
+  cardHeight: 260
+  cardSpacing: 16
+  restY: -300
+  hoverY: -200
+  selectedY: -150
+  hoverScale: 1.35
+  selectedScale: 1.5
+  tweenSpeed: 12
+  bounceSpeed: 5
+  bounceAmount: 6
+  selectedColorSpeed: 5
 --- !u!1 &854968233
 GameObject:
   m_ObjectHideFlags: 0

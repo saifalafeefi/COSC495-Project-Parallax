@@ -34,6 +34,9 @@ public class GameManager : MonoBehaviour
     private int crisisCount;
     private bool chainCollapseWarning;
 
+    // tracks which regions already received a card this round
+    private HashSet<Region> targetedThisRound;
+
     private RegionManager regionManager;
 
     private bool started;
@@ -85,6 +88,7 @@ public class GameManager : MonoBehaviour
 
         discardPile = new List<PolicyData>();
         CurrentHand = new List<PolicyData>();
+        targetedThisRound = new HashSet<Region>();
 
         ShuffleDeck();
         Debug.Log($"[GameManager] deck built with {deck.Count} cards");
@@ -96,6 +100,7 @@ public class GameManager : MonoBehaviour
     {
         CurrentRound++;
         ActionsRemaining = actionsPerRound;
+        targetedThisRound.Clear();
 
         // draw 3 cards
         CurrentHand.Clear();
@@ -127,6 +132,7 @@ public class GameManager : MonoBehaviour
         if (GameOver) return "Game is over.";
         if (cardIndex < 0 || cardIndex >= CurrentHand.Count) return "Invalid card.";
         if (target == null) return "No region selected.";
+        if (targetedThisRound.Contains(target)) return $"{target.RegionName} already targeted this round.";
 
         var card = CurrentHand[cardIndex];
         card.GetModifiedDeltas(target, out float carbon, out float economy, out float stability);
@@ -148,10 +154,11 @@ public class GameManager : MonoBehaviour
             neighbor.StabilityLevel = Mathf.Clamp(neighbor.StabilityLevel + stability * 0.25f, 0f, 100f);
         }
 
-        // move card to discard
+        // move card to discard and mark region as targeted
         discardPile.Add(card);
         CurrentHand.RemoveAt(cardIndex);
         ActionsRemaining--;
+        targetedThisRound.Add(target);
 
         string result = $"{card.policyName} → {target.RegionName}";
 
@@ -167,6 +174,10 @@ public class GameManager : MonoBehaviour
     {
         var regions = regionManager.Regions;
         if (regions == null) return;
+
+        // 0. global carbon drift — the world gets worse on its own
+        foreach (var r in regions)
+            r.CarbonLevel = Mathf.Clamp(r.CarbonLevel + 1f, 0f, 100f);
 
         // 1. passive trait effects
         foreach (var r in regions)
@@ -345,6 +356,12 @@ public class GameManager : MonoBehaviour
         else if (FinalScore >= 75f) FinalRating = "Stable Transition (Silver)";
         else if (FinalScore >= 50f) FinalRating = "Fragile Balance (Bronze)";
         else FinalRating = "Environmental Failure";
+    }
+
+    // returns true if a region already got a card this round
+    public bool IsTargetedThisRound(Region region)
+    {
+        return targetedThisRound != null && targetedThisRound.Contains(region);
     }
 
     public float GetGlobalCarbon()

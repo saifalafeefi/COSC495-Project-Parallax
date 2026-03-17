@@ -71,11 +71,15 @@ MonoBehaviour:
   colorMergeThreshold: 0.05
   normalThreshold: 0.3
   highlightColor: {r: 1, g: 1, b: 1, a: 0.4}
+  selectionColor: {r: 0.2, g: 0.8, b: 1, a: 0.5}
   frozenLatitude: 60
   tropicalLatitude: 25
   aridLatitude: 40
   coastalMaxTris: 35
   neighborProximity: 0.15
+  stressedColor: {r: 1, g: 0.6, b: 0.2, a: 0.35}
+  crisisColor: {r: 1, g: 0.15, b: 0.1, a: 0.5}
+  pulseSpeed: 10
 --- !u!1 &2100348791094012262
 GameObject:
   m_ObjectHideFlags: 0

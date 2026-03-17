@@ -12,6 +12,11 @@ public class RegionDebugUI : MonoBehaviour
     [SerializeField] private float eventDisplayDuration = 6f;
     [SerializeField] private float cardPlayDisplayDuration = 4f;
 
+    [Header("Health Warning Colors")]
+    [SerializeField] private Color stressedTextColor = new Color(1f, 0.67f, 0.27f);
+    [SerializeField] private Color crisisTextColor = new Color(1f, 0.27f, 0.27f);
+    [SerializeField] private Color cooldownTextColor = new Color(0.53f, 0.53f, 0.53f);
+
     private RegionManager regionManager;
     private GameManager gameManager;
     private RegionSelector regionSelector;
@@ -65,9 +70,24 @@ public class RegionDebugUI : MonoBehaviour
                 ? string.Join(", ", selected.Neighbors.ConvertAll(n => n.RegionName))
                 : "none";
 
-            displayText.text = $"<b>{selected.RegionName}</b> ({selected.Trait})\n"
-                + $"C: {selected.CarbonLevel:F0}  E: {selected.EconomyLevel:F0}  S: {selected.StabilityLevel:F0}\n"
-                + $"Neighbors: {neighbors}";
+            // carbon status warning
+            string crisisHex = ColorUtility.ToHtmlStringRGB(crisisTextColor);
+            string stressedHex = ColorUtility.ToHtmlStringRGB(stressedTextColor);
+            string cooldownHex = ColorUtility.ToHtmlStringRGB(cooldownTextColor);
+
+            string status = "";
+            if (selected.CarbonLevel > 85f) status = $"  <color=#{crisisHex}>CRISIS</color>";
+            else if (selected.CarbonLevel > 70f) status = $"  <color=#{stressedHex}>STRESSED</color>";
+
+            // cooldown indicator
+            string cooldown = "";
+            if (gameManager != null && gameManager.IsTargetedThisRound(selected))
+                cooldown = $"\n<color=#{cooldownHex}>Already targeted this round</color>";
+
+            displayText.text = $"<b>{selected.RegionName}</b> ({selected.Trait}){status}\n"
+                + $"C: {selected.CarbonLevel:F0}  E: {selected.EconomyLevel:F0}  S: {selected.StabilityLevel:F0}"
+                + cooldown
+                + $"\nNeighbors: {neighbors}";
         }
         else if (hovered != null)
         {
