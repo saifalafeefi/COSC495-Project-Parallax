@@ -21,6 +21,7 @@ public class GameManager : MonoBehaviour
     public string GameOverReason { get; private set; }
     public float FinalScore { get; private set; }
     public string FinalRating { get; private set; }
+    public string ScoreBreakdown { get; private set; }
 
     // the 3 cards in hand this round
     public List<PolicyData> CurrentHand { get; private set; }
@@ -64,27 +65,15 @@ public class GameManager : MonoBehaviour
         FinalScore = 0;
         FinalRating = null;
 
-        // build deck: all 6 common + 2 random uncommon + 1 random rare
+        // build deck from all assigned policies
         deck = new List<PolicyData>();
 
         foreach (var p in commonPolicies)
             deck.Add(p);
-
-        // pick 2 random uncommon
-        var uncommonPool = new List<PolicyData>(uncommonPolicies);
-        for (int i = 0; i < 2 && uncommonPool.Count > 0; i++)
-        {
-            int idx = Random.Range(0, uncommonPool.Count);
-            deck.Add(uncommonPool[idx]);
-            uncommonPool.RemoveAt(idx);
-        }
-
-        // pick 1 random rare
-        if (rarePolicies.Length > 0)
-        {
-            int idx = Random.Range(0, rarePolicies.Length);
-            deck.Add(rarePolicies[idx]);
-        }
+        foreach (var p in uncommonPolicies)
+            deck.Add(p);
+        foreach (var p in rarePolicies)
+            deck.Add(p);
 
         discardPile = new List<PolicyData>();
         CurrentHand = new List<PolicyData>();
@@ -245,12 +234,9 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        // 6. draw and apply 1 random event
-        ApplyRandomEvent(regions);
-
+        // 6. check game over before event on final round
         Debug.Log($"[GameManager] end of round {CurrentRound} | global carbon: {GetGlobalCarbon():F1}");
 
-        // 7. check game over
         if (CheckGameOver(regions))
             return;
 
@@ -259,10 +245,13 @@ public class GameManager : MonoBehaviour
             // survived all rounds, calculate score
             CalculateScore(regions);
             GameOver = true;
-            GameOverReason = FinalRating;
+            GameOverReason = "You survived all 10 rounds.";
             Debug.Log($"[GameManager] game complete! score: {FinalScore:F0} — {FinalRating}");
             return;
         }
+
+        // draw and apply event only if the game continues
+        ApplyRandomEvent(regions);
 
         StartRound();
     }
@@ -299,19 +288,20 @@ public class GameManager : MonoBehaviour
         }
 
         // chain collapse: 3+ regions in crisis
-        int crisisRegions = 0;
+        var crisisRegionNames = new List<string>();
         foreach (var r in regions)
         {
             if (r.CarbonLevel > 85f)
-                crisisRegions++;
+                crisisRegionNames.Add(r.RegionName);
         }
 
-        if (crisisRegions >= 3)
+        if (crisisRegionNames.Count >= 3)
         {
             if (chainCollapseWarning)
             {
+                string names = string.Join(", ", crisisRegionNames);
                 GameOver = true;
-                GameOverReason = "Chain Collapse — 3+ regions in crisis for consecutive rounds.";
+                GameOverReason = $"Chain Collapse — {crisisRegionNames.Count} regions in crisis for consecutive rounds:\n{names}";
                 Debug.Log($"[GameManager] GAME OVER: {GameOverReason}");
                 return true;
             }
@@ -321,7 +311,7 @@ public class GameManager : MonoBehaviour
                 Debug.LogWarning("[GameManager] WARNING: 3+ regions in crisis — collapse imminent next round!");
             }
         }
-        else
+        else if (crisisRegionNames.Count < 3)
         {
             chainCollapseWarning = false;
         }
@@ -348,9 +338,21 @@ public class GameManager : MonoBehaviour
         float avgEconomy = totalEconomy / regions.Count;
         float globalCarbon = GetGlobalCarbon();
 
-        FinalScore = (thriving * 25f) + (healthy * 15f)
-            + (avgStability * 0.5f) + (avgEconomy * 0.5f)
-            - (globalCarbon * 1.5f) - (crisisCount * 10f);
+        float thrivingPts = thriving * 25f;
+        float healthyPts = healthy * 15f;
+        float stabilityPts = avgStability * 0.5f;
+        float economyPts = avgEconomy * 0.5f;
+        float carbonPenalty = globalCarbon * 1.5f;
+        float crisisPenalty = crisisCount * 10f;
+
+        FinalScore = thrivingPts + healthyPts + stabilityPts + economyPts - carbonPenalty - crisisPenalty;
+
+        ScoreBreakdown = $"Thriving regions ({thriving}): +{thrivingPts:F0}\n"
+            + $"Healthy regions ({healthy}): +{healthyPts:F0}\n"
+            + $"Avg Stability ({avgStability:F0}): +{stabilityPts:F0}\n"
+            + $"Avg Economy ({avgEconomy:F0}): +{economyPts:F0}\n"
+            + $"Global Carbon ({globalCarbon:F0}): -{carbonPenalty:F0}\n"
+            + $"Crisis events ({crisisCount}): -{crisisPenalty:F0}";
 
         if (FinalScore >= 100f) FinalRating = "Sustainable Future (Gold)";
         else if (FinalScore >= 75f) FinalRating = "Stable Transition (Silver)";

@@ -7,6 +7,7 @@ public class RegionDebugUI : MonoBehaviour
     [SerializeField] private TMP_Text eventText;
     [SerializeField] private TMP_Text cardPlayText;
     [SerializeField] private TMP_Text gameStateText;
+    [SerializeField] private TMP_Text gameOverText;
 
     [Header("Display Durations")]
     [SerializeField] private float eventDisplayDuration = 6f;
@@ -35,34 +36,60 @@ public class RegionDebugUI : MonoBehaviour
         if (regionSelector == null)
             regionSelector = FindFirstObjectByType<RegionSelector>();
 
+        bool isGameOver = gameManager != null && gameManager.GameOver;
+
         UpdateGameState();
-        UpdateRegionInfo();
-        UpdateEventText();
-        UpdateCardPlayText();
+        UpdateRegionInfo(isGameOver);
+        UpdateEventText(isGameOver);
+        UpdateCardPlayText(isGameOver);
     }
 
     void UpdateGameState()
     {
-        if (gameStateText == null || gameManager == null) return;
+        if (gameManager == null) return;
 
-        if (gameManager.GameOver)
+        // round/actions bar (hide on game over)
+        if (gameStateText != null)
         {
-            gameStateText.text = $"GAME OVER\n{gameManager.GameOverReason}";
-            if (gameManager.FinalRating != null)
-                gameStateText.text += $"\n{gameManager.FinalScore:F0} — {gameManager.FinalRating}";
+            if (gameManager.GameOver)
+            {
+                gameStateText.gameObject.SetActive(false);
+            }
+            else
+            {
+                gameStateText.text = $"Round {gameManager.CurrentRound}/10   Actions: {gameManager.ActionsRemaining}/3   Carbon: {gameManager.GetGlobalCarbon():F0}";
+                gameStateText.gameObject.SetActive(true);
+            }
         }
-        else
+
+        // game over screen (separate TMP, position/style it center screen in Inspector)
+        if (gameOverText != null)
         {
-            gameStateText.text = $"Round {gameManager.CurrentRound}/10   Actions: {gameManager.ActionsRemaining}/3   Carbon: {gameManager.GetGlobalCarbon():F0}";
+            if (gameManager.GameOver)
+            {
+                string text = $"GAME OVER\n{gameManager.GameOverReason}";
+                if (gameManager.FinalRating != null)
+                    text += $"\n\n{gameManager.FinalRating}\nScore: {gameManager.FinalScore:F0}\n\n{gameManager.ScoreBreakdown}";
+                gameOverText.text = text;
+                gameOverText.gameObject.SetActive(true);
+            }
+            else
+            {
+                gameOverText.gameObject.SetActive(false);
+            }
         }
     }
 
-    void UpdateRegionInfo()
+    void UpdateRegionInfo(bool isGameOver)
     {
         if (displayText == null) return;
 
         Region selected = regionManager.SelectedRegion;
         Region hovered = regionManager.HoveredRegion;
+
+        string crisisHex = ColorUtility.ToHtmlStringRGB(crisisTextColor);
+        string stressedHex = ColorUtility.ToHtmlStringRGB(stressedTextColor);
+        string cooldownHex = ColorUtility.ToHtmlStringRGB(cooldownTextColor);
 
         if (selected != null)
         {
@@ -70,18 +97,13 @@ public class RegionDebugUI : MonoBehaviour
                 ? string.Join(", ", selected.Neighbors.ConvertAll(n => n.RegionName))
                 : "none";
 
-            // carbon status warning
-            string crisisHex = ColorUtility.ToHtmlStringRGB(crisisTextColor);
-            string stressedHex = ColorUtility.ToHtmlStringRGB(stressedTextColor);
-            string cooldownHex = ColorUtility.ToHtmlStringRGB(cooldownTextColor);
-
             string status = "";
             if (selected.CarbonLevel > 85f) status = $"  <color=#{crisisHex}>CRISIS</color>";
             else if (selected.CarbonLevel > 70f) status = $"  <color=#{stressedHex}>STRESSED</color>";
 
-            // cooldown indicator
+            // cooldown indicator (only during gameplay)
             string cooldown = "";
-            if (gameManager != null && gameManager.IsTargetedThisRound(selected))
+            if (!isGameOver && gameManager != null && gameManager.IsTargetedThisRound(selected))
                 cooldown = $"\n<color=#{cooldownHex}>Already targeted this round</color>";
 
             displayText.text = $"<b>{selected.RegionName}</b> ({selected.Trait}){status}\n"
@@ -91,7 +113,8 @@ public class RegionDebugUI : MonoBehaviour
         }
         else if (hovered != null)
         {
-            displayText.text = $"{hovered.RegionName} ({hovered.Trait})";
+            displayText.text = $"{hovered.RegionName} ({hovered.Trait})\n"
+                + $"C: {hovered.CarbonLevel:F0}  E: {hovered.EconomyLevel:F0}  S: {hovered.StabilityLevel:F0}";
         }
         else
         {
@@ -99,9 +122,11 @@ public class RegionDebugUI : MonoBehaviour
         }
     }
 
-    void UpdateEventText()
+    void UpdateEventText(bool isGameOver)
     {
         if (eventText == null || gameManager == null) return;
+
+        if (isGameOver) { eventText.gameObject.SetActive(false); return; }
 
         if (Time.time - gameManager.LastEventTime < eventDisplayDuration && gameManager.LastEventText != null)
         {
@@ -114,9 +139,11 @@ public class RegionDebugUI : MonoBehaviour
         }
     }
 
-    void UpdateCardPlayText()
+    void UpdateCardPlayText(bool isGameOver)
     {
         if (cardPlayText == null || regionSelector == null) return;
+
+        if (isGameOver) { cardPlayText.gameObject.SetActive(false); return; }
 
         if (Time.time - regionSelector.LastPlayTime < cardPlayDisplayDuration && regionSelector.LastPlayResult != null)
         {
