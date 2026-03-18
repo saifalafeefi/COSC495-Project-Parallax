@@ -60,6 +60,10 @@ public class DesktopInteraction : MonoBehaviour
         if (desktopPlacement == null || desktopPlacement.SpawnedEarth == null)
             return;
 
+        // don't allow orbit/zoom while paused
+        if (PauseMenu.IsPaused)
+            return;
+
         if (currentDistance == 0f)
             InitOrbit();
 
@@ -119,8 +123,7 @@ public class DesktopInteraction : MonoBehaviour
                 targetPitch = pitch;
             }
 
-            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
-                Unfocus();
+            // ESC unfocus is handled by PauseMenu to avoid double-triggering
         }
         else if (isReturning)
         {

@@ -21,6 +21,8 @@ public class PauseMenu : MonoBehaviour
     public static bool IsPaused { get; private set; }
 
     private GameManager gameManager;
+    private DesktopInteraction desktopInteraction;
+    private RegionManager regionManager;
     private bool wasGameOver;
 
     void Start()
@@ -48,15 +50,31 @@ public class PauseMenu : MonoBehaviour
             if (gameManager == null) return;
         }
 
-        // toggle pause with escape (only during active gameplay, not game over)
+        if (desktopInteraction == null)
+            desktopInteraction = FindFirstObjectByType<DesktopInteraction>();
+        if (regionManager == null)
+            regionManager = FindFirstObjectByType<RegionManager>();
+
+        // ESC priority: unfocus region first, then toggle pause
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
             if (!gameManager.GameOver)
             {
                 if (IsPaused)
+                {
                     Resume();
+                }
+                else if (desktopInteraction != null && desktopInteraction.IsFocused)
+                {
+                    // unfocus camera and deselect region instead of pausing
+                    desktopInteraction.Unfocus();
+                    if (regionManager != null)
+                        regionManager.SelectedRegion = null;
+                }
                 else
+                {
                     Pause();
+                }
             }
         }
 
