@@ -65,6 +65,9 @@ public class HandDisplay : MonoBehaviour
         if (canvas == null)
             BuildCanvas();
 
+        // don't update cards while paused
+        if (PauseMenu.IsPaused) return;
+
         var hand = gameManager.CurrentHand;
         int handCount = hand != null ? hand.Count : 0;
         int round = gameManager.CurrentRound;
@@ -219,6 +222,8 @@ public class HandDisplay : MonoBehaviour
 
     public void OnCardClick(int index)
     {
+        if (PauseMenu.IsPaused) return;
+
         if (selectedIndex == index)
         {
             // second click on same card: confirm play

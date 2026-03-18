@@ -845,6 +845,23 @@ public class RegionManager : MonoBehaviour
         }
     }
 
+    // resets all region stats to defaults for a fresh game
+    public void ResetAllRegions()
+    {
+        if (Regions == null) return;
+
+        foreach (var r in Regions)
+        {
+            r.CarbonLevel = r.Trait == RegionTrait.Industrial ? 60f : 50f;
+            r.EconomyLevel = 50f;
+            r.StabilityLevel = 50f;
+        }
+
+        SelectedRegion = null;
+        HoveredRegion = null;
+        SetHighlight(null);
+    }
+
     public Region GetRegionAtHit(int triangleIndex)
     {
         if (triangleToRegion == null) return null;

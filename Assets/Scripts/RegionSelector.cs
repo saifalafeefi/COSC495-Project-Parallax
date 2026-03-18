@@ -26,6 +26,9 @@ public class RegionSelector : MonoBehaviour
         if (mainCamera == null)
             mainCamera = Camera.main;
 
+        // don't process hover/select while paused
+        if (PauseMenu.IsPaused) return;
+
         if (Mouse.current == null) return;
 
         Ray ray = mainCamera.ScreenPointToRay(Mouse.current.position.ReadValue());

@@ -56,6 +56,17 @@ public class GameManager : MonoBehaviour
             started = true;
             StartGame();
         }
+
+        // debug: press G to force game over for testing
+        if (UnityEngine.InputSystem.Keyboard.current != null
+            && UnityEngine.InputSystem.Keyboard.current.gKey.wasPressedThisFrame
+            && !GameOver)
+        {
+            CalculateScore(regionManager.Regions);
+            GameOver = true;
+            GameOverReason = "[DEBUG] Forced game over.";
+            Debug.Log("[GameManager] DEBUG: forced game over");
+        }
     }
 
     void StartGame()
@@ -365,6 +376,20 @@ public class GameManager : MonoBehaviour
         else if (FinalScore >= 75f) FinalRating = "Stable Transition (Silver)";
         else if (FinalScore >= 50f) FinalRating = "Fragile Balance (Bronze)";
         else FinalRating = "Environmental Failure";
+    }
+
+    // called by PauseMenu to start a completely fresh game
+    public void RestartGame()
+    {
+        // reset region stats
+        if (regionManager != null)
+            regionManager.ResetAllRegions();
+
+        // clear event display
+        LastEventText = null;
+        LastEventTime = 0f;
+
+        StartGame();
     }
 
     // returns true if a region already got a card this round
