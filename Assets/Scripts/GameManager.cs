@@ -3,13 +3,15 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-    [Header("Policy Deck")]
-    [SerializeField] private PolicyData[] commonPolicies;
-    [SerializeField] private PolicyData[] uncommonPolicies;
-    [SerializeField] private PolicyData[] rarePolicies;
-
-    [Header("Events")]
-    [SerializeField] private EventData[] allEvents;
+    [Header("Data Folders (Resources)")]
+    [Tooltip("path inside Resources/ to common policies")]
+    [SerializeField] private string commonPath = "Policies/Common";
+    [Tooltip("path inside Resources/ to uncommon policies")]
+    [SerializeField] private string uncommonPath = "Policies/Uncommon";
+    [Tooltip("path inside Resources/ to rare policies")]
+    [SerializeField] private string rarePath = "Policies/Rare";
+    [Tooltip("path inside Resources/ to events")]
+    [SerializeField] private string eventsPath = "Events";
 
     [Header("Game Settings")]
     [SerializeField] private int totalRounds = 10;
@@ -30,6 +32,7 @@ public class GameManager : MonoBehaviour
     public string LastEventText { get; private set; }
     public float LastEventTime { get; private set; }
 
+    private EventData[] allEvents;
     private List<PolicyData> deck;
     private List<PolicyData> discardPile;
     private int crisisCount;
@@ -65,15 +68,18 @@ public class GameManager : MonoBehaviour
         FinalScore = 0;
         FinalRating = null;
 
-        // build deck from all assigned policies
-        deck = new List<PolicyData>();
+        // auto-load policies from Resources folders
+        var commonPolicies = Resources.LoadAll<PolicyData>(commonPath);
+        var uncommonPolicies = Resources.LoadAll<PolicyData>(uncommonPath);
+        var rarePolicies = Resources.LoadAll<PolicyData>(rarePath);
+        allEvents = Resources.LoadAll<EventData>(eventsPath);
 
-        foreach (var p in commonPolicies)
-            deck.Add(p);
-        foreach (var p in uncommonPolicies)
-            deck.Add(p);
-        foreach (var p in rarePolicies)
-            deck.Add(p);
+        deck = new List<PolicyData>();
+        deck.AddRange(commonPolicies);
+        deck.AddRange(uncommonPolicies);
+        deck.AddRange(rarePolicies);
+
+        Debug.Log($"[GameManager] loaded {commonPolicies.Length} common, {uncommonPolicies.Length} uncommon, {rarePolicies.Length} rare, {allEvents.Length} events");
 
         discardPile = new List<PolicyData>();
         CurrentHand = new List<PolicyData>();
@@ -135,12 +141,13 @@ public class GameManager : MonoBehaviour
         target.EconomyLevel = Mathf.Clamp(target.EconomyLevel + economy, 0f, 100f);
         target.StabilityLevel = Mathf.Clamp(target.StabilityLevel + stability, 0f, 100f);
 
-        // 25% spillover to neighbors
+        // spillover to neighbors
+        float spill = card.GetSpillover();
         foreach (var neighbor in target.Neighbors)
         {
-            neighbor.CarbonLevel = Mathf.Clamp(neighbor.CarbonLevel + carbon * 0.25f, 0f, 100f);
-            neighbor.EconomyLevel = Mathf.Clamp(neighbor.EconomyLevel + economy * 0.25f, 0f, 100f);
-            neighbor.StabilityLevel = Mathf.Clamp(neighbor.StabilityLevel + stability * 0.25f, 0f, 100f);
+            neighbor.CarbonLevel = Mathf.Clamp(neighbor.CarbonLevel + carbon * spill, 0f, 100f);
+            neighbor.EconomyLevel = Mathf.Clamp(neighbor.EconomyLevel + economy * spill, 0f, 100f);
+            neighbor.StabilityLevel = Mathf.Clamp(neighbor.StabilityLevel + stability * spill, 0f, 100f);
         }
 
         // move card to discard and mark region as targeted

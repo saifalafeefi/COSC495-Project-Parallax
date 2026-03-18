@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9b20f123c2bff349975eb62386e5770, type: 3}
+  m_Name: Green_New_Deal
+  m_EditorClassIdentifier: Assembly-CSharp::PolicyData
+  policyName: Green New Deal
+  description: Revolutionary overhaul. Expensive but transformative.
+  carbonDelta: -20
+  economyDelta: -15
+  stabilityDelta: 10
+  rarity: 2
+  icon: {fileID: 0}
+  spilloverOverride: 0
