@@ -13,6 +13,7 @@ public class RegionDebugUI : MonoBehaviour
     [Header("Display Durations")]
     [SerializeField] private float eventDisplayDuration = 6f;
     [SerializeField] private float cardPlayDisplayDuration = 4f;
+    [SerializeField] private float roundSummaryDuration = 5f;
 
     [Header("Health Warning Colors")]
     [SerializeField] private Color stressedTextColor = new Color(1f, 0.67f, 0.27f);
@@ -141,9 +142,22 @@ public class RegionDebugUI : MonoBehaviour
 
         if (isGameOver) { eventText.gameObject.SetActive(false); return; }
 
-        if (Time.time - gameManager.LastEventTime < eventDisplayDuration && gameManager.LastEventText != null)
+        bool showSummary = Time.time - gameManager.RoundSummaryTime < roundSummaryDuration
+            && gameManager.RoundSummaryText != null;
+        bool showEvent = Time.time - gameManager.LastEventTime < eventDisplayDuration
+            && gameManager.LastEventText != null;
+
+        if (showSummary || showEvent)
         {
-            eventText.text = gameManager.LastEventText;
+            string text = "";
+            if (showSummary)
+                text += gameManager.RoundSummaryText;
+            if (showSummary && showEvent)
+                text += "\n\n";
+            if (showEvent)
+                text += gameManager.LastEventText;
+
+            eventText.text = text;
             eventText.gameObject.SetActive(true);
         }
         else

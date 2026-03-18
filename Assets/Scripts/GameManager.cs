@@ -32,6 +32,10 @@ public class GameManager : MonoBehaviour
     public string LastEventText { get; private set; }
     public float LastEventTime { get; private set; }
 
+    // round summary shown briefly after end-of-round processing
+    public string RoundSummaryText { get; private set; }
+    public float RoundSummaryTime { get; private set; }
+
     // rolling log of recent events
     public List<string> EventLog { get; private set; } = new List<string>();
     private const int maxEventLog = 5;
@@ -39,6 +43,10 @@ public class GameManager : MonoBehaviour
     private EventData[] allEvents;
     private List<PolicyData> deck;
     private List<PolicyData> discardPile;
+
+    // snapshot taken at start of round so summary captures card play + end-of-round changes
+    private float snapshotGlobalCarbon;
+    private Dictionary<Region, int> snapshotStatus = new Dictionary<Region, int>();
 
     public int DeckCount => deck != null ? deck.Count : 0;
     public int DiscardCount => discardPile != null ? discardPile.Count : 0;
@@ -128,6 +136,9 @@ public class GameManager : MonoBehaviour
         CurrentRound++;
         ActionsRemaining = actionsPerRound;
         targetedThisRound.Clear();
+
+        // snapshot region status before player acts so the summary captures everything
+        SnapshotStatus();
 
         // draw 3 cards
         CurrentHand.Clear();
@@ -277,7 +288,10 @@ public class GameManager : MonoBehaviour
         Debug.Log($"[GameManager] end of round {CurrentRound} | global carbon: {GetGlobalCarbon():F1}");
 
         if (CheckGameOver(regions))
+        {
+            BuildRoundSummary(regions, snapshotGlobalCarbon, snapshotStatus);
             return;
+        }
 
         if (CurrentRound >= totalRounds)
         {
@@ -285,6 +299,7 @@ public class GameManager : MonoBehaviour
             CalculateScore(regions);
             GameOver = true;
             GameOverReason = "You survived all 10 rounds.";
+            BuildRoundSummary(regions, snapshotGlobalCarbon, snapshotStatus);
             Debug.Log($"[GameManager] game complete! score: {FinalScore:F0} — {FinalRating}");
             return;
         }
@@ -292,7 +307,68 @@ public class GameManager : MonoBehaviour
         // draw and apply event only if the game continues
         ApplyRandomEvent(regions);
 
+        // build round summary AFTER event so it captures everything
+        BuildRoundSummary(regions, snapshotGlobalCarbon, snapshotStatus);
+
         StartRound();
+    }
+
+    void SnapshotStatus()
+    {
+        snapshotGlobalCarbon = GetGlobalCarbon();
+        snapshotStatus.Clear();
+
+        if (regionManager == null || regionManager.Regions == null) return;
+
+        foreach (var r in regionManager.Regions)
+        {
+            if (r.CarbonLevel > 85f) snapshotStatus[r] = 2;
+            else if (r.CarbonLevel > 70f) snapshotStatus[r] = 1;
+            else snapshotStatus[r] = 0;
+        }
+    }
+
+    void BuildRoundSummary(List<Region> regions, float oldGlobalCarbon, Dictionary<Region, int> oldStatus)
+    {
+        float newGlobalCarbon = GetGlobalCarbon();
+        float carbonDiff = newGlobalCarbon - oldGlobalCarbon;
+        string carbonDir = carbonDiff >= 0 ? "+" : "";
+        string summary = $"Round {CurrentRound} End — Carbon: {carbonDir}{carbonDiff:F1}";
+
+        var crisisNames = new List<string>();
+        var stressedNames = new List<string>();
+        var recovered = new List<string>();
+
+        foreach (var r in regions)
+        {
+            int newSt = r.CarbonLevel > 85f ? 2 : (r.CarbonLevel > 70f ? 1 : 0);
+            int oldSt = oldStatus[r];
+
+            if (newSt == 2)
+            {
+                string label = newSt > oldSt ? $"{r.RegionName} (!)" : r.RegionName;
+                crisisNames.Add(label);
+            }
+            else if (newSt == 1)
+            {
+                string label = newSt > oldSt ? $"{r.RegionName} (!)" : r.RegionName;
+                stressedNames.Add(label);
+            }
+            else if (newSt < oldSt)
+            {
+                recovered.Add(r.RegionName);
+            }
+        }
+
+        if (crisisNames.Count > 0)
+            summary += $"\nCrisis: {string.Join(", ", crisisNames)}";
+        if (stressedNames.Count > 0)
+            summary += $"\nStressed: {string.Join(", ", stressedNames)}";
+        if (recovered.Count > 0)
+            summary += $"\nRecovered: {string.Join(", ", recovered)}";
+
+        RoundSummaryText = summary;
+        RoundSummaryTime = Time.time;
     }
 
     void ApplyRandomEvent(List<Region> regions)

@@ -451,6 +451,7 @@ MonoBehaviour:
   globalStatsText: {fileID: 2085467294}
   eventDisplayDuration: 6
   cardPlayDisplayDuration: 4
+  roundSummaryDuration: 5
   stressedTextColor: {r: 1, g: 0.67, b: 0.27, a: 1}
   crisisTextColor: {r: 1, g: 0.27, b: 0.27, a: 1}
   cooldownTextColor: {r: 0.53, g: 0.53, b: 0.53, a: 1}
@@ -2347,7 +2348,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: game over text
+  m_text: global stats text
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
