@@ -47,6 +47,19 @@ public class HandDisplay : MonoBehaviour
     private int hoveredIndex = -1;
     private int selectedIndex = -1;
 
+    // expose the currently selected card for other scripts (e.g. stat preview)
+    public PolicyData SelectedCard
+    {
+        get
+        {
+            if (selectedIndex < 0 || gameManager == null || gameManager.CurrentHand == null)
+                return null;
+            if (selectedIndex >= gameManager.CurrentHand.Count)
+                return null;
+            return gameManager.CurrentHand[selectedIndex];
+        }
+    }
+
     private int lastHandCount = -1;
     private int lastRound = -1;
     private Region lastSelectedRegion;
@@ -218,6 +231,12 @@ public class HandDisplay : MonoBehaviour
     {
         if (hoveredIndex == index)
             hoveredIndex = -1;
+    }
+
+    public void OnCardDeselect()
+    {
+        if (PauseMenu.IsPaused) return;
+        selectedIndex = -1;
     }
 
     public void OnCardClick(int index)

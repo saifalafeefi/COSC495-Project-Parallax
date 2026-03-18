@@ -8,6 +8,7 @@ public class RegionDebugUI : MonoBehaviour
     [SerializeField] private TMP_Text cardPlayText;
     [SerializeField] private TMP_Text gameStateText;
     [SerializeField] private TMP_Text gameOverText;
+    [SerializeField] private TMP_Text globalStatsText;
 
     [Header("Display Durations")]
     [SerializeField] private float eventDisplayDuration = 6f;
@@ -18,9 +19,14 @@ public class RegionDebugUI : MonoBehaviour
     [SerializeField] private Color crisisTextColor = new Color(1f, 0.27f, 0.27f);
     [SerializeField] private Color cooldownTextColor = new Color(0.53f, 0.53f, 0.53f);
 
+    [Header("Preview Colors")]
+    [SerializeField] private Color previewGoodColor = new Color(0.4f, 0.9f, 0.4f);
+    [SerializeField] private Color previewBadColor = new Color(0.9f, 0.4f, 0.4f);
+
     private RegionManager regionManager;
     private GameManager gameManager;
     private RegionSelector regionSelector;
+    private HandDisplay handDisplay;
 
     void Update()
     {
@@ -36,12 +42,16 @@ public class RegionDebugUI : MonoBehaviour
         if (regionSelector == null)
             regionSelector = FindFirstObjectByType<RegionSelector>();
 
+        if (handDisplay == null)
+            handDisplay = FindFirstObjectByType<HandDisplay>();
+
         bool isGameOver = gameManager != null && gameManager.GameOver;
 
         UpdateGameState();
         UpdateRegionInfo(isGameOver);
         UpdateEventText(isGameOver);
         UpdateCardPlayText(isGameOver);
+        UpdateGlobalStats(isGameOver);
     }
 
     void UpdateGameState()
@@ -57,7 +67,7 @@ public class RegionDebugUI : MonoBehaviour
             }
             else
             {
-                gameStateText.text = $"Round {gameManager.CurrentRound}/10   Actions: {gameManager.ActionsRemaining}/3   Carbon: {gameManager.GetGlobalCarbon():F0}";
+                gameStateText.text = $"Round {gameManager.CurrentRound}/10   Actions: {gameManager.ActionsRemaining}/3   Deck: {gameManager.DeckCount}  Discard: {gameManager.DiscardCount}";
                 gameStateText.gameObject.SetActive(true);
             }
         }
@@ -106,9 +116,12 @@ public class RegionDebugUI : MonoBehaviour
             if (!isGameOver && gameManager != null && gameManager.IsTargetedThisRound(selected))
                 cooldown = $"\n<color=#{cooldownHex}>Already targeted this round</color>";
 
+            string preview = BuildCardPreview(selected, isGameOver);
+
             displayText.text = $"<b>{selected.RegionName}</b> ({selected.Trait}){status}\n"
                 + $"C: {selected.CarbonLevel:F0}  E: {selected.EconomyLevel:F0}  S: {selected.StabilityLevel:F0}"
                 + cooldown
+                + preview
                 + $"\nNeighbors: {neighbors}";
         }
         else if (hovered != null)
@@ -154,5 +167,78 @@ public class RegionDebugUI : MonoBehaviour
         {
             cardPlayText.gameObject.SetActive(false);
         }
+    }
+
+    // shows projected stat changes when a card is selected
+    string BuildCardPreview(Region region, bool isGameOver)
+    {
+        if (isGameOver || handDisplay == null) return "";
+
+        var card = handDisplay.SelectedCard;
+        if (card == null) return "";
+
+        // don't show preview if this region already got a card this round
+        if (gameManager != null && gameManager.IsTargetedThisRound(region)) return "";
+
+        card.GetModifiedDeltas(region, out float carbon, out float economy, out float stability);
+
+        float newC = Mathf.Clamp(region.CarbonLevel + carbon, 0f, 100f);
+        float newE = Mathf.Clamp(region.EconomyLevel + economy, 0f, 100f);
+        float newS = Mathf.Clamp(region.StabilityLevel + stability, 0f, 100f);
+
+        string goodHex = ColorUtility.ToHtmlStringRGB(previewGoodColor);
+        string badHex = ColorUtility.ToHtmlStringRGB(previewBadColor);
+
+        // carbon: lower is better, economy/stability: higher is better
+        string cColor = carbon <= 0 ? goodHex : badHex;
+        string eColor = economy >= 0 ? goodHex : badHex;
+        string sColor = stability >= 0 ? goodHex : badHex;
+
+        return $"\n<b>{card.policyName}:</b>"
+            + $" <color=#{cColor}>C:{newC:F0}</color>"
+            + $" <color=#{eColor}>E:{newE:F0}</color>"
+            + $" <color=#{sColor}>S:{newS:F0}</color>";
+    }
+
+    void UpdateGlobalStats(bool isGameOver)
+    {
+        if (globalStatsText == null || gameManager == null || regionManager == null) return;
+
+        if (isGameOver) { globalStatsText.gameObject.SetActive(false); return; }
+
+        var regions = regionManager.Regions;
+        if (regions == null || regions.Count == 0) { globalStatsText.gameObject.SetActive(false); return; }
+
+        float totalCarbon = 0f, totalEcon = 0f, totalStab = 0f;
+        int stressed = 0, crisis = 0;
+
+        foreach (var r in regions)
+        {
+            totalCarbon += r.CarbonLevel;
+            totalEcon += r.EconomyLevel;
+            totalStab += r.StabilityLevel;
+            if (r.CarbonLevel > 85f) crisis++;
+            else if (r.CarbonLevel > 70f) stressed++;
+        }
+
+        int count = regions.Count;
+        string stressedHex = ColorUtility.ToHtmlStringRGB(stressedTextColor);
+        string crisisHex = ColorUtility.ToHtmlStringRGB(crisisTextColor);
+
+        string text = $"Avg C: {totalCarbon / count:F0}  E: {totalEcon / count:F0}  S: {totalStab / count:F0}";
+        if (stressed > 0) text += $"  <color=#{stressedHex}>Stressed: {stressed}</color>";
+        if (crisis > 0) text += $"  <color=#{crisisHex}>Crisis: {crisis}</color>";
+
+        // event log
+        if (gameManager.EventLog.Count > 0)
+        {
+            text += "\n<size=85%>";
+            foreach (var entry in gameManager.EventLog)
+                text += $"\n  {entry}";
+            text += "</size>";
+        }
+
+        globalStatsText.text = text;
+        globalStatsText.gameObject.SetActive(true);
     }
 }

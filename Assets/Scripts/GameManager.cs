@@ -32,9 +32,16 @@ public class GameManager : MonoBehaviour
     public string LastEventText { get; private set; }
     public float LastEventTime { get; private set; }
 
+    // rolling log of recent events
+    public List<string> EventLog { get; private set; } = new List<string>();
+    private const int maxEventLog = 5;
+
     private EventData[] allEvents;
     private List<PolicyData> deck;
     private List<PolicyData> discardPile;
+
+    public int DeckCount => deck != null ? deck.Count : 0;
+    public int DiscardCount => discardPile != null ? discardPile.Count : 0;
     private int crisisCount;
     private bool chainCollapseWarning;
 
@@ -57,15 +64,28 @@ public class GameManager : MonoBehaviour
             StartGame();
         }
 
+        var kb = UnityEngine.InputSystem.Keyboard.current;
+        if (kb == null) return;
+
         // debug: press G to force game over for testing
-        if (UnityEngine.InputSystem.Keyboard.current != null
-            && UnityEngine.InputSystem.Keyboard.current.gKey.wasPressedThisFrame
-            && !GameOver)
+        if (kb.gKey.wasPressedThisFrame && !GameOver)
         {
             CalculateScore(regionManager.Regions);
             GameOver = true;
             GameOverReason = "[DEBUG] Forced game over.";
             Debug.Log("[GameManager] DEBUG: forced game over");
+        }
+
+        // press space to skip remaining actions and end round early
+        if (kb.spaceKey.wasPressedThisFrame && !GameOver && !PauseMenu.IsPaused && ActionsRemaining > 0)
+        {
+            // discard remaining hand
+            foreach (var card in CurrentHand)
+                discardPile.Add(card);
+            CurrentHand.Clear();
+            ActionsRemaining = 0;
+            Debug.Log("[GameManager] skipped remaining actions");
+            EndRound();
         }
     }
 
@@ -74,6 +94,7 @@ public class GameManager : MonoBehaviour
         GameOver = false;
         GameOverReason = null;
         crisisCount = 0;
+        EventLog.Clear();
         chainCollapseWarning = false;
         CurrentRound = 0;
         FinalScore = 0;
@@ -290,6 +311,12 @@ public class GameManager : MonoBehaviour
 
         LastEventText = $"{evt.eventName}\n{evt.description}\n({affected.Count} region{(affected.Count != 1 ? "s" : "")} affected)";
         LastEventTime = Time.time;
+
+        // add to rolling event log
+        string logEntry = $"R{CurrentRound}: {evt.eventName} ({affected.Count} region{(affected.Count != 1 ? "s" : "")})";
+        EventLog.Add(logEntry);
+        if (EventLog.Count > maxEventLog)
+            EventLog.RemoveAt(0);
     }
 
     bool CheckGameOver(List<Region> regions)

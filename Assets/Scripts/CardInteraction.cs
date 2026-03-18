@@ -20,7 +20,11 @@ public class CardInteraction : MonoBehaviour, IPointerEnterHandler, IPointerExit
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (eventData.button == PointerEventData.InputButton.Left && handDisplay != null)
+        if (handDisplay == null) return;
+
+        if (eventData.button == PointerEventData.InputButton.Left)
             handDisplay.OnCardClick(cardIndex);
+        else if (eventData.button == PointerEventData.InputButton.Right)
+            handDisplay.OnCardDeselect();
     }
 }
