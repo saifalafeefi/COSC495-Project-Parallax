@@ -26,14 +26,14 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1406784529821176}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: -0.6098685, w: 0.7925026}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8479483470453656990}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: -75.16}
 --- !u!135 &5853576109138472361
 SphereCollider:
   m_ObjectHideFlags: 0
@@ -68,18 +68,37 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RegionManager
   bakedRegionData: {fileID: 11400000, guid: d07e437b8be4f0c4596083c1b43cef0e, type: 2}
-  colorMergeThreshold: 0.05
-  normalThreshold: 0.3
+  colorMergeThreshold: 0.01
+  normalThreshold: 0.208
   highlightColor: {r: 1, g: 1, b: 1, a: 0.4}
   selectionColor: {r: 0.2, g: 0.8, b: 1, a: 0.5}
-  frozenLatitude: 60
-  tropicalLatitude: 25
-  aridLatitude: 40
-  coastalMaxTris: 35
-  neighborProximity: 0.15
-  stressedColor: {r: 1, g: 0.6, b: 0.2, a: 0.35}
-  crisisColor: {r: 1, g: 0.15, b: 0.1, a: 0.5}
+  frozenLatitude: 62
+  tropicalLatitude: 27
+  aridLatitude: 27.8
+  coastalMaxTris: 79
+  neighborProximity: 0.146
+  frozenTint: {r: 0.85, g: 0.92, b: 1, a: 1}
+  tropicalTint: {r: 0.2, g: 0.55, b: 0.15, a: 1}
+  aridTint: {r: 0.82, g: 0.72, b: 0.45, a: 1}
+  industrialTint: {r: 0.4, g: 0.38, b: 0.36, a: 1}
+  coastalTint: {r: 0.45, g: 0.7, b: 0.75, a: 1}
+  temperateTint: {r: 0.5, g: 0.65, b: 0.35, a: 1}
+  stressedTint: {r: 0.9, g: 0.55, b: 0.15, a: 1}
+  crisisTint: {r: 0.85, g: 0.15, b: 0.1, a: 1}
+  healthPulseSpeed: 2
+  crisisPulseSpeed: 3.5
   pulseSpeed: 10
+  stressedBorders:
+  - width: 0.012
+    height: 0.004
+    color: {r: 1, g: 0.6, b: 0.2, a: 0.4}
+  crisisBorders:
+  - width: 0.01
+    height: 0.004
+    color: {r: 1, g: 0.2, b: 0.1, a: 0.5}
+  - width: 0.02
+    height: 0.006
+    color: {r: 1, g: 0.1, b: 0.05, a: 0.25}
 --- !u!1 &2100348791094012262
 GameObject:
   m_ObjectHideFlags: 0
@@ -123,8 +142,8 @@ LODGroup:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2100348791094012262}
   serializedVersion: 2
-  m_LocalReferencePoint: {x: 0.008528471, y: 0.006518841, z: -0.034915924}
-  m_Size: 1
+  m_LocalReferencePoint: {x: 0.008528471, y: 0.0065186024, z: -0.034915924}
+  m_Size: 10.102257
   m_FadeMode: 0
   m_AnimateCrossFading: 0
   m_LastLODIsBillboard: 0
@@ -305,7 +324,7 @@ MeshRenderer:
   m_StaticBatchRoot: {fileID: 0}
   m_ProbeAnchor: {fileID: 0}
   m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
+  m_ScaleInLightmap: 0.19554627
   m_ReceiveGI: 1
   m_PreserveUVs: 0
   m_IgnoreNormalsForChartDetection: 0
@@ -395,7 +414,7 @@ MeshRenderer:
   m_StaticBatchRoot: {fileID: 0}
   m_ProbeAnchor: {fileID: 0}
   m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
+  m_ScaleInLightmap: 0.13688238
   m_ReceiveGI: 1
   m_PreserveUVs: 0
   m_IgnoreNormalsForChartDetection: 0

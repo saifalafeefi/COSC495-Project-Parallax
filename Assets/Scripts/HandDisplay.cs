@@ -33,6 +33,8 @@ public class HandDisplay : MonoBehaviour
     [SerializeField] private float bounceSpeed = 3f;
     [SerializeField] private float bounceAmount = 6f;
     [SerializeField] private float selectedColorSpeed = 2.5f;
+    [SerializeField] private float fanAngle = 5f;
+    [SerializeField] private float fanYOffset = 20f;
 
     private GameManager gameManager;
     private RegionManager regionManager;
@@ -167,6 +169,10 @@ public class HandDisplay : MonoBehaviour
             float targetX = startX + i * (cardWidth + cardSpacing);
             float targetY;
             float targetScale;
+            float targetRotation;
+
+            // fan spread: -1 for left, 0 for center, +1 for right
+            float fanPos = count > 1 ? (i - (count - 1) / 2f) / ((count - 1) / 2f) : 0f;
 
             if (i == selectedIndex)
             {
@@ -174,19 +180,23 @@ public class HandDisplay : MonoBehaviour
                 float bounce = Mathf.Sin(Time.time * bounceSpeed) * bounceAmount;
                 targetY = selectedY + bounce;
                 targetScale = selectedScale;
+                targetRotation = 0f;
             }
             else if (i == hoveredIndex)
             {
                 targetY = hoverY;
                 targetScale = hoverScale;
+                targetRotation = 0f;
             }
             else
             {
-                targetY = restY;
+                // fan arc: outer cards dip lower
+                targetY = restY - Mathf.Abs(fanPos) * fanYOffset;
                 targetScale = 1f;
+                targetRotation = -fanPos * fanAngle;
             }
 
-            // lerp position and scale
+            // lerp position, scale, and rotation
             float t = Time.deltaTime * tweenSpeed;
             var pos = rect.anchoredPosition;
             pos.x = Mathf.Lerp(pos.x, targetX, t);
@@ -197,6 +207,11 @@ public class HandDisplay : MonoBehaviour
             float curScale = s.x;
             float newScale = Mathf.Lerp(curScale, targetScale, t);
             rect.localScale = new Vector3(newScale, newScale, 1f);
+
+            float curRot = rect.localEulerAngles.z;
+            if (curRot > 180f) curRot -= 360f;
+            float newRot = Mathf.Lerp(curRot, targetRotation, t);
+            rect.localEulerAngles = new Vector3(0f, 0f, newRot);
 
             // border color: tween between rarity color and glow when selected
             if (i < cardBorders.Count && cardBorders[i] != null)

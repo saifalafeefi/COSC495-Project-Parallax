@@ -53,6 +53,20 @@ public class RegionManager : MonoBehaviour
 
     private Dictionary<int, Region> triangleToRegion;
 
+    [Header("Region Trait Tints")]
+    [SerializeField] private Color frozenTint = new Color(0.85f, 0.92f, 1f);
+    [SerializeField] private Color tropicalTint = new Color(0.2f, 0.55f, 0.15f);
+    [SerializeField] private Color aridTint = new Color(0.82f, 0.72f, 0.45f);
+    [SerializeField] private Color industrialTint = new Color(0.4f, 0.38f, 0.36f);
+    [SerializeField] private Color coastalTint = new Color(0.45f, 0.7f, 0.75f);
+    [SerializeField] private Color temperateTint = new Color(0.5f, 0.65f, 0.35f);
+
+    [Header("Carbon Health Pulse")]
+    [SerializeField] private Color stressedTint = new Color(0.9f, 0.55f, 0.15f);
+    [SerializeField] private Color crisisTint = new Color(0.85f, 0.15f, 0.1f);
+    [SerializeField] private float healthPulseSpeed = 2f;
+    [SerializeField] private float crisisPulseSpeed = 3.5f;
+
     [Header("Status Pulse")]
     [SerializeField] private float pulseSpeed = 2.5f;
     [SerializeField] private StatusBorderConfig[] stressedBorders = new StatusBorderConfig[]
@@ -75,6 +89,10 @@ public class RegionManager : MonoBehaviour
     // one overlay object per border ring per status level
     private List<PulseLayer> stressedLayers = new List<PulseLayer>();
     private List<PulseLayer> crisisLayers = new List<PulseLayer>();
+
+    // trait tint overlay — one object per region with its own material
+    private List<(Region region, MeshRenderer renderer, Material mat)> tintEntries
+        = new List<(Region, MeshRenderer, Material)>();
 
     private Vector3[] allVertices;
     private int[] allTriangles;
@@ -122,11 +140,13 @@ public class RegionManager : MonoBehaviour
             RunDiscovery();
 
         SetupHighlightOverlay();
+        SetupTintOverlay();
     }
 
     void Update()
     {
         UpdateStatusPulse();
+        UpdateTintColors();
     }
 
     void UpdateStatusPulse()
@@ -732,6 +752,81 @@ public class RegionManager : MonoBehaviour
     {
         // the remapped index IS an original vertex index (the first one found at that position)
         return allVertices[remappedIdx];
+    }
+
+    Color GetTraitTint(RegionTrait trait)
+    {
+        switch (trait)
+        {
+            case RegionTrait.Frozen: return frozenTint;
+            case RegionTrait.Tropical: return tropicalTint;
+            case RegionTrait.Arid: return aridTint;
+            case RegionTrait.Industrial: return industrialTint;
+            case RegionTrait.Coastal: return coastalTint;
+            case RegionTrait.Temperate: return temperateTint;
+            default: return temperateTint;
+        }
+    }
+
+    void SetupTintOverlay()
+    {
+        if (Regions == null || Regions.Count == 0) return;
+
+        tintEntries.Clear();
+
+        foreach (var region in Regions)
+        {
+            if (region.FillMesh == null) continue;
+
+            var obj = new GameObject($"Tint_{region.RegionName}");
+            obj.transform.SetParent(transform, false);
+
+            var mf = obj.AddComponent<MeshFilter>();
+            mf.mesh = region.FillMesh;
+
+            var mr = obj.AddComponent<MeshRenderer>();
+            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            mat.SetColor("_BaseColor", GetTraitTint(region.Trait));
+            mat.SetFloat("_Smoothness", 0f);
+            mat.SetFloat("_Metallic", 0f);
+            mat.SetFloat("_Surface", 0);
+            mat.SetInt("_ZWrite", 1);
+            mat.renderQueue = 2998;
+            mr.material = mat;
+
+            tintEntries.Add((region, mr, mat));
+        }
+    }
+
+    void UpdateTintColors()
+    {
+        if (tintEntries.Count == 0) return;
+
+        float pulse = (Mathf.Sin(Time.time * healthPulseSpeed) + 1f) / 2f;
+        float fastPulse = (Mathf.Sin(Time.time * crisisPulseSpeed) + 1f) / 2f;
+
+        foreach (var (region, renderer, mat) in tintEntries)
+        {
+            Color baseColor = GetTraitTint(region.Trait);
+            Color finalColor;
+
+            if (region.CarbonLevel > 85f)
+            {
+                float blend = Mathf.Lerp(0.3f, 0.7f, fastPulse);
+                finalColor = Color.Lerp(baseColor, crisisTint, blend);
+            }
+            else if (region.CarbonLevel > 70f)
+            {
+                float blend = Mathf.Lerp(0.15f, 0.4f, pulse);
+                finalColor = Color.Lerp(baseColor, stressedTint, blend);
+            }
+            else
+            {
+                finalColor = baseColor;
+            }
+
+            mat.SetColor("_BaseColor", finalColor);
+        }
     }
 
     void SetupHighlightOverlay()
