@@ -18,5 +18,5 @@ MonoBehaviour:
   carbonDelta: 0
   economyDelta: 0
   stabilityDelta: -12
-  targetAll: 0
+  targetAll: 1
   randomTargetCount: 2

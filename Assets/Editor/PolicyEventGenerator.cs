@@ -113,7 +113,7 @@ public class PolicyEventGenerator
             12f, 15f, 0f, false, 1);
 
         CreateEvent(folder, "Volcanic Eruption", "Volcanic ash disrupts air travel and agriculture.",
-            new RegionTrait[] { }, 6f, -8f, 0f, false, 1);
+            new RegionTrait[] { }, 6f, -8f, 0f, true, 1);
 
         CreateEvent(folder, "International Summit", "World leaders agree to modest emission targets.",
             new RegionTrait[] { }, -4f, 0f, 3f, true, 0);
@@ -128,7 +128,7 @@ public class PolicyEventGenerator
             0f, -10f, -5f, false, 0);
 
         CreateEvent(folder, "Refugee Crisis", "Climate refugees overwhelm neighboring regions.",
-            new RegionTrait[] { }, 0f, 0f, -12f, false, 2);
+            new RegionTrait[] { }, 0f, 0f, -12f, true, 2);
 
         CreateEvent(folder, "Carbon Sink Discovery", "Scientists find a massive natural carbon sink.",
             new RegionTrait[] { RegionTrait.Tropical },
