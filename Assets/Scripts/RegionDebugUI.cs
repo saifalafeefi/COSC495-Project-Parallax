@@ -68,7 +68,7 @@ public class RegionDebugUI : MonoBehaviour
             }
             else
             {
-                gameStateText.text = $"Round {gameManager.CurrentRound}/10   Actions: {gameManager.ActionsRemaining}/3   Deck: {gameManager.DeckCount}  Discard: {gameManager.DiscardCount}";
+                gameStateText.text = $"Round {gameManager.CurrentRound}/10   Actions: {gameManager.ActionsRemaining}/{gameManager.HandSize}   Deck: {gameManager.DeckCount}  Discard: {gameManager.DiscardCount}";
                 gameStateText.gameObject.SetActive(true);
             }
         }

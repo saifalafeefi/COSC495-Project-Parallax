@@ -17,11 +17,30 @@ public class RegionManager : MonoBehaviour
 
     [Tooltip("Color of the highlight glow when hovering a region.")]
     [SerializeField]
-    private Color highlightColor = new Color(1f, 1f, 1f, 0.4f);
+    private Color highlightColor = new Color(1f, 1f, 1f, 0.15f);
 
     [Tooltip("Color of the selection glow for the currently selected region.")]
     [SerializeField]
-    private Color selectionColor = new Color(0.2f, 0.8f, 1f, 0.5f);
+    private Color selectionColor = new Color(0.2f, 0.8f, 1f, 0.3f);
+
+    [Header("Selection Pulse")]
+    [Tooltip("minimum opacity of the selection pulse")]
+    [SerializeField, Range(0f, 1f)]
+    private float selectionPulseMin = 0.1f;
+
+    [Tooltip("maximum opacity of the selection pulse")]
+    [SerializeField, Range(0f, 1f)]
+    private float selectionPulseMax = 0.3f;
+
+    [Tooltip("speed of the selection pulse breathing")]
+    [SerializeField, Range(0.5f, 5f)]
+    private float selectionPulseSpeed = 2f;
+
+    [Header("Highlight Overlay")]
+    [Tooltip("how far the highlight floats above the region surface. 0 = flush.")]
+    [SerializeField, Range(0f, 100f)]
+    private float highlightHeight = 1f;
+
 
     [Header("Trait Assignment Thresholds")]
     [Tooltip("latitude above this is frozen (absolute value)")]
@@ -53,49 +72,39 @@ public class RegionManager : MonoBehaviour
 
     private Dictionary<int, Region> triangleToRegion;
 
-    [Header("Region Trait Tints")]
-    [SerializeField] private Color frozenTint = new Color(0.85f, 0.92f, 1f);
-    [SerializeField] private Color tropicalTint = new Color(0.2f, 0.55f, 0.15f);
-    [SerializeField] private Color aridTint = new Color(0.82f, 0.72f, 0.45f);
-    [SerializeField] private Color industrialTint = new Color(0.4f, 0.38f, 0.36f);
-    [SerializeField] private Color coastalTint = new Color(0.45f, 0.7f, 0.75f);
-    [SerializeField] private Color temperateTint = new Color(0.5f, 0.65f, 0.35f);
 
-    [Header("Carbon Health Pulse")]
-    [SerializeField] private Color stressedTint = new Color(0.9f, 0.55f, 0.15f);
-    [SerializeField] private Color crisisTint = new Color(0.85f, 0.15f, 0.1f);
-    [SerializeField] private float healthPulseSpeed = 2f;
-    [SerializeField] private float crisisPulseSpeed = 3.5f;
 
     [Header("Status Pulse")]
     [SerializeField] private float pulseSpeed = 2.5f;
     [SerializeField] private StatusBorderConfig[] stressedBorders = new StatusBorderConfig[]
     {
-        new StatusBorderConfig { width = 0.012f, height = 0.004f, color = new Color(1f, 0.6f, 0.2f, 0.4f) }
+        new StatusBorderConfig { width = 10f, height = 40f, color = new Color(1f, 0.6f, 0.2f, 0.4f) }
     };
     [SerializeField] private StatusBorderConfig[] crisisBorders = new StatusBorderConfig[]
     {
-        new StatusBorderConfig { width = 0.010f, height = 0.004f, color = new Color(1f, 0.2f, 0.1f, 0.5f) },
-        new StatusBorderConfig { width = 0.020f, height = 0.006f, color = new Color(1f, 0.1f, 0.05f, 0.25f) }
+        new StatusBorderConfig { width = 10f, height = 40f, color = new Color(1f, 0.2f, 0.1f, 0.5f) },
+        new StatusBorderConfig { width = 20f, height = 60f, color = new Color(1f, 0.1f, 0.05f, 0.25f) }
     };
 
     private GameObject highlightObject;
     private MeshFilter highlightMeshFilter;
+    private Material highlightMat;
 
     private GameObject selectionObject;
     private MeshFilter selectionMeshFilter;
+    private Material selectionMat;
     private Region currentlyShownSelection;
 
     // one overlay object per border ring per status level
     private List<PulseLayer> stressedLayers = new List<PulseLayer>();
     private List<PulseLayer> crisisLayers = new List<PulseLayer>();
 
-    // trait tint overlay — one object per region with its own material
-    private List<(Region region, MeshRenderer renderer, Material mat)> tintEntries
-        = new List<(Region, MeshRenderer, Material)>();
 
     private Vector3[] allVertices;
     private int[] allTriangles;
+
+    // the actual transform of the mesh object (may be a child with its own rotation/scale)
+    private Transform meshTransform;
 
     // cached outline meshes per region, keyed by (width, height) so we don't rebuild every frame
     private Dictionary<(float, float), Dictionary<Region, Mesh>> outlineMeshCache
@@ -104,9 +113,11 @@ public class RegionManager : MonoBehaviour
     [System.Serializable]
     public struct StatusBorderConfig
     {
-        [Tooltip("thickness of the border line")]
+        [Tooltip("thickness of the border line (whole number, same scale as highlight)")]
+        [Range(1f, 1000f)]
         public float width;
-        [Tooltip("how far the border floats above the surface")]
+        [Tooltip("how far the border floats above the surface (whole number, same scale as highlight)")]
+        [Range(0f, 100f)]
         public float height;
         public Color color;
     }
@@ -140,13 +151,23 @@ public class RegionManager : MonoBehaviour
             RunDiscovery();
 
         SetupHighlightOverlay();
-        SetupTintOverlay();
     }
 
     void Update()
     {
+        // hover: static semi-transparent overlay
+        if (highlightMat != null)
+            highlightMat.SetColor("_BaseColor", highlightColor);
+
+        // selection: breathing pulse between min and max opacity
+        if (selectionMat != null)
+        {
+            float pulse = (Mathf.Sin(Time.time * selectionPulseSpeed) + 1f) / 2f;
+            float alpha = Mathf.Lerp(selectionPulseMin, selectionPulseMax, pulse);
+            selectionMat.SetColor("_BaseColor", new Color(selectionColor.r, selectionColor.g, selectionColor.b, alpha));
+        }
+
         UpdateStatusPulse();
-        UpdateTintColors();
     }
 
     void UpdateStatusPulse()
@@ -233,20 +254,25 @@ public class RegionManager : MonoBehaviour
 
     void SetupMeshCollider()
     {
+        // remove any existing colliders on this object
         var sphere = GetComponent<SphereCollider>();
         if (sphere != null) Destroy(sphere);
-
         var existingMC = GetComponent<MeshCollider>();
         if (existingMC != null) Destroy(existingMC);
 
         var meshFilter = GetComponentInChildren<MeshFilter>();
         if (meshFilter != null)
         {
+            meshTransform = meshFilter.transform;
             earthMesh = meshFilter.sharedMesh;
             allVertices = earthMesh.vertices;
             allTriangles = earthMesh.triangles;
-            var mc = gameObject.AddComponent<MeshCollider>();
-            mc.sharedMesh = earthMesh;
+
+            // put collider on the mesh object itself so raycasts align with the actual geometry
+            var childMC = meshTransform.GetComponent<MeshCollider>();
+            if (childMC == null)
+                childMC = meshTransform.gameObject.AddComponent<MeshCollider>();
+            childMC.sharedMesh = earthMesh;
         }
     }
 
@@ -311,6 +337,7 @@ public class RegionManager : MonoBehaviour
         var meshFilter = GetComponentInChildren<MeshFilter>();
         if (meshFilter != null)
         {
+            meshTransform = meshFilter.transform;
             earthMesh = meshFilter.sharedMesh;
             allVertices = earthMesh.vertices;
             allTriangles = earthMesh.triangles;
@@ -327,6 +354,184 @@ public class RegionManager : MonoBehaviour
             return;
         }
 
+        // if mesh has multiple submeshes (one per blender material), use material-based discovery
+        if (earthMesh.subMeshCount > 1)
+        {
+            RunMaterialDiscovery();
+            return;
+        }
+
+        // single-material mesh: fall back to texture-based flood fill
+        RunTextureDiscovery();
+    }
+
+    // reads region colors from blender materials (one submesh per material)
+    void RunMaterialDiscovery()
+    {
+        var renderer = GetComponentInChildren<Renderer>();
+        if (renderer == null)
+        {
+            Debug.LogError("[RegionManager] no Renderer found on any child");
+            return;
+        }
+
+        var materials = renderer.sharedMaterials;
+        int triCount = allTriangles.Length / 3;
+        var remap = BuildVertexRemap(allVertices);
+
+        Regions = new List<Region>();
+        triangleToRegion = new Dictionary<int, Region>();
+        var usedNames = new HashSet<string>();
+
+        Debug.Log($"[RegionManager] material-based discovery: {earthMesh.subMeshCount} submeshes found");
+
+        for (int sub = 0; sub < earthMesh.subMeshCount; sub++)
+        {
+            // read the material color for this submesh
+            Color matColor = Color.gray;
+            string matName = "";
+            if (sub < materials.Length && materials[sub] != null)
+            {
+                matName = materials[sub].name;
+                if (materials[sub].HasProperty("_BaseColor"))
+                    matColor = materials[sub].GetColor("_BaseColor");
+                else if (materials[sub].HasProperty("_Color"))
+                    matColor = materials[sub].GetColor("_Color");
+            }
+
+            // skip ocean materials by name or color
+            if (matName.ToLower().Contains("ocean") || matName.ToLower().Contains("water") || IsOceanColor(matColor))
+            {
+                Debug.Log($"[RegionManager] skipping ocean submesh {sub} ({matName})");
+                continue;
+            }
+
+            // figure out which global triangle indices belong to this submesh
+            var subMeshDesc = earthMesh.GetSubMesh(sub);
+            int startTri = subMeshDesc.indexStart / 3;
+            int subTriCount = subMeshDesc.indexCount / 3;
+
+            // gather all triangles in this submesh
+            var subTris = new HashSet<int>();
+            for (int t = startTri; t < startTri + subTriCount; t++)
+                subTris.Add(t);
+
+            if (subTris.Count < 3)
+            {
+                Debug.Log($"[RegionManager] skipping submesh {sub} ({matName}) — only {subTris.Count} valid tris");
+                continue;
+            }
+
+            // build adjacency within this submesh so disconnected patches become separate regions
+            var subEdgeToTris = new Dictionary<(int, int), List<int>>();
+            foreach (int t in subTris)
+            {
+                int r0 = remap[allTriangles[t * 3]];
+                int r1 = remap[allTriangles[t * 3 + 1]];
+                int r2 = remap[allTriangles[t * 3 + 2]];
+                AddEdge(subEdgeToTris, r0, r1, t);
+                AddEdge(subEdgeToTris, r1, r2, t);
+                AddEdge(subEdgeToTris, r2, r0, t);
+            }
+
+            var subAdj = new Dictionary<int, List<int>>();
+            foreach (int t in subTris)
+                subAdj[t] = new List<int>();
+
+            foreach (var adjTris in subEdgeToTris.Values)
+            {
+                for (int a = 0; a < adjTris.Count; a++)
+                    for (int b = a + 1; b < adjTris.Count; b++)
+                    {
+                        subAdj[adjTris[a]].Add(adjTris[b]);
+                        subAdj[adjTris[b]].Add(adjTris[a]);
+                    }
+            }
+
+            // flood fill to find connected components within this submesh
+            var visited = new HashSet<int>();
+            foreach (int seedTri in subTris)
+            {
+                if (visited.Contains(seedTri)) continue;
+
+                var component = new List<int>();
+                var queue = new Queue<int>();
+                queue.Enqueue(seedTri);
+                visited.Add(seedTri);
+
+                while (queue.Count > 0)
+                {
+                    int cur = queue.Dequeue();
+                    component.Add(cur);
+                    foreach (int neighbor in subAdj[cur])
+                    {
+                        if (!visited.Contains(neighbor))
+                        {
+                            visited.Add(neighbor);
+                            queue.Enqueue(neighbor);
+                        }
+                    }
+                }
+
+                if (component.Count < 3) continue;
+
+                string name = GenerateUniqueName(matColor, component[0], usedNames);
+                usedNames.Add(name);
+
+                var region = new Region(name, matColor, component);
+                region.Trait = TraitFromMaterialName(matName);
+                region.HighlightMesh = BuildHighlightMesh(component);
+                region.FillMesh = BuildFillMesh(component);
+                Regions.Add(region);
+
+                foreach (int tri in component)
+                    triangleToRegion[tri] = region;
+
+                Debug.Log($"[RegionManager] region '{name}' from material '{matName}' — trait: {region.Trait} — {component.Count} tris");
+            }
+        }
+
+        // traits already assigned from material names above
+        foreach (var region in Regions)
+        {
+            if (region.Trait == RegionTrait.Industrial)
+                region.CarbonLevel = 60f;
+        }
+
+        // build neighbor graph from triangle adjacency
+        var edgeToTris = new Dictionary<(int, int), List<int>>();
+        for (int t = 0; t < triCount; t++)
+        {
+            if (!triangleToRegion.ContainsKey(t)) continue;
+            int r0 = remap[allTriangles[t * 3]];
+            int r1 = remap[allTriangles[t * 3 + 1]];
+            int r2 = remap[allTriangles[t * 3 + 2]];
+            AddEdge(edgeToTris, r0, r1, t);
+            AddEdge(edgeToTris, r1, r2, t);
+            AddEdge(edgeToTris, r2, r0, t);
+        }
+
+        var adjacency = new List<int>[triCount];
+        for (int t = 0; t < triCount; t++)
+            adjacency[t] = new List<int>();
+
+        foreach (var tris in edgeToTris.Values)
+        {
+            for (int a = 0; a < tris.Count; a++)
+                for (int b = a + 1; b < tris.Count; b++)
+                {
+                    adjacency[tris[a]].Add(tris[b]);
+                    adjacency[tris[b]].Add(tris[a]);
+                }
+        }
+
+        BuildNeighborGraph(adjacency, triCount);
+        Debug.Log($"[RegionManager] material discovery complete: {Regions.Count} regions");
+    }
+
+    // original texture-based flood fill for single-material meshes
+    void RunTextureDiscovery()
+    {
         var renderer = GetComponentInChildren<Renderer>();
         if (renderer == null)
         {
@@ -501,6 +706,29 @@ public class RegionManager : MonoBehaviour
         BuildNeighborGraph(adjacency, triCount);
     }
 
+    // reads trait directly from the blender material name
+    RegionTrait TraitFromMaterialName(string matName)
+    {
+        string lower = matName.ToLower();
+        if (lower.Contains("frozen") || lower.Contains("ice") || lower.Contains("arctic"))
+            return RegionTrait.Frozen;
+        if (lower.Contains("tropical") || lower.Contains("jungle"))
+            return RegionTrait.Tropical;
+        if (lower.Contains("arid") || lower.Contains("desert") || lower.Contains("sand"))
+            return RegionTrait.Arid;
+        if (lower.Contains("industrial") || lower.Contains("urban"))
+            return RegionTrait.Industrial;
+        if (lower.Contains("coastal") || lower.Contains("coast"))
+            return RegionTrait.Coastal;
+        if (lower.Contains("temperate") || lower.Contains("forest"))
+            return RegionTrait.Temperate;
+
+        // fallback to temperate if name doesn't match
+        Debug.LogWarning($"[RegionManager] unrecognized trait in material name '{matName}', defaulting to Temperate");
+        return RegionTrait.Temperate;
+    }
+
+    // used by texture-based discovery (old marketplace prefab)
     RegionTrait AssignTrait(Region region)
     {
         // get the average latitude of this region
@@ -640,66 +868,39 @@ public class RegionManager : MonoBehaviour
 
     Mesh BuildHighlightMesh(List<int> tris)
     {
-        return BuildOutlineMesh(tris, 0.006f, 0.003f);
+        // full fill overlay using the region's triangles
+        float offset = highlightHeight * 0.00001f;
+        return BuildFillMeshFromTris(tris, offset);
     }
 
-    Mesh BuildOutlineMesh(List<int> tris, float outlineWidth, float outlineHeight)
+    Mesh BuildFillMeshFromTris(List<int> tris, float offset)
     {
-        // build an outline mesh from the boundary edges of this region
-        var remap = BuildVertexRemap(allVertices);
+        var verts = new List<Vector3>();
+        var indices = new List<int>();
 
-        // find boundary edges: edges where only one side belongs to this region
-        var edgeCount = new Dictionary<(int, int), int>();
         foreach (int t in tris)
         {
-            int r0 = remap[allTriangles[t * 3]];
-            int r1 = remap[allTriangles[t * 3 + 1]];
-            int r2 = remap[allTriangles[t * 3 + 2]];
+            int i0 = allTriangles[t * 3];
+            int i1 = allTriangles[t * 3 + 1];
+            int i2 = allTriangles[t * 3 + 2];
 
-            IncrementEdge(edgeCount, r0, r1);
-            IncrementEdge(edgeCount, r1, r2);
-            IncrementEdge(edgeCount, r2, r0);
-        }
+            Vector3 v0 = allVertices[i0];
+            Vector3 v1 = allVertices[i1];
+            Vector3 v2 = allVertices[i2];
 
-        // edges that appear only once are boundary edges
-        var newVerts = new List<Vector3>();
-        var newTris = new List<int>();
+            int baseIdx = verts.Count;
+            verts.Add(v0 + v0.normalized * offset);
+            verts.Add(v1 + v1.normalized * offset);
+            verts.Add(v2 + v2.normalized * offset);
 
-        foreach (var (edge, count) in edgeCount)
-        {
-            if (count > 1) continue;
-
-            // find the actual vertex positions for this edge
-            Vector3 a = FindVertexByRemap(remap, edge.Item1);
-            Vector3 b = FindVertexByRemap(remap, edge.Item2);
-
-            // push both points outward from sphere center
-            Vector3 aOut = a + a.normalized * outlineHeight;
-            Vector3 bOut = b + b.normalized * outlineHeight;
-
-            // widen the edge into a thin quad strip
-            Vector3 mid = ((a + b) / 2f).normalized;
-            Vector3 edgeDir = (b - a).normalized;
-            Vector3 widthDir = Vector3.Cross(edgeDir, mid).normalized * outlineWidth;
-
-            int baseIdx = newVerts.Count;
-            newVerts.Add(aOut - widthDir);
-            newVerts.Add(aOut + widthDir);
-            newVerts.Add(bOut + widthDir);
-            newVerts.Add(bOut - widthDir);
-
-            // two triangles for the quad
-            newTris.Add(baseIdx);
-            newTris.Add(baseIdx + 1);
-            newTris.Add(baseIdx + 2);
-            newTris.Add(baseIdx);
-            newTris.Add(baseIdx + 2);
-            newTris.Add(baseIdx + 3);
+            indices.Add(baseIdx);
+            indices.Add(baseIdx + 1);
+            indices.Add(baseIdx + 2);
         }
 
         var mesh = new Mesh();
-        mesh.SetVertices(newVerts);
-        mesh.SetTriangles(newTris, 0);
+        mesh.SetVertices(verts);
+        mesh.SetTriangles(indices, 0);
         mesh.RecalculateNormals();
         return mesh;
     }
@@ -707,7 +908,7 @@ public class RegionManager : MonoBehaviour
     Mesh BuildFillMesh(List<int> tris)
     {
         // solid fill mesh: duplicates each triangle pushed slightly outward from the sphere
-        float offset = 0.002f;
+        float offset = 0.001f;
         var verts = new List<Vector3>();
         var indices = new List<int>();
 
@@ -739,6 +940,75 @@ public class RegionManager : MonoBehaviour
         return mesh;
     }
 
+    // used by stressed/crisis pulse borders
+    // used by stressed/crisis pulse borders — values come in as whole numbers
+    // width expands triangles outward from region center along the sphere surface
+    // height pushes them above the surface
+    Mesh BuildOutlineMesh(List<int> tris, float outlineWidth, float outlineHeight)
+    {
+        float scaledHeight = outlineHeight * 0.00001f;
+        float scaledWidth = outlineWidth * 0.001f;
+
+        // find the region center to push vertices away from
+        Vector3 regionCenter = Vector3.zero;
+        foreach (int t in tris)
+        {
+            int i0 = allTriangles[t * 3], i1 = allTriangles[t * 3 + 1], i2 = allTriangles[t * 3 + 2];
+            regionCenter += (allVertices[i0] + allVertices[i1] + allVertices[i2]) / 3f;
+        }
+        regionCenter = (regionCenter / tris.Count).normalized;
+
+        var verts = new List<Vector3>();
+        var indices = new List<int>();
+
+        foreach (int t in tris)
+        {
+            int i0 = allTriangles[t * 3];
+            int i1 = allTriangles[t * 3 + 1];
+            int i2 = allTriangles[t * 3 + 2];
+
+            Vector3 v0 = allVertices[i0];
+            Vector3 v1 = allVertices[i1];
+            Vector3 v2 = allVertices[i2];
+
+            // expand: push each vertex away from region center along the sphere surface
+            // then re-project onto the sphere at the original radius
+            v0 = ExpandOnSphere(v0, regionCenter, scaledWidth);
+            v1 = ExpandOnSphere(v1, regionCenter, scaledWidth);
+            v2 = ExpandOnSphere(v2, regionCenter, scaledWidth);
+
+            // push above surface
+            int baseIdx = verts.Count;
+            verts.Add(v0 + v0.normalized * scaledHeight);
+            verts.Add(v1 + v1.normalized * scaledHeight);
+            verts.Add(v2 + v2.normalized * scaledHeight);
+
+            indices.Add(baseIdx);
+            indices.Add(baseIdx + 1);
+            indices.Add(baseIdx + 2);
+        }
+
+        var mesh = new Mesh();
+        mesh.SetVertices(verts);
+        mesh.SetTriangles(indices, 0);
+        mesh.RecalculateNormals();
+        return mesh;
+    }
+
+    // moves a vertex away from center along the sphere surface by amount
+    Vector3 ExpandOnSphere(Vector3 vertex, Vector3 center, float amount)
+    {
+        float radius = vertex.magnitude;
+        Vector3 dir = vertex.normalized;
+
+        // direction away from center, projected onto the sphere surface tangent
+        Vector3 awayDir = (dir - center * Vector3.Dot(dir, center)).normalized;
+
+        // move along the surface then re-project onto the sphere
+        Vector3 expanded = (dir + awayDir * amount).normalized * radius;
+        return expanded;
+    }
+
     void IncrementEdge(Dictionary<(int, int), int> edgeCount, int v0, int v1)
     {
         var key = v0 < v1 ? (v0, v1) : (v1, v0);
@@ -754,86 +1024,14 @@ public class RegionManager : MonoBehaviour
         return allVertices[remappedIdx];
     }
 
-    Color GetTraitTint(RegionTrait trait)
-    {
-        switch (trait)
-        {
-            case RegionTrait.Frozen: return frozenTint;
-            case RegionTrait.Tropical: return tropicalTint;
-            case RegionTrait.Arid: return aridTint;
-            case RegionTrait.Industrial: return industrialTint;
-            case RegionTrait.Coastal: return coastalTint;
-            case RegionTrait.Temperate: return temperateTint;
-            default: return temperateTint;
-        }
-    }
-
-    void SetupTintOverlay()
-    {
-        if (Regions == null || Regions.Count == 0) return;
-
-        tintEntries.Clear();
-
-        foreach (var region in Regions)
-        {
-            if (region.FillMesh == null) continue;
-
-            var obj = new GameObject($"Tint_{region.RegionName}");
-            obj.transform.SetParent(transform, false);
-
-            var mf = obj.AddComponent<MeshFilter>();
-            mf.mesh = region.FillMesh;
-
-            var mr = obj.AddComponent<MeshRenderer>();
-            var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
-            mat.SetColor("_BaseColor", GetTraitTint(region.Trait));
-            mat.SetFloat("_Smoothness", 0f);
-            mat.SetFloat("_Metallic", 0f);
-            mat.SetFloat("_Surface", 0);
-            mat.SetInt("_ZWrite", 1);
-            mat.renderQueue = 2998;
-            mr.material = mat;
-
-            tintEntries.Add((region, mr, mat));
-        }
-    }
-
-    void UpdateTintColors()
-    {
-        if (tintEntries.Count == 0) return;
-
-        float pulse = (Mathf.Sin(Time.time * healthPulseSpeed) + 1f) / 2f;
-        float fastPulse = (Mathf.Sin(Time.time * crisisPulseSpeed) + 1f) / 2f;
-
-        foreach (var (region, renderer, mat) in tintEntries)
-        {
-            Color baseColor = GetTraitTint(region.Trait);
-            Color finalColor;
-
-            if (region.CarbonLevel > 85f)
-            {
-                float blend = Mathf.Lerp(0.3f, 0.7f, fastPulse);
-                finalColor = Color.Lerp(baseColor, crisisTint, blend);
-            }
-            else if (region.CarbonLevel > 70f)
-            {
-                float blend = Mathf.Lerp(0.15f, 0.4f, pulse);
-                finalColor = Color.Lerp(baseColor, stressedTint, blend);
-            }
-            else
-            {
-                finalColor = baseColor;
-            }
-
-            mat.SetColor("_BaseColor", finalColor);
-        }
-    }
-
     void SetupHighlightOverlay()
     {
+        // parent overlays under the mesh object so they inherit its rotation/scale
+        Transform overlayParent = meshTransform != null ? meshTransform : transform;
+
         // hover highlight (subtle white glow)
         highlightObject = new GameObject("RegionHighlight");
-        highlightObject.transform.SetParent(transform, false);
+        highlightObject.transform.SetParent(overlayParent, false);
 
         highlightMeshFilter = highlightObject.AddComponent<MeshFilter>();
         var highlightRenderer = highlightObject.AddComponent<MeshRenderer>();
@@ -847,12 +1045,13 @@ public class RegionManager : MonoBehaviour
         hoverMat.SetInt("_ZWrite", 0);
         hoverMat.renderQueue = 3000;
 
-        highlightRenderer.material = hoverMat;
+        highlightMat = hoverMat;
+        highlightRenderer.material = highlightMat;
         highlightObject.SetActive(false);
 
         // selection highlight (stronger colored glow, renders behind hover)
         selectionObject = new GameObject("RegionSelection");
-        selectionObject.transform.SetParent(transform, false);
+        selectionObject.transform.SetParent(overlayParent, false);
 
         selectionMeshFilter = selectionObject.AddComponent<MeshFilter>();
         var selectionRenderer = selectionObject.AddComponent<MeshRenderer>();
@@ -866,7 +1065,8 @@ public class RegionManager : MonoBehaviour
         selectMat.SetInt("_ZWrite", 0);
         selectMat.renderQueue = 2999;
 
-        selectionRenderer.material = selectMat;
+        selectionMat = selectMat;
+        selectionRenderer.material = selectionMat;
         selectionObject.SetActive(false);
 
         // create pulse layers for each border config
@@ -879,8 +1079,9 @@ public class RegionManager : MonoBehaviour
 
     PulseLayer CreatePulseLayer(string name, Color color, int renderQueue)
     {
+        Transform overlayParent = meshTransform != null ? meshTransform : transform;
         var obj = new GameObject(name);
-        obj.transform.SetParent(transform, false);
+        obj.transform.SetParent(overlayParent, false);
 
         var mf = obj.AddComponent<MeshFilter>();
         var mr = obj.AddComponent<MeshRenderer>();
@@ -902,7 +1103,7 @@ public class RegionManager : MonoBehaviour
 
     public void SetHighlight(Region region)
     {
-        // hover highlight
+        // hover highlight — outline border around the region
         if (highlightObject != null)
         {
             if (region != null && region.HighlightMesh != null)
@@ -971,7 +1172,9 @@ public class RegionManager : MonoBehaviour
         foreach (int t in region.TriangleIndices)
             sum += TriCenter(t);
         Vector3 localDir = (sum / region.TriangleIndices.Count).normalized;
-        return transform.TransformPoint(localDir);
+        // use the mesh's own transform since it may be a child with rotation/scale
+        Transform t2 = meshTransform != null ? meshTransform : transform;
+        return t2.TransformPoint(localDir);
     }
 
     bool IsOceanColor(Color color)

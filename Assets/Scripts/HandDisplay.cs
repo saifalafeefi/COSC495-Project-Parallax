@@ -36,6 +36,12 @@ public class HandDisplay : MonoBehaviour
     [SerializeField] private float fanAngle = 5f;
     [SerializeField] private float fanYOffset = 20f;
 
+    [Header("Deal Animation")]
+    [SerializeField] private float dealStartX = -1100f;
+    [SerializeField] private float dealStartY = -300f;
+    [SerializeField] private float dealDuration = 0.5f;
+    [SerializeField] private float dealStagger = 0.12f;
+
     private GameManager gameManager;
     private RegionManager regionManager;
     private Canvas canvas;
@@ -45,6 +51,10 @@ public class HandDisplay : MonoBehaviour
     private List<RectTransform> cardRects = new List<RectTransform>();
     private List<Image> cardBorders = new List<Image>();
     private List<Color> cardRarityColors = new List<Color>();
+    // per-card deal animation: time when deal started
+    private List<float> cardDealTimes = new List<float>();
+    // track which PolicyData each card slot holds so we can match across rebuilds
+    private List<PolicyData> cardPolicies = new List<PolicyData>();
 
     private int hoveredIndex = -1;
     private int selectedIndex = -1;
@@ -88,17 +98,31 @@ public class HandDisplay : MonoBehaviour
         int round = gameManager.CurrentRound;
         Region selectedRegion = regionManager != null ? regionManager.SelectedRegion : null;
 
-        if (handCount != lastHandCount || round != lastRound || selectedRegion != lastSelectedRegion)
+        if (round != lastRound)
         {
-            lastHandCount = handCount;
+            // new round: full rebuild with deal animation
             lastRound = round;
+            lastHandCount = handCount;
+            lastSelectedRegion = selectedRegion;
+            selectedIndex = -1;
+            RebuildCards();
+        }
+        else if (handCount != lastHandCount)
+        {
+            // card played: refresh content, preserve positions (no deal animation)
+            lastHandCount = handCount;
             lastSelectedRegion = selectedRegion;
 
-            // keep selected card valid
             if (selectedIndex >= handCount)
                 selectedIndex = -1;
 
-            RebuildCards();
+            RefreshCardContent();
+        }
+        else if (selectedRegion != lastSelectedRegion)
+        {
+            // just refresh card content (stat previews) without resetting deal animation
+            lastSelectedRegion = selectedRegion;
+            RefreshCardContent();
         }
 
         AnimateCards();
@@ -140,6 +164,8 @@ public class HandDisplay : MonoBehaviour
         cardRects.Clear();
         cardBorders.Clear();
         cardRarityColors.Clear();
+        cardDealTimes.Clear();
+        cardPolicies.Clear();
 
         if (gameManager.CurrentHand == null) return;
 
@@ -148,8 +174,65 @@ public class HandDisplay : MonoBehaviour
             var card = gameManager.CurrentHand[i];
             var cardObj = BuildCard(card, i);
             cardObj.transform.SetParent(cardContainer, false);
+
+            // start off-screen left
+            var rect = cardObj.GetComponent<RectTransform>();
+            rect.anchoredPosition = new Vector2(dealStartX, dealStartY);
+            rect.localEulerAngles = new Vector3(0f, 0f, 15f);
+
             cardObjects.Add(cardObj);
-            cardRects.Add(cardObj.GetComponent<RectTransform>());
+            cardRects.Add(rect);
+            cardDealTimes.Add(Time.time + i * dealStagger);
+            cardPolicies.Add(card);
+        }
+    }
+
+    void RefreshCardContent()
+    {
+        // save state keyed by PolicyData reference so positions survive index shifts
+        var savedState = new Dictionary<PolicyData, (Vector2 pos, Vector3 scale, Vector3 rot, float dealTime)>();
+
+        for (int i = 0; i < cardPolicies.Count; i++)
+        {
+            if (i >= cardRects.Count || cardRects[i] == null) continue;
+            var rect = cardRects[i];
+            float dt = i < cardDealTimes.Count ? cardDealTimes[i] : 0f;
+            savedState[cardPolicies[i]] = (rect.anchoredPosition, rect.localScale, rect.localEulerAngles, dt);
+        }
+
+        foreach (var obj in cardObjects)
+        {
+            if (obj != null) Destroy(obj);
+        }
+        cardObjects.Clear();
+        cardRects.Clear();
+        cardBorders.Clear();
+        cardRarityColors.Clear();
+        cardDealTimes.Clear();
+        cardPolicies.Clear();
+
+        if (gameManager.CurrentHand == null) return;
+
+        for (int i = 0; i < gameManager.CurrentHand.Count; i++)
+        {
+            var card = gameManager.CurrentHand[i];
+            var cardObj = BuildCard(card, i);
+            cardObj.transform.SetParent(cardContainer, false);
+
+            var rect = cardObj.GetComponent<RectTransform>();
+
+            // restore position from old state if this card existed before
+            if (savedState.TryGetValue(card, out var state))
+            {
+                rect.anchoredPosition = state.pos;
+                rect.localScale = state.scale;
+                rect.localEulerAngles = state.rot;
+            }
+
+            cardObjects.Add(cardObj);
+            cardRects.Add(rect);
+            cardDealTimes.Add(savedState.ContainsKey(card) ? savedState[card].dealTime : 0f);
+            cardPolicies.Add(card);
         }
     }
 
@@ -196,26 +279,55 @@ public class HandDisplay : MonoBehaviour
                 targetRotation = -fanPos * fanAngle;
             }
 
-            // lerp position, scale, and rotation
-            float t = Time.deltaTime * tweenSpeed;
-            var pos = rect.anchoredPosition;
-            pos.x = Mathf.Lerp(pos.x, targetX, t);
-            pos.y = Mathf.Lerp(pos.y, targetY, t);
-            rect.anchoredPosition = pos;
+            // deal animation: ease-out from off-screen to hand
+            float dealT = 1f;
+            if (i < cardDealTimes.Count)
+            {
+                float elapsed = Time.time - cardDealTimes[i];
+                if (elapsed < dealDuration)
+                {
+                    // ease-out: fast start, slow finish (1 - (1-t)^3)
+                    float raw = elapsed / dealDuration;
+                    dealT = 1f - (1f - raw) * (1f - raw) * (1f - raw);
+                }
+            }
 
-            var s = rect.localScale;
-            float curScale = s.x;
-            float newScale = Mathf.Lerp(curScale, targetScale, t);
-            rect.localScale = new Vector3(newScale, newScale, 1f);
+            if (dealT < 1f)
+            {
+                // still dealing — interpolate from start to target
+                float x = Mathf.Lerp(dealStartX, targetX, dealT);
+                float y = Mathf.Lerp(dealStartY, targetY, dealT);
+                rect.anchoredPosition = new Vector2(x, y);
 
-            float curRot = rect.localEulerAngles.z;
-            if (curRot > 180f) curRot -= 360f;
-            float newRot = Mathf.Lerp(curRot, targetRotation, t);
-            rect.localEulerAngles = new Vector3(0f, 0f, newRot);
+                float rot = Mathf.Lerp(15f, targetRotation, dealT);
+                rect.localEulerAngles = new Vector3(0f, 0f, rot);
+
+                rect.localScale = new Vector3(dealT, dealT, 1f);
+            }
+            else
+            {
+                // normal hand positioning
+                float t = Time.deltaTime * tweenSpeed;
+                var pos = rect.anchoredPosition;
+                pos.x = Mathf.Lerp(pos.x, targetX, t);
+                pos.y = Mathf.Lerp(pos.y, targetY, t);
+                rect.anchoredPosition = pos;
+
+                var s = rect.localScale;
+                float curScale = s.x;
+                float newScale = Mathf.Lerp(curScale, targetScale, t);
+                rect.localScale = new Vector3(newScale, newScale, 1f);
+
+                float curRot = rect.localEulerAngles.z;
+                if (curRot > 180f) curRot -= 360f;
+                float newRot = Mathf.Lerp(curRot, targetRotation, t);
+                rect.localEulerAngles = new Vector3(0f, 0f, newRot);
+            }
 
             // border color: tween between rarity color and glow when selected
-            if (i < cardBorders.Count && cardBorders[i] != null)
+            if (dealT >= 1f && i < cardBorders.Count && cardBorders[i] != null)
             {
+                float ct = Time.deltaTime * tweenSpeed;
                 if (i == selectedIndex)
                 {
                     // pulse between rarity color and glow
@@ -224,7 +336,7 @@ public class HandDisplay : MonoBehaviour
                 }
                 else
                 {
-                    cardBorders[i].color = Color.Lerp(cardBorders[i].color, cardRarityColors[i], t);
+                    cardBorders[i].color = Color.Lerp(cardBorders[i].color, cardRarityColors[i], ct);
                 }
             }
 

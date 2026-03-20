@@ -15,10 +15,12 @@ public class GameManager : MonoBehaviour
 
     [Header("Game Settings")]
     [SerializeField] private int totalRounds = 10;
+    [SerializeField] private int baseHandSize = 3;
     [SerializeField] private int actionsPerRound = 3;
 
     public int CurrentRound { get; private set; }
     public int ActionsRemaining { get; private set; }
+    public int HandSize { get; private set; }
     public bool GameOver { get; private set; }
     public string GameOverReason { get; private set; }
     public float FinalScore { get; private set; }
@@ -134,15 +136,17 @@ public class GameManager : MonoBehaviour
     void StartRound()
     {
         CurrentRound++;
-        ActionsRemaining = actionsPerRound;
         targetedThisRound.Clear();
 
         // snapshot region status before player acts so the summary captures everything
         SnapshotStatus();
 
-        // draw 3 cards
+        // hand size grows: base + floor(round / 2)
+        HandSize = baseHandSize + (CurrentRound - 1) / 2;
+        ActionsRemaining = HandSize;
+
         CurrentHand.Clear();
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < HandSize; i++)
         {
             if (deck.Count == 0)
             {
