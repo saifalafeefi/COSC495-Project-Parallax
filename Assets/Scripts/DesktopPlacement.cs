@@ -27,7 +27,7 @@ public class DesktopPlacement : MonoBehaviour
     {
         if (earthPrefab != null)
         {
-            SpawnedEarth = Instantiate(earthPrefab, spawnPosition, Quaternion.identity);
+            SpawnedEarth = Instantiate(earthPrefab, spawnPosition, earthPrefab.transform.rotation);
         }
 
         timeSinceRelease = resumeDelay + resumeRampTime;
