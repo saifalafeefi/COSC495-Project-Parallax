@@ -76,6 +76,11 @@ MonoBehaviour:
   selectionPulseMax: 0.057
   selectionPulseSpeed: 5
   highlightHeight: 1
+  showTraitDividers: 1
+  traitDividerWidth: 3
+  traitDividerHeight: 0
+  traitDividerColor: {r: 0, g: 0, b: 0, a: 1}
+  fallbackToAnyRegionDivider: 1
   frozenLatitude: 62
   tropicalLatitude: 27
   aridLatitude: 27.8

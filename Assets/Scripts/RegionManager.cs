@@ -41,6 +41,27 @@ public class RegionManager : MonoBehaviour
     [SerializeField, Range(0f, 100f)]
     private float highlightHeight = 1f;
 
+    [Header("Trait Divider Lines")]
+    [Tooltip("draws black divider lines where neighboring regions have different traits")]
+    [SerializeField]
+    private bool showTraitDividers = true;
+
+    [Tooltip("line thickness for trait dividers (whole number scale)")]
+    [SerializeField, Range(1f, 1000f)]
+    private float traitDividerWidth = 12f;
+
+    [Tooltip("how far trait divider lines float above the surface")]
+    [SerializeField, Range(0f, 1000f)]
+    private float traitDividerHeight = 60f;
+
+    [Tooltip("color of the trait divider lines")]
+    [SerializeField]
+    private Color traitDividerColor = new Color(0f, 0f, 0f, 1f);
+
+    [Tooltip("if no cross-trait borders exist, draw borders between all neighboring regions")]
+    [SerializeField]
+    private bool fallbackToAnyRegionDivider = true;
+
 
     [Header("Trait Assignment Thresholds")]
     [Tooltip("latitude above this is frozen (absolute value)")]
@@ -94,6 +115,9 @@ public class RegionManager : MonoBehaviour
     private MeshFilter selectionMeshFilter;
     private Material selectionMat;
     private Region currentlyShownSelection;
+
+    private GameObject traitDividerObject;
+    private MeshFilter traitDividerMeshFilter;
 
     // one overlay object per border ring per status level
     private List<PulseLayer> stressedLayers = new List<PulseLayer>();
@@ -1018,16 +1042,12 @@ public class RegionManager : MonoBehaviour
             edgeCount[key] = 1;
     }
 
-    Vector3 FindVertexByRemap(int[] remap, int remappedIdx)
-    {
-        // the remapped index IS an original vertex index (the first one found at that position)
-        return allVertices[remappedIdx];
-    }
-
     void SetupHighlightOverlay()
     {
         // parent overlays under the mesh object so they inherit its rotation/scale
         Transform overlayParent = meshTransform != null ? meshTransform : transform;
+
+        SetupTraitDividerOverlay(overlayParent);
 
         // hover highlight (subtle white glow)
         highlightObject = new GameObject("RegionHighlight");
@@ -1075,6 +1095,230 @@ public class RegionManager : MonoBehaviour
             stressedLayers.Add(CreatePulseLayer($"StressedBorder_{stressedLayers.Count}", config.color, queue++));
         foreach (var config in crisisBorders)
             crisisLayers.Add(CreatePulseLayer($"CrisisBorder_{crisisLayers.Count}", config.color, queue++));
+    }
+
+    void SetupTraitDividerOverlay(Transform overlayParent)
+    {
+        traitDividerObject = new GameObject("TraitDividers");
+        traitDividerObject.transform.SetParent(overlayParent, false);
+
+        traitDividerMeshFilter = traitDividerObject.AddComponent<MeshFilter>();
+        var dividerRenderer = traitDividerObject.AddComponent<MeshRenderer>();
+
+        var dividerMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+        dividerMat.SetColor("_BaseColor", traitDividerColor);
+        dividerMat.SetFloat("_Surface", 1);
+        dividerMat.SetFloat("_Blend", 0);
+        dividerMat.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        dividerMat.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        dividerMat.SetInt("_ZWrite", 0);
+        dividerMat.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Off);
+        dividerMat.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
+        dividerMat.renderQueue = 3010;
+
+        dividerRenderer.material = dividerMat;
+
+        var dividerMesh = BuildTraitDividerMesh();
+        if (showTraitDividers && dividerMesh != null && dividerMesh.vertexCount > 0)
+        {
+            traitDividerMeshFilter.mesh = dividerMesh;
+            traitDividerObject.SetActive(true);
+        }
+        else
+        {
+            traitDividerObject.SetActive(false);
+        }
+    }
+
+    Mesh BuildTraitDividerMesh()
+    {
+        if (Regions == null || Regions.Count == 0 || triangleToRegion == null || allTriangles == null || allVertices == null)
+            return null;
+
+        float scaledWidth = traitDividerWidth * 0.00001f;
+        float scaledHeight = traitDividerHeight * 0.00002f;
+        float halfWidth = scaledWidth * 0.5f;
+
+        int triCount = allTriangles.Length / 3;
+        var remap = BuildPreciseVertexRemap(allVertices, 100000f);
+        var edgeToEntries = new Dictionary<(int, int), List<(Region region, int v0, int v1)>>();
+
+        for (int t = 0; t < triCount; t++)
+        {
+            if (!triangleToRegion.TryGetValue(t, out Region region)) continue;
+
+            int i0 = remap[allTriangles[t * 3]];
+            int i1 = remap[allTriangles[t * 3 + 1]];
+            int i2 = remap[allTriangles[t * 3 + 2]];
+
+            AddTraitDividerEdge(edgeToEntries, i0, i1, region);
+            AddTraitDividerEdge(edgeToEntries, i1, i2, region);
+            AddTraitDividerEdge(edgeToEntries, i2, i0, region);
+        }
+
+        var verts = new List<Vector3>();
+        var indices = new List<int>();
+        int drawnEdges = 0;
+
+        foreach (var kvp in edgeToEntries)
+        {
+            var entries = kvp.Value;
+            if (entries.Count < 2) continue;
+
+            bool shouldDraw = false;
+            for (int i = 0; i < entries.Count && !shouldDraw; i++)
+            {
+                for (int j = i + 1; j < entries.Count; j++)
+                {
+                    Region a = entries[i].region;
+                    Region b = entries[j].region;
+                    if (a == b) continue;
+                    if (a.Trait != b.Trait)
+                    {
+                        shouldDraw = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!shouldDraw) continue;
+            drawnEdges++;
+
+            Vector3 p0 = FindVertexByRemap(remap, kvp.Key.Item1);
+            Vector3 p1 = FindVertexByRemap(remap, kvp.Key.Item2);
+
+            Vector3 n0 = p0.normalized;
+            Vector3 n1 = p1.normalized;
+            Vector3 avgNormal = (n0 + n1).normalized;
+            Vector3 edgeDir = (p1 - p0).normalized;
+            Vector3 side = Vector3.Cross(avgNormal, edgeDir).normalized;
+
+            if (side.sqrMagnitude < 0.000001f)
+                continue;
+
+            Vector3 a0 = p0 + side * halfWidth + n0 * scaledHeight;
+            Vector3 a1 = p0 - side * halfWidth + n0 * scaledHeight;
+            Vector3 b0 = p1 + side * halfWidth + n1 * scaledHeight;
+            Vector3 b1 = p1 - side * halfWidth + n1 * scaledHeight;
+
+            int baseIdx = verts.Count;
+            verts.Add(a0);
+            verts.Add(a1);
+            verts.Add(b0);
+            verts.Add(b1);
+
+            indices.Add(baseIdx);
+            indices.Add(baseIdx + 2);
+            indices.Add(baseIdx + 1);
+
+            indices.Add(baseIdx + 1);
+            indices.Add(baseIdx + 2);
+            indices.Add(baseIdx + 3);
+        }
+
+        if (drawnEdges == 0 && fallbackToAnyRegionDivider)
+        {
+            foreach (var kvp in edgeToEntries)
+            {
+                var entries = kvp.Value;
+                if (entries.Count < 2) continue;
+
+                bool shouldDraw = false;
+                for (int i = 0; i < entries.Count && !shouldDraw; i++)
+                {
+                    for (int j = i + 1; j < entries.Count; j++)
+                    {
+                        Region a = entries[i].region;
+                        Region b = entries[j].region;
+                        if (a != b)
+                        {
+                            shouldDraw = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!shouldDraw) continue;
+
+                Vector3 p0 = FindVertexByRemap(remap, kvp.Key.Item1);
+                Vector3 p1 = FindVertexByRemap(remap, kvp.Key.Item2);
+
+                Vector3 n0 = p0.normalized;
+                Vector3 n1 = p1.normalized;
+                Vector3 avgNormal = (n0 + n1).normalized;
+                Vector3 edgeDir = (p1 - p0).normalized;
+                Vector3 side = Vector3.Cross(avgNormal, edgeDir).normalized;
+                if (side.sqrMagnitude < 0.000001f) continue;
+
+                Vector3 a0 = p0 + side * halfWidth + n0 * scaledHeight;
+                Vector3 a1 = p0 - side * halfWidth + n0 * scaledHeight;
+                Vector3 b0 = p1 + side * halfWidth + n1 * scaledHeight;
+                Vector3 b1 = p1 - side * halfWidth + n1 * scaledHeight;
+
+                int baseIdx = verts.Count;
+                verts.Add(a0);
+                verts.Add(a1);
+                verts.Add(b0);
+                verts.Add(b1);
+
+                indices.Add(baseIdx);
+                indices.Add(baseIdx + 2);
+                indices.Add(baseIdx + 1);
+                indices.Add(baseIdx + 1);
+                indices.Add(baseIdx + 2);
+                indices.Add(baseIdx + 3);
+            }
+        }
+
+        if (verts.Count == 0)
+        {
+            Debug.LogWarning("[RegionManager] trait divider mesh has no shared region borders to draw");
+            return null;
+        }
+
+        var mesh = new Mesh();
+        mesh.SetVertices(verts);
+        mesh.SetTriangles(indices, 0);
+        mesh.RecalculateNormals();
+        return mesh;
+    }
+
+    void AddTraitDividerEdge(Dictionary<(int, int), List<(Region region, int v0, int v1)>> edgeToEntries, int v0, int v1, Region region)
+    {
+        var key = v0 < v1 ? (v0, v1) : (v1, v0);
+        if (!edgeToEntries.TryGetValue(key, out var list))
+        {
+            list = new List<(Region region, int v0, int v1)>();
+            edgeToEntries[key] = list;
+        }
+        list.Add((region, v0, v1));
+    }
+
+    int[] BuildPreciseVertexRemap(Vector3[] vertices, float precision)
+    {
+        var posToIndex = new Dictionary<string, int>();
+        var remap = new int[vertices.Length];
+
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            string key = $"{Mathf.Round(vertices[i].x * precision)},{Mathf.Round(vertices[i].y * precision)},{Mathf.Round(vertices[i].z * precision)}";
+
+            if (posToIndex.TryGetValue(key, out int existing))
+                remap[i] = existing;
+            else
+            {
+                posToIndex[key] = i;
+                remap[i] = i;
+            }
+        }
+
+        return remap;
+    }
+
+    Vector3 FindVertexByRemap(int[] remap, int remappedIdx)
+    {
+        // the remapped index is an original vertex index at this position
+        return allVertices[remappedIdx];
     }
 
     PulseLayer CreatePulseLayer(string name, Color color, int renderQueue)
