@@ -15,8 +15,7 @@ public class GameManager : MonoBehaviour
 
     [Header("Game Settings")]
     [SerializeField] private int totalRounds = 10;
-    [SerializeField] private int baseHandSize = 3;
-    [SerializeField] private int actionsPerRound = 3;
+    [SerializeField] private int handSize = 6;
 
     public int CurrentRound { get; private set; }
     public int ActionsRemaining { get; private set; }
@@ -141,8 +140,7 @@ public class GameManager : MonoBehaviour
         // snapshot region status before player acts so the summary captures everything
         SnapshotStatus();
 
-        // hand size grows: base + floor(round / 2)
-        HandSize = baseHandSize + (CurrentRound - 1) / 2;
+        HandSize = handSize;
         ActionsRemaining = HandSize;
 
         CurrentHand.Clear();
