@@ -72,6 +72,8 @@ public class DesktopPlacement : MonoBehaviour
         float rampProgress = Mathf.Clamp01((timeSinceRelease - resumeDelay) / resumeRampTime);
         float currentSpeed = autoRotateSpeed * rampProgress;
 
-        SpawnedEarth.transform.Rotate(0f, currentSpeed * Time.deltaTime, 0f, Space.World);
+        float angle = currentSpeed * Time.deltaTime;
+        if (Mathf.Abs(angle) > 0.0001f)
+            SpawnedEarth.transform.Rotate(0f, angle, 0f, Space.World);
     }
 }
