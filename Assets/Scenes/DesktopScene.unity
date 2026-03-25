@@ -890,6 +890,7 @@ GameObject:
   - component: {fileID: 776120564}
   - component: {fileID: 776120565}
   - component: {fileID: 776120566}
+  - component: {fileID: 776120567}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1040,6 +1041,38 @@ MonoBehaviour:
   resumeButton: {fileID: 732204449}
   pauseRestartButton: {fileID: 1263614509}
   gameOverRestartButton: {fileID: 210047966}
+--- !u!114 &776120567
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 776120559}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30c358f9f3eca7047bca1a4f507ce0fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RewardDisplay
+  cardBackground: {r: 0.12, g: 0.12, b: 0.16, a: 0.95}
+  commonColor: {r: 0.6, g: 0.6, b: 0.6, a: 1}
+  uncommonColor: {r: 0.2, g: 0.8, b: 0.2, a: 1}
+  rareColor: {r: 0.9, g: 0.7, b: 0.1, a: 1}
+  selectedGlow: {r: 1, g: 0.9, b: 0.4, a: 1}
+  carbonColor: {r: 0.75, g: 0.45, b: 0.3, a: 1}
+  economyColor: {r: 0.85, g: 0.75, b: 0.3, a: 1}
+  stabilityColor: {r: 0.4, g: 0.6, b: 0.85, a: 1}
+  cardWidth: 200
+  cardHeight: 280
+  cardSpacing: 40
+  hoverLift: 20
+  hoverScale: 1.08
+  selectedScale: 1.12
+  tweenSpeed: 10
+  bounceSpeed: 3
+  bounceAmount: 6
+  selectedColorSpeed: 2.5
+  dealDuration: 0.4
+  dealStagger: 0.1
 --- !u!1 &785006178
 GameObject:
   m_ObjectHideFlags: 0

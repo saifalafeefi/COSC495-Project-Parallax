@@ -19,6 +19,10 @@ public class GameManager : MonoBehaviour
     [SerializeField] private int totalRounds = 10;
     [SerializeField] private int handSize = 6;
 
+    [Header("Reward System")]
+    [Tooltip("global carbon must drop by at least this much in a round to trigger a card reward (0 = any decrease)")]
+    [SerializeField] private float rewardCarbonThreshold = 2f;
+
     [Header("Focus System")]
     [Tooltip("chance per play above average to trigger a focus event (e.g. 20 = 20% per extra play)")]
     [SerializeField] private float focusChancePerPlay = 20f;
@@ -70,6 +74,11 @@ public class GameManager : MonoBehaviour
     // regions warned about over-targeting — value = number of punishments applied (0 = warned only)
     private Dictionary<Region, int> focusWarnedRegions = new Dictionary<Region, int>();
 
+    // reward system — offer card pick after a net-positive round
+    public bool RewardActive { get; private set; }
+    public List<PolicyData> RewardChoices { get; private set; } = new List<PolicyData>();
+    private bool rewardPending;
+    private PolicyData[] allPolicies;
 
     private RegionManager regionManager;
 
@@ -100,7 +109,7 @@ public class GameManager : MonoBehaviour
         }
 
         // press space to skip remaining actions and end round early
-        if (kb.spaceKey.wasPressedThisFrame && !GameOver && !PauseMenu.IsPaused && ActionsRemaining > 0)
+        if (kb.spaceKey.wasPressedThisFrame && !GameOver && !PauseMenu.IsPaused && !RewardActive && ActionsRemaining > 0)
         {
             // discard remaining hand
             foreach (var card in CurrentHand)
@@ -143,11 +152,18 @@ public class GameManager : MonoBehaviour
         deck.AddRange(uncommonPolicies);
         deck.AddRange(rarePolicies);
 
+        // cache all policies for reward card pool
+        allPolicies = new PolicyData[deck.Count];
+        deck.CopyTo(allPolicies);
+
         Debug.Log($"[GameManager] loaded {commonPolicies.Length} common, {uncommonPolicies.Length} uncommon, {rarePolicies.Length} rare, {normalEvents.Length} normal events, {focusEvents.Length} focus events");
 
         discardPile = new List<PolicyData>();
         CurrentHand = new List<PolicyData>();
         totalPlaysPerRegion.Clear();
+        rewardPending = false;
+        RewardActive = false;
+        RewardChoices.Clear();
 
         ShuffleDeck();
         Debug.Log($"[GameManager] deck built with {deck.Count} cards");
@@ -186,12 +202,22 @@ public class GameManager : MonoBehaviour
 
         string cardNames = string.Join(", ", CurrentHand.ConvertAll(c => c.policyName));
         Debug.Log($"[GameManager] round {CurrentRound} | drew: {cardNames}");
+
+        // show reward popup if last round was net-positive
+        if (rewardPending)
+        {
+            rewardPending = false;
+            GenerateRewardChoices();
+            RewardActive = true;
+            Debug.Log("[GameManager] reward popup triggered — pick 1 of 3");
+        }
     }
 
     // called when the player presses 1, 2, or 3 with a region selected
     public string PlayCard(int cardIndex, Region target)
     {
         if (GameOver) return "Game is over.";
+        if (RewardActive) return "Choose a reward first.";
         if (cardIndex < 0 || cardIndex >= CurrentHand.Count) return "Invalid card.";
         if (target == null) return "No region selected.";
 
@@ -359,6 +385,15 @@ public class GameManager : MonoBehaviour
 
         // build round summary AFTER event so it captures everything
         BuildRoundSummary(regions, snapshotGlobalCarbon, snapshotStatus);
+
+        // queue reward if global carbon dropped enough this round
+        float endCarbon = GetGlobalCarbon();
+        float carbonDrop = snapshotGlobalCarbon - endCarbon;
+        if (carbonDrop >= rewardCarbonThreshold)
+        {
+            rewardPending = true;
+            Debug.Log($"[GameManager] net-positive round! carbon {snapshotGlobalCarbon:F1} → {endCarbon:F1} (drop: {carbonDrop:F1}, threshold: {rewardCarbonThreshold})");
+        }
 
         StartRound();
     }
@@ -608,6 +643,35 @@ public class GameManager : MonoBehaviour
         LastEventTime = 0f;
 
         StartGame();
+    }
+
+    // player picks one of the 3 offered reward cards — added straight to hand
+    public void ClaimReward(int index)
+    {
+        if (!RewardActive || index < 0 || index >= RewardChoices.Count) return;
+        var chosen = RewardChoices[index];
+        CurrentHand.Add(chosen);
+        Debug.Log($"[GameManager] reward claimed: {chosen.policyName} (hand now {CurrentHand.Count})");
+        RewardActive = false;
+        RewardChoices.Clear();
+    }
+
+    // player skips the reward
+    public void SkipReward()
+    {
+        if (!RewardActive) return;
+        Debug.Log("[GameManager] reward skipped");
+        RewardActive = false;
+        RewardChoices.Clear();
+    }
+
+    void GenerateRewardChoices()
+    {
+        RewardChoices.Clear();
+        if (allPolicies == null || allPolicies.Length == 0) return;
+
+        for (int i = 0; i < 3; i++)
+            RewardChoices.Add(allPolicies[Random.Range(0, allPolicies.Length)]);
     }
 
     public float GetGlobalCarbon()

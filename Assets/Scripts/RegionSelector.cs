@@ -26,8 +26,11 @@ public class RegionSelector : MonoBehaviour
         if (mainCamera == null)
             mainCamera = Camera.main;
 
-        // don't process hover/select while paused
+        // don't process hover/select while paused or reward popup is showing
         if (PauseMenu.IsPaused) return;
+
+        var gm = FindFirstObjectByType<GameManager>();
+        if (gm != null && gm.RewardActive) return;
 
         if (Mouse.current == null) return;
 

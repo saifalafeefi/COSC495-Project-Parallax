@@ -60,8 +60,12 @@ public class DesktopInteraction : MonoBehaviour
         if (desktopPlacement == null || desktopPlacement.SpawnedEarth == null)
             return;
 
-        // don't allow orbit/zoom while paused
+        // don't allow orbit/zoom while paused or reward popup is showing
         if (PauseMenu.IsPaused)
+            return;
+
+        var gm = FindFirstObjectByType<GameManager>();
+        if (gm != null && gm.RewardActive)
             return;
 
         if (currentDistance == 0f)
