@@ -58,7 +58,10 @@ public class PauseMenu : MonoBehaviour
         // ESC priority: unfocus region first, then toggle pause
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
-            if (!gameManager.GameOver)
+            // block pause while reward popup is showing
+            if (gameManager.RewardActive)
+            { }
+            else if (!gameManager.GameOver)
             {
                 if (IsPaused)
                 {
