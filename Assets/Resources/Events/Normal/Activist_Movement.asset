@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a9cc931d080c5514fa73f384027f0a1d, type: 3}
+  m_Name: Activist_Movement
+  m_EditorClassIdentifier: Assembly-CSharp::EventData
+  eventName: Activist Movement
+  description: A global climate movement boosts public support for green policies.
+  affectedTraits: 
+  carbonDelta: -3
+  economyDelta: 0
+  stabilityDelta: 5
+  targetAll: 1
+  randomTargetCount: 0
+  focusThreshold: 0

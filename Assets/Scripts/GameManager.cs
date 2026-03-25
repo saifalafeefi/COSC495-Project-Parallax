@@ -10,12 +10,18 @@ public class GameManager : MonoBehaviour
     [SerializeField] private string uncommonPath = "Policies/Uncommon";
     [Tooltip("path inside Resources/ to rare policies")]
     [SerializeField] private string rarePath = "Policies/Rare";
-    [Tooltip("path inside Resources/ to events")]
-    [SerializeField] private string eventsPath = "Events";
+    [Tooltip("path inside Resources/ to normal events")]
+    [SerializeField] private string normalEventsPath = "Events/Normal";
+    [Tooltip("path inside Resources/ to focus events")]
+    [SerializeField] private string focusEventsPath = "Events/Focus";
 
     [Header("Game Settings")]
     [SerializeField] private int totalRounds = 10;
     [SerializeField] private int handSize = 6;
+
+    [Header("Focus System")]
+    [Tooltip("chance per play above average to trigger a focus event (e.g. 20 = 20% per extra play)")]
+    [SerializeField] private float focusChancePerPlay = 20f;
 
     public int CurrentRound { get; private set; }
     public int ActionsRemaining { get; private set; }
@@ -26,7 +32,7 @@ public class GameManager : MonoBehaviour
     public string FinalRating { get; private set; }
     public string ScoreBreakdown { get; private set; }
 
-    // the 3 cards in hand this round
+    // cards in hand this round
     public List<PolicyData> CurrentHand { get; private set; }
 
     // last event that fired, for UI display
@@ -54,8 +60,16 @@ public class GameManager : MonoBehaviour
     private int crisisCount;
     private bool chainCollapseWarning;
 
-    // tracks which regions already received a card this round
-    private HashSet<Region> targetedThisRound;
+    // last focus warning text for UI
+    public string LastWarningText { get; private set; }
+    public float LastWarningTime { get; private set; }
+
+    // tracks how many cards each region has received across all rounds
+    private Dictionary<Region, int> totalPlaysPerRegion = new Dictionary<Region, int>();
+
+    // regions warned about over-targeting — value = number of punishments applied (0 = warned only)
+    private Dictionary<Region, int> focusWarnedRegions = new Dictionary<Region, int>();
+
 
     private RegionManager regionManager;
 
@@ -105,6 +119,9 @@ public class GameManager : MonoBehaviour
         crisisCount = 0;
         EventLog.Clear();
         chainCollapseWarning = false;
+        focusWarnedRegions.Clear();
+        LastWarningText = null;
+        LastWarningTime = 0f;
         CurrentRound = 0;
         FinalScore = 0;
         FinalRating = null;
@@ -113,18 +130,24 @@ public class GameManager : MonoBehaviour
         var commonPolicies = Resources.LoadAll<PolicyData>(commonPath);
         var uncommonPolicies = Resources.LoadAll<PolicyData>(uncommonPath);
         var rarePolicies = Resources.LoadAll<PolicyData>(rarePath);
-        allEvents = Resources.LoadAll<EventData>(eventsPath);
+        var normalEvents = Resources.LoadAll<EventData>(normalEventsPath);
+        var focusEvents = Resources.LoadAll<EventData>(focusEventsPath);
+
+        // combine all events into one array
+        allEvents = new EventData[normalEvents.Length + focusEvents.Length];
+        normalEvents.CopyTo(allEvents, 0);
+        focusEvents.CopyTo(allEvents, normalEvents.Length);
 
         deck = new List<PolicyData>();
         deck.AddRange(commonPolicies);
         deck.AddRange(uncommonPolicies);
         deck.AddRange(rarePolicies);
 
-        Debug.Log($"[GameManager] loaded {commonPolicies.Length} common, {uncommonPolicies.Length} uncommon, {rarePolicies.Length} rare, {allEvents.Length} events");
+        Debug.Log($"[GameManager] loaded {commonPolicies.Length} common, {uncommonPolicies.Length} uncommon, {rarePolicies.Length} rare, {normalEvents.Length} normal events, {focusEvents.Length} focus events");
 
         discardPile = new List<PolicyData>();
         CurrentHand = new List<PolicyData>();
-        targetedThisRound = new HashSet<Region>();
+        totalPlaysPerRegion.Clear();
 
         ShuffleDeck();
         Debug.Log($"[GameManager] deck built with {deck.Count} cards");
@@ -135,7 +158,6 @@ public class GameManager : MonoBehaviour
     void StartRound()
     {
         CurrentRound++;
-        targetedThisRound.Clear();
 
         // snapshot region status before player acts so the summary captures everything
         SnapshotStatus();
@@ -172,7 +194,6 @@ public class GameManager : MonoBehaviour
         if (GameOver) return "Game is over.";
         if (cardIndex < 0 || cardIndex >= CurrentHand.Count) return "Invalid card.";
         if (target == null) return "No region selected.";
-        if (targetedThisRound.Contains(target)) return $"{target.RegionName} already targeted this round.";
 
         var card = CurrentHand[cardIndex];
         card.GetModifiedDeltas(target, out float carbon, out float economy, out float stability);
@@ -195,13 +216,40 @@ public class GameManager : MonoBehaviour
             neighbor.StabilityLevel = Mathf.Clamp(neighbor.StabilityLevel + stability * spill, 0f, 100f);
         }
 
-        // move card to discard and mark region as targeted
+        // track plays for focus system
+        if (!totalPlaysPerRegion.ContainsKey(target))
+            totalPlaysPerRegion[target] = 0;
+        totalPlaysPerRegion[target]++;
+
+        // real-time decay: playing on a region reduces all OTHER regions' counts by 1
+        var decayKeys = new List<Region>(totalPlaysPerRegion.Keys);
+        foreach (var r in decayKeys)
+        {
+            if (r == target) continue;
+            totalPlaysPerRegion[r]--;
+            if (totalPlaysPerRegion[r] <= 0)
+            {
+                totalPlaysPerRegion.Remove(r);
+                focusWarnedRegions.Remove(r);
+            }
+            else if (GetFocusPercent(r) <= 0f)
+            {
+                // focus % dropped to 0 — clear warning so they get a fresh one next time
+                focusWarnedRegions.Remove(r);
+            }
+        }
+
+        // check focus: warn or punish immediately on card play
+        string focusResult = CheckFocusOnPlay(target);
+
+        // move card to discard
         discardPile.Add(card);
         CurrentHand.RemoveAt(cardIndex);
         ActionsRemaining--;
-        targetedThisRound.Add(target);
 
         string result = $"{card.policyName} → {target.RegionName}";
+        if (focusResult != null)
+            result += $"\n{focusResult}";
 
         Debug.Log($"[GameManager] {result}");
 
@@ -373,11 +421,76 @@ public class GameManager : MonoBehaviour
         RoundSummaryTime = Time.time;
     }
 
+    // called per card play — rolls focus % chance, warns first then punishes
+    string CheckFocusOnPlay(Region target)
+    {
+        if (allEvents == null) return null;
+
+        float chance = GetFocusPercent(target);
+        if (chance <= 0f) return null;
+
+        // roll against the focus %
+        float roll = Random.Range(0f, 100f);
+        if (roll >= chance) return null;
+
+        // pick a random focus event to apply
+        var focusEvents = new List<EventData>();
+        foreach (var evt in allEvents)
+        {
+            if (evt.IsFocusEvent())
+                focusEvents.Add(evt);
+        }
+        if (focusEvents.Count == 0) return null;
+
+        var matchedEvent = focusEvents[Random.Range(0, focusEvents.Count)];
+
+        if (focusWarnedRegions.ContainsKey(target))
+        {
+            // already warned — punish with escalating multiplier: x1, x2, x5 (capped)
+            focusWarnedRegions[target]++;
+            int hits = focusWarnedRegions[target];
+            float multiplier = hits >= 3 ? 5f : hits;
+
+            target.CarbonLevel = Mathf.Clamp(target.CarbonLevel + matchedEvent.carbonDelta * multiplier, 0f, 100f);
+            target.EconomyLevel = Mathf.Clamp(target.EconomyLevel + matchedEvent.economyDelta * multiplier, 0f, 100f);
+            target.StabilityLevel = Mathf.Clamp(target.StabilityLevel + matchedEvent.stabilityDelta * multiplier, 0f, 100f);
+
+            string severity = multiplier > 1f ? $" (x{multiplier:F0})" : "";
+            string punishText = $"{matchedEvent.eventName}!{severity} {matchedEvent.description}";
+            LastWarningText = punishText;
+            LastWarningTime = Time.time;
+
+            string logEntry = $"R{CurrentRound}: {matchedEvent.eventName}{severity} ({target.RegionName})";
+            EventLog.Add(logEntry);
+            if (EventLog.Count > maxEventLog)
+                EventLog.RemoveAt(0);
+
+            Debug.Log($"[GameManager] FOCUS PUNISHMENT: {matchedEvent.eventName} x{multiplier} hit {target.RegionName} (rolled {roll:F0} < {chance:F0}%)");
+            return punishText;
+        }
+        else
+        {
+            // first trigger — warn (shown persistently on region panel, not as timed popup)
+            focusWarnedRegions[target] = 0;
+            Debug.LogWarning($"[GameManager] focus warning on {target.RegionName} (rolled {roll:F0} < {chance:F0}%)");
+            return null;
+        }
+    }
+
     void ApplyRandomEvent(List<Region> regions)
     {
         if (allEvents == null || allEvents.Length == 0) return;
 
-        var evt = allEvents[Random.Range(0, allEvents.Length)];
+        // build pool of normal events (exclude focus events)
+        var pool = new List<EventData>();
+        foreach (var e in allEvents)
+        {
+            if (!e.IsFocusEvent())
+                pool.Add(e);
+        }
+        if (pool.Count == 0) return;
+
+        var evt = pool[Random.Range(0, pool.Count)];
         var affected = evt.GetAffectedRegions(regions);
 
         foreach (var r in affected)
@@ -497,12 +610,6 @@ public class GameManager : MonoBehaviour
         StartGame();
     }
 
-    // returns true if a region already got a card this round
-    public bool IsTargetedThisRound(Region region)
-    {
-        return targetedThisRound != null && targetedThisRound.Contains(region);
-    }
-
     public float GetGlobalCarbon()
     {
         if (regionManager == null || regionManager.Regions == null || regionManager.Regions.Count == 0)
@@ -512,6 +619,40 @@ public class GameManager : MonoBehaviour
         foreach (var r in regionManager.Regions)
             total += r.CarbonLevel;
         return total / regionManager.Regions.Count;
+    }
+
+    // how many cards have been played on this region total
+    public int GetPlayCount(Region region)
+    {
+        return totalPlaysPerRegion.ContainsKey(region) ? totalPlaysPerRegion[region] : 0;
+    }
+
+    // average plays across all regions
+    public float GetAveragePlayCount()
+    {
+        if (regionManager == null || regionManager.Regions == null || regionManager.Regions.Count == 0)
+            return 0f;
+
+        int total = 0;
+        foreach (var r in regionManager.Regions)
+            total += GetPlayCount(r);
+        return (float)total / regionManager.Regions.Count;
+    }
+
+    // true if this region has been warned about over-targeting
+    public bool IsRegionFocusWarned(Region region)
+    {
+        return focusWarnedRegions.ContainsKey(region);
+    }
+
+    // returns the focus chance (0-100) for a region based on plays above average
+    public float GetFocusPercent(Region region)
+    {
+        float avg = GetAveragePlayCount();
+        int plays = GetPlayCount(region);
+        float above = plays - avg;
+        if (above <= 0f) return 0f;
+        return Mathf.Clamp(above * focusChancePerPlay, 0f, 100f);
     }
 
     void ShuffleDeck()

@@ -18,8 +18,6 @@ public class RegionDebugUI : MonoBehaviour
     [Header("Health Warning Colors")]
     [SerializeField] private Color stressedTextColor = new Color(1f, 0.67f, 0.27f);
     [SerializeField] private Color crisisTextColor = new Color(1f, 0.27f, 0.27f);
-    [SerializeField] private Color cooldownTextColor = new Color(0.53f, 0.53f, 0.53f);
-
     [Header("Preview Colors")]
     [SerializeField] private Color previewGoodColor = new Color(0.4f, 0.9f, 0.4f);
     [SerializeField] private Color previewBadColor = new Color(0.9f, 0.4f, 0.4f);
@@ -100,7 +98,6 @@ public class RegionDebugUI : MonoBehaviour
 
         string crisisHex = ColorUtility.ToHtmlStringRGB(crisisTextColor);
         string stressedHex = ColorUtility.ToHtmlStringRGB(stressedTextColor);
-        string cooldownHex = ColorUtility.ToHtmlStringRGB(cooldownTextColor);
 
         if (selected != null)
         {
@@ -112,17 +109,29 @@ public class RegionDebugUI : MonoBehaviour
             if (selected.CarbonLevel > 85f) status = $"  <color=#{crisisHex}>CRISIS</color>";
             else if (selected.CarbonLevel > 70f) status = $"  <color=#{stressedHex}>STRESSED</color>";
 
-            // cooldown indicator (only during gameplay)
-            string cooldown = "";
-            if (!isGameOver && gameManager != null && gameManager.IsTargetedThisRound(selected))
-                cooldown = $"\n<color=#{cooldownHex}>Already targeted this round</color>";
-
             string preview = BuildCardPreview(selected, isGameOver);
 
+            // show focus risk and warning during gameplay
+            string focusInfo = "";
+            string focusWarning = "";
+            if (!isGameOver && gameManager != null)
+            {
+                float focusPct = gameManager.GetFocusPercent(selected);
+                if (focusPct > 0f)
+                {
+                    string focusHex = focusPct >= 60f ? crisisHex : stressedHex;
+                    focusInfo = $"  <color=#{focusHex}>Focus: {focusPct:F0}%</color>";
+                }
+
+                // persistent warning when region has been flagged
+                if (gameManager.IsRegionFocusWarned(selected))
+                    focusWarning = $"\n<color=#{stressedHex}>WARNING: Over-governed! Continued focus risks penalties.</color>";
+            }
+
             displayText.text = $"<b>{selected.RegionName}</b> ({selected.Trait}){status}\n"
-                + $"C: {selected.CarbonLevel:F0}  E: {selected.EconomyLevel:F0}  S: {selected.StabilityLevel:F0}"
-                + cooldown
+                + $"C: {selected.CarbonLevel:F0}  E: {selected.EconomyLevel:F0}  S: {selected.StabilityLevel:F0}{focusInfo}"
                 + preview
+                + focusWarning
                 + $"\nNeighbors: {neighbors}";
         }
         else if (hovered != null)
@@ -146,10 +155,19 @@ public class RegionDebugUI : MonoBehaviour
             && gameManager.RoundSummaryText != null;
         bool showEvent = Time.time - gameManager.LastEventTime < eventDisplayDuration
             && gameManager.LastEventText != null;
+        bool showWarning = Time.time - gameManager.LastWarningTime < eventDisplayDuration
+            && gameManager.LastWarningText != null;
 
-        if (showSummary || showEvent)
+        if (showSummary || showEvent || showWarning)
         {
             string text = "";
+            if (showWarning)
+            {
+                string warningHex = ColorUtility.ToHtmlStringRGB(stressedTextColor);
+                text += $"<color=#{warningHex}>{gameManager.LastWarningText}</color>";
+            }
+            if (showWarning && (showSummary || showEvent))
+                text += "\n\n";
             if (showSummary)
                 text += gameManager.RoundSummaryText;
             if (showSummary && showEvent)
@@ -190,9 +208,6 @@ public class RegionDebugUI : MonoBehaviour
 
         var card = handDisplay.SelectedCard;
         if (card == null) return "";
-
-        // don't show preview if this region already got a card this round
-        if (gameManager != null && gameManager.IsTargetedThisRound(region)) return "";
 
         card.GetModifiedDeltas(region, out float carbon, out float economy, out float stability);
 

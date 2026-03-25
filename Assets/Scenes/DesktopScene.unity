@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 2100000, guid: 246d4b1ad4a63004d8fcf3949494e5b3, type: 2}
+  m_SkyboxMaterial: {fileID: 2100000, guid: 59873b8c3aff57c42a7229b3a8ad6b22, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -454,7 +454,6 @@ MonoBehaviour:
   roundSummaryDuration: 5
   stressedTextColor: {r: 1, g: 0.67, b: 0.27, a: 1}
   crisisTextColor: {r: 1, g: 0.27, b: 0.27, a: 1}
-  cooldownTextColor: {r: 0.53, g: 0.53, b: 0.53, a: 1}
   previewGoodColor: {r: 0.4, g: 0.9, b: 0.4, a: 1}
   previewBadColor: {r: 0.9, g: 0.4, b: 0.4, a: 1}
 --- !u!114 &207634239
@@ -980,10 +979,11 @@ MonoBehaviour:
   commonPath: Policies/Common
   uncommonPath: Policies/Uncommon
   rarePath: Policies/Rare
-  eventsPath: Events
+  normalEventsPath: Events/Normal
+  focusEventsPath: Events/Focus
   totalRounds: 10
-  baseHandSize: 3
-  actionsPerRound: 3
+  handSize: 6
+  focusChancePerPlay: 20
 --- !u!114 &776120565
 MonoBehaviour:
   m_ObjectHideFlags: 0

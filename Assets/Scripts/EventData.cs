@@ -17,7 +17,31 @@ public class EventData : ScriptableObject
     [Tooltip("if > 0, picks this many random matching regions instead of all")]
     public int randomTargetCount;
 
-    // returns the list of regions this event will hit
+    [Header("Focus Targeting")]
+    [Tooltip("targets regions with plays exceeding average by this amount (0 = disabled)")]
+    public int focusThreshold;
+
+    // returns the list of regions this event will hit using focus targeting
+    public List<Region> GetAffectedRegions(List<Region> allRegions, GameManager gm)
+    {
+        // focus targeting takes priority
+        if (focusThreshold > 0 && gm != null)
+        {
+            var candidates = new List<Region>();
+            float avg = gm.GetAveragePlayCount();
+            foreach (var r in allRegions)
+            {
+                if (gm.GetPlayCount(r) >= avg + focusThreshold)
+                    candidates.Add(r);
+            }
+            return ApplyRandomSubset(candidates);
+        }
+
+        // default: trait-based or target-all
+        return GetAffectedRegions(allRegions);
+    }
+
+    // standard targeting for normal events (trait filter or target-all)
     public List<Region> GetAffectedRegions(List<Region> allRegions)
     {
         var candidates = new List<Region>();
@@ -42,7 +66,12 @@ public class EventData : ScriptableObject
             }
         }
 
-        // pick random subset if needed
+        return ApplyRandomSubset(candidates);
+    }
+
+    // pick random subset if randomTargetCount is set
+    List<Region> ApplyRandomSubset(List<Region> candidates)
+    {
         if (randomTargetCount > 0 && candidates.Count > randomTargetCount)
         {
             // fisher-yates shuffle then take first N
@@ -57,5 +86,11 @@ public class EventData : ScriptableObject
         }
 
         return candidates;
+    }
+
+    // returns true if this is a focus event (not part of the random pool)
+    public bool IsFocusEvent()
+    {
+        return focusThreshold > 0;
     }
 }
