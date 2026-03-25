@@ -1022,6 +1022,10 @@ MonoBehaviour:
   selectedColorSpeed: 5
   fanAngle: 5
   fanYOffset: 20
+  stackX: 0
+  stackY: -100
+  stackOffsetY: 3
+  stackRotation: 2
   dealStartX: -1100
   dealStartY: -300
   dealDuration: 0.5

@@ -243,7 +243,10 @@ public class HandDisplay : MonoBehaviour
         int count = cardRects.Count;
         if (count == 0) return;
 
-        float totalWidth = count * cardWidth + (count - 1) * cardSpacing;
+        // when hovered or selected, fan out with full spacing; otherwise stack overlapping
+        bool anyActive = hoveredIndex >= 0 || selectedIndex >= 0;
+        float effectiveSpacing = anyActive ? cardSpacing : -cardWidth * 0.7f;
+        float totalWidth = count * cardWidth + (count - 1) * effectiveSpacing;
         float startX = -totalWidth / 2f + cardWidth / 2f;
 
         for (int i = 0; i < count; i++)
@@ -251,7 +254,7 @@ public class HandDisplay : MonoBehaviour
             var rect = cardRects[i];
             if (rect == null) continue;
 
-            float targetX = startX + i * (cardWidth + cardSpacing);
+            float targetX = startX + i * (cardWidth + effectiveSpacing);
             float targetY;
             float targetScale;
             float targetRotation;
@@ -342,11 +345,13 @@ public class HandDisplay : MonoBehaviour
                 }
             }
 
-            // hovered card always on top, selected behind it
+            // z-order: hovered on top, selected behind it, otherwise first card on top (reverse order)
             if (i == hoveredIndex)
                 rect.SetAsLastSibling();
             else if (i == selectedIndex && hoveredIndex != selectedIndex)
                 rect.transform.SetSiblingIndex(rect.parent.childCount - 2);
+            else if (!anyActive)
+                rect.transform.SetSiblingIndex(count - 1 - i);
         }
     }
 
