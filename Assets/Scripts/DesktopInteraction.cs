@@ -60,16 +60,16 @@ public class DesktopInteraction : MonoBehaviour
         if (desktopPlacement == null || desktopPlacement.SpawnedEarth == null)
             return;
 
-        // don't allow orbit/zoom while paused or reward popup is showing
+        // don't allow orbit/zoom while paused
         if (PauseMenu.IsPaused)
-            return;
-
-        var gm = FindFirstObjectByType<GameManager>();
-        if (gm != null && gm.RewardActive)
             return;
 
         if (currentDistance == 0f)
             InitOrbit();
+
+        // block user input while reward popup is showing, but keep orbit applied
+        var gm = FindFirstObjectByType<GameManager>();
+        bool rewardBlocked = gm != null && gm.RewardActive;
 
         if (isFocused)
         {
@@ -80,7 +80,7 @@ public class DesktopInteraction : MonoBehaviour
 
             // let the player orbit slowly while focused, with deadzone limit
             var mouse = Mouse.current;
-            if (mouse != null && mouse.leftButton.isPressed)
+            if (!rewardBlocked && mouse != null && mouse.leftButton.isPressed)
             {
                 Vector2 delta = mouse.delta.ReadValue();
                 float baseSpeed = orbitSpeed * focusedOrbitMultiplier;
@@ -131,17 +131,20 @@ public class DesktopInteraction : MonoBehaviour
         }
         else if (isReturning)
         {
-            // let the player orbit while zooming out
-            var mouse = Mouse.current;
-            if (mouse != null && mouse.leftButton.isPressed)
+            if (!rewardBlocked)
             {
-                Vector2 delta = mouse.delta.ReadValue();
-                yaw += delta.x * orbitSpeed * 0.1f;
-                pitch -= delta.y * orbitSpeed * 0.1f;
-                pitch = Mathf.Clamp(pitch, -89f, 89f);
-            }
+                // let the player orbit while zooming out
+                var mouse = Mouse.current;
+                if (mouse != null && mouse.leftButton.isPressed)
+                {
+                    Vector2 delta = mouse.delta.ReadValue();
+                    yaw += delta.x * orbitSpeed * 0.1f;
+                    pitch -= delta.y * orbitSpeed * 0.1f;
+                    pitch = Mathf.Clamp(pitch, -89f, 89f);
+                }
 
-            HandleZoom();
+                HandleZoom();
+            }
 
             // smoothly pull distance back, keep going even if player is orbiting
             currentDistance = Mathf.Lerp(currentDistance, targetDistance, focusSmoothSpeed * Time.deltaTime);
@@ -152,7 +155,7 @@ public class DesktopInteraction : MonoBehaviour
                 currentDistance = targetDistance;
             }
         }
-        else
+        else if (!rewardBlocked)
         {
             HandleOrbit();
             HandleZoom();

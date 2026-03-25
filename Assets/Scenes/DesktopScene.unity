@@ -984,6 +984,7 @@ MonoBehaviour:
   focusEventsPath: Events/Focus
   totalRounds: 10
   handSize: 6
+  rewardCarbonThreshold: 1
   focusChancePerPlay: 20
 --- !u!114 &776120565
 MonoBehaviour:

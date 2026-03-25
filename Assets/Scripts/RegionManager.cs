@@ -1347,10 +1347,10 @@ public class RegionManager : MonoBehaviour
 
     public void SetHighlight(Region region)
     {
-        // hover highlight — outline border around the region
+        // hover highlight — skip if hovering on the selected region (selection pulse handles it)
         if (highlightObject != null)
         {
-            if (region != null && region.HighlightMesh != null)
+            if (region != null && region.HighlightMesh != null && region != SelectedRegion)
             {
                 highlightMeshFilter.mesh = region.HighlightMesh;
                 highlightObject.SetActive(true);

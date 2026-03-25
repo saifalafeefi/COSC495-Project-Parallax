@@ -74,6 +74,7 @@ public class HandDisplay : MonoBehaviour
 
     private int lastHandCount = -1;
     private int lastRound = -1;
+    private List<PolicyData> lastHandRef;
     private Region lastSelectedRegion;
 
     void Update()
@@ -98,11 +99,12 @@ public class HandDisplay : MonoBehaviour
         int round = gameManager.CurrentRound;
         Region selectedRegion = regionManager != null ? regionManager.SelectedRegion : null;
 
-        if (round != lastRound)
+        if (round != lastRound || hand != lastHandRef)
         {
-            // new round: full rebuild with deal animation
+            // new round or restart: full rebuild with deal animation
             lastRound = round;
             lastHandCount = handCount;
+            lastHandRef = hand;
             lastSelectedRegion = selectedRegion;
             selectedIndex = -1;
             RebuildCards();
