@@ -42,48 +42,94 @@ public class PolicyData : ScriptableObject
         switch (target.Trait)
         {
             case RegionTrait.Tropical:
-                // reforestation is 50% more effective in tropical regions
+                // reforestation thrives in tropical regions
                 if (policyName.Contains("Reforestation"))
                     carbon *= 1.5f;
+                // warm climate boosts solar output
+                if (policyName.Contains("Solar"))
+                    carbon *= 1.3f;
+                // dense population makes public transport very effective
+                if (policyName.Contains("Transport"))
+                {
+                    carbon *= 1.3f;
+                    stability *= 1.3f;
+                }
                 break;
 
             case RegionTrait.Arid:
-                // reforestation is 50% less effective in arid regions
+                // reforestation struggles in dry climate
                 if (policyName.Contains("Reforestation"))
                     carbon *= 0.5f;
-                // wind farms and desalination are 50% more effective in arid regions
-                if (policyName.Contains("Wind"))
+                // wind and solar excel in open desert
+                if (policyName.Contains("Wind") || policyName.Contains("Solar"))
                 {
                     carbon *= 1.5f;
-                    economy *= 1.5f;
+                    economy *= 1.3f;
                 }
+                // desalination is critical in arid regions
                 if (policyName.Contains("Desalination"))
                     stability *= 1.5f;
                 break;
 
             case RegionTrait.Industrial:
-                // economy policies are 50% more effective, carbon penalties are 50% harsher
+                // economy gains amplified, but carbon cost is harsher
                 economy *= 1.5f;
                 if (carbon > 0) carbon *= 1.5f;
-                // carbon capture is 50% more effective in industrial regions
-                if (policyName.Contains("Carbon Capture"))
+                // carbon capture and nuclear are more effective at scale
+                if (policyName.Contains("Carbon Capture") || policyName.Contains("Nuclear"))
                     carbon *= 1.5f;
+                // waste management has more to work with
+                if (policyName.Contains("Waste"))
+                    carbon *= 1.3f;
                 break;
 
             case RegionTrait.Frozen:
-                // industrial policies are 50% less effective
+                // industrial and coal policies are less effective in harsh conditions
                 if (policyName.Contains("Industrial") || policyName.Contains("Coal"))
                 {
                     carbon *= 0.5f;
                     economy *= 0.5f;
                     stability *= 0.5f;
                 }
+                // nuclear energy thrives — no cooling issues
+                if (policyName.Contains("Nuclear"))
+                    carbon *= 1.3f;
+                // reforestation is weak in frozen soil
+                if (policyName.Contains("Reforestation"))
+                    carbon *= 0.5f;
                 break;
 
             case RegionTrait.Coastal:
-                // desalination is 50% more effective in coastal regions
+                // trade flourishes along coasts
+                if (policyName.Contains("Trade"))
+                {
+                    economy *= 1.5f;
+                    stability *= 1.3f;
+                }
+                // desalination is natural fit for coastal regions
                 if (policyName.Contains("Desalination"))
                     stability *= 1.5f;
+                // eco tourism draws visitors to beaches
+                if (policyName.Contains("Tourism"))
+                    economy *= 1.5f;
+                // wind farms work well on coastlines
+                if (policyName.Contains("Wind"))
+                    carbon *= 1.3f;
+                break;
+
+            case RegionTrait.Temperate:
+                // balanced climate makes most green policies slightly better
+                if (policyName.Contains("Reforestation") || policyName.Contains("Wind") || policyName.Contains("Solar"))
+                    carbon *= 1.2f;
+                // public transport networks thrive in temperate cities
+                if (policyName.Contains("Transport"))
+                {
+                    carbon *= 1.3f;
+                    stability *= 1.3f;
+                }
+                // stable climate makes eco tourism viable
+                if (policyName.Contains("Tourism"))
+                    economy *= 1.3f;
                 break;
         }
     }

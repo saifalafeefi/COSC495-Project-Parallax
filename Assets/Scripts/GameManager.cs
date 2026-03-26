@@ -57,6 +57,18 @@ public class GameManager : MonoBehaviour
     [Tooltip("global carbon must drop by at least this much in a round to trigger a card reward (0 = any decrease)")]
     [SerializeField] private float rewardCarbonThreshold = 2f;
 
+    [Header("Skip Penalty")]
+    [Tooltip("base carbon added to all regions when player skips with capital to spare")]
+    [SerializeField] private float skipBasePenalty = 3f;
+    [Tooltip("multiplier per consecutive wasteful skip (e.g. 2 = doubles each skip)")]
+    [SerializeField] private float skipEscalation = 2f;
+    [Tooltip("fraction of carbon penalty applied as stability loss (e.g. 0.5 = half)")]
+    [SerializeField] private float skipStabilityFraction = 0.5f;
+    [Tooltip("minimum bonus capital for skipping early")]
+    [SerializeField] private int skipCapitalBonusMin = 0;
+    [Tooltip("maximum bonus capital for skipping early (exclusive)")]
+    [SerializeField] private int skipCapitalBonusMax = 5;
+
     [Header("Focus System")]
     [Tooltip("chance per play above average to trigger a focus event (e.g. 20 = 20% per extra play)")]
     [SerializeField] private float focusChancePerPlay = 20f;
@@ -129,6 +141,16 @@ public class GameManager : MonoBehaviour
     private bool rewardPending;
     private PolicyData[] allPolicies;
 
+    // tracks consecutive rounds where player had capital to spare but skipped
+    private int consecutiveWastefulSkips;
+    private int cardsPlayedThisRound;
+    private int capitalWhenSkipped;
+
+    // bonus capital from previous skip trade-off
+    private int bankedCapitalBonus;
+    // how much bonus was applied this round (for UI display)
+    public int AppliedCapitalBonus { get; private set; }
+
     private RegionManager regionManager;
 
     private bool started;
@@ -160,6 +182,14 @@ public class GameManager : MonoBehaviour
         // press space to skip remaining capital and end round early
         if (kb.spaceKey.wasPressedThisFrame && !GameOver && !PauseMenu.IsPaused && !RewardActive && CurrentHand.Count > 0)
         {
+            // check if player could have played at least one card (wasteful skip)
+            bool couldPlay = false;
+            foreach (var c in CurrentHand)
+            {
+                if (c.politicalCapitalCost <= PoliticalCapital) { couldPlay = true; break; }
+            }
+            capitalWhenSkipped = couldPlay ? PoliticalCapital : 0;
+
             // discard remaining hand
             foreach (var card in CurrentHand)
                 discardPile.Add(card);
@@ -183,6 +213,9 @@ public class GameManager : MonoBehaviour
         CurrentRound = 0;
         Funds = 0;
         LastIncome = 0;
+        consecutiveWastefulSkips = 0;
+        bankedCapitalBonus = 0;
+        AppliedCapitalBonus = 0;
         StabilityMultiplier = 1f;
         FinalScore = 0;
         FinalRating = null;
@@ -226,6 +259,7 @@ public class GameManager : MonoBehaviour
     void StartRound()
     {
         CurrentRound++;
+        cardsPlayedThisRound = 0;
 
         // snapshot region status before player acts so the summary captures everything
         SnapshotStatus();
@@ -238,8 +272,10 @@ public class GameManager : MonoBehaviour
         StabilityMultiplier = Mathf.Lerp(stabilityMultMin, stabilityMultMax, t);
 
         int baseCapital = startingCapital + (CurrentRound - 1) * capitalPerRound;
-        MaxCapital = Mathf.Max(1, Mathf.RoundToInt(baseCapital * StabilityMultiplier));
+        AppliedCapitalBonus = bankedCapitalBonus;
+        MaxCapital = Mathf.Max(1, Mathf.RoundToInt(baseCapital * StabilityMultiplier)) + AppliedCapitalBonus;
         PoliticalCapital = MaxCapital;
+        bankedCapitalBonus = 0;
 
         // economy generates funds income each round
         float avgEconomy = GetAverageEconomy();
@@ -341,6 +377,7 @@ public class GameManager : MonoBehaviour
         discardPile.Add(card);
         CurrentHand.RemoveAt(cardIndex);
         PoliticalCapital -= card.politicalCapitalCost;
+        cardsPlayedThisRound++;
 
         string result = $"{card.policyName} ({card.politicalCapitalCost}) → {target.RegionName}";
         if (focusResult != null)
@@ -359,6 +396,42 @@ public class GameManager : MonoBehaviour
     {
         var regions = regionManager.Regions;
         if (regions == null) return;
+
+        // wasteful skip penalty: player had capital to spare but chose to skip
+        if (capitalWhenSkipped > 0)
+        {
+            consecutiveWastefulSkips++;
+            float penalty = skipBasePenalty * Mathf.Pow(skipEscalation, consecutiveWastefulSkips - 1);
+            float stabPenalty = penalty * skipStabilityFraction;
+            foreach (var r in regions)
+            {
+                r.CarbonLevel = Mathf.Clamp(r.CarbonLevel + penalty, 0f, 100f);
+                r.StabilityLevel = Mathf.Clamp(r.StabilityLevel - stabPenalty, 0f, 100f);
+            }
+
+            // trade-off: random capital bonus banked for next round
+            bankedCapitalBonus = Random.Range(skipCapitalBonusMin, skipCapitalBonusMax);
+
+            string warnText = $"Neglect Penalty! (+{penalty:F0} carbon, -{stabPenalty:F0} stability to all regions)";
+            if (bankedCapitalBonus > 0)
+                warnText += $"\n+{bankedCapitalBonus} bonus capital next round";
+            if (consecutiveWastefulSkips >= 2)
+                warnText += $" [x{consecutiveWastefulSkips} consecutive]";
+            LastWarningText = warnText;
+            LastWarningTime = Time.time;
+
+            string logEntry = $"R{CurrentRound}: Neglect penalty (skip x{consecutiveWastefulSkips}, +{bankedCapitalBonus} capital banked)";
+            EventLog.Add(logEntry);
+            if (EventLog.Count > maxEventLog)
+                EventLog.RemoveAt(0);
+
+            Debug.Log($"[GameManager] wasteful skip penalty: +{penalty:F0} carbon, -{stabPenalty:F0} stability (streak: {consecutiveWastefulSkips}, banked: +{bankedCapitalBonus})");
+        }
+        else
+        {
+            consecutiveWastefulSkips = 0;
+        }
+        capitalWhenSkipped = 0;
 
         // 0. global carbon drift — the world gets worse on its own
         foreach (var r in regions)

@@ -147,6 +147,26 @@ public class PolicyEventGenerator
             new RegionTrait[] { RegionTrait.Arid },
             -8f, 6f, 0f, false, 0);
 
+        CreateEvent(normal, "Factory Meltdown", "Industrial accident contaminates surrounding areas.",
+            new RegionTrait[] { RegionTrait.Industrial },
+            8f, -8f, -6f, false, 0);
+
+        CreateEvent(normal, "Trade Boom", "A surge in global shipping fuels coastal economies.",
+            new RegionTrait[] { RegionTrait.Coastal, RegionTrait.Industrial },
+            3f, 10f, 3f, false, 0);
+
+        CreateEvent(normal, "Blizzard", "Severe storms isolate frozen communities.",
+            new RegionTrait[] { RegionTrait.Frozen, RegionTrait.Temperate },
+            0f, -6f, -8f, false, 0);
+
+        CreateEvent(normal, "Harvest Festival", "Bumper crops boost morale and trade.",
+            new RegionTrait[] { RegionTrait.Temperate, RegionTrait.Tropical },
+            0f, 8f, 6f, false, 0);
+
+        CreateEvent(normal, "Infrastructure Decay", "Aging systems fail in neglected regions.",
+            new RegionTrait[] { RegionTrait.Industrial, RegionTrait.Temperate },
+            4f, -6f, -4f, false, 0);
+
         // focus events — warn then punish for over-targeting a region
         CreateEvent(focus, "Civil Unrest", "Overworked citizens revolt against constant government intervention.",
             new RegionTrait[] { }, 0f, -6f, -12f, false, 0, focusThreshold: 3);

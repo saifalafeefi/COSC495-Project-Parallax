@@ -71,7 +71,8 @@ public class RegionDebugUI : MonoBehaviour
             else
             {
                 string stabMult = gameManager.StabilityMultiplier != 1f ? $" (x{gameManager.StabilityMultiplier:F1})" : "";
-                gameStateText.text = $"Round {gameManager.CurrentRound}/10   Capital: {gameManager.PoliticalCapital}/{gameManager.MaxCapital}{stabMult}   Funds: {gameManager.Funds}";
+                string bonusTag = gameManager.AppliedCapitalBonus > 0 ? $" (+{gameManager.AppliedCapitalBonus})" : "";
+                gameStateText.text = $"Round {gameManager.CurrentRound}/10   Capital: {gameManager.PoliticalCapital}/{gameManager.MaxCapital}{bonusTag}{stabMult}   Funds: {gameManager.Funds}";
                 gameStateText.gameObject.SetActive(true);
             }
         }
