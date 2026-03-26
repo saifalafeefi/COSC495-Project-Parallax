@@ -373,6 +373,17 @@ public class RewardDisplay : MonoBehaviour
         innerImg.color = cardBackground;
         innerImg.raycastTarget = false;
 
+        // cost badge — reward cards are always free
+        var costBadge = CreateChild(inner, "CostBadge",
+            new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f),
+            new Vector2(-4f, -4f), new Vector2(36f, 20f));
+        var costBg = costBadge.AddComponent<Image>();
+        costBg.color = new Color(0.2f, 0.6f, 0.3f, 0.9f);
+        costBg.raycastTarget = false;
+        var costText = CreateText(costBadge, "FREE", 10, TextAlignmentOptions.Center, Color.white);
+        costText.fontStyle = FontStyles.Bold;
+        StretchFill(costText.gameObject);
+
         // stats at top
         var statsArea = CreateChild(inner, "Stats",
             new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),

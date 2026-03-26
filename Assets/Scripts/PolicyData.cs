@@ -18,6 +18,9 @@ public class PolicyData : ScriptableObject
     public PolicyRarity rarity;
     public Sprite icon;
 
+    [Tooltip("political capital cost to play this card (0 = free)")]
+    public int politicalCapitalCost = 1;
+
     [Tooltip("overrides the default 0.25 spillover to neighbors. 0 = use default.")]
     public float spilloverOverride;
 

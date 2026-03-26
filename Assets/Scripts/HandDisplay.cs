@@ -56,8 +56,18 @@ public class HandDisplay : MonoBehaviour
     // track which PolicyData each card slot holds so we can match across rebuilds
     private List<PolicyData> cardPolicies = new List<PolicyData>();
 
+    // reject flash when card is too expensive
+    private int rejectFlashIndex = -1;
+    private float rejectFlashTime;
+    private const float rejectFlashDuration = 0.6f;
+    private static readonly Color rejectColor = new Color(1f, 0.2f, 0.2f);
+
     private int hoveredIndex = -1;
     private int selectedIndex = -1;
+
+    // keeps cards fanned briefly after unhover to prevent jitter
+    private float lastFanTime;
+    private const float fanCooldown = 0.4f;
 
     // expose the currently selected card for other scripts (e.g. stat preview)
     public PolicyData SelectedCard
@@ -243,8 +253,8 @@ public class HandDisplay : MonoBehaviour
         int count = cardRects.Count;
         if (count == 0) return;
 
-        // when hovered or selected, fan out with full spacing; otherwise stack overlapping
-        bool anyActive = hoveredIndex >= 0 || selectedIndex >= 0;
+        // when hovered or selected, fan out with full spacing; cooldown prevents jitter at edges
+        bool anyActive = hoveredIndex >= 0 || selectedIndex >= 0 || Time.time - lastFanTime < fanCooldown;
         float effectiveSpacing = anyActive ? cardSpacing : -cardWidth * 0.7f;
         float totalWidth = count * cardWidth + (count - 1) * effectiveSpacing;
         float startX = -totalWidth / 2f + cardWidth / 2f;
@@ -333,7 +343,13 @@ public class HandDisplay : MonoBehaviour
             if (dealT >= 1f && i < cardBorders.Count && cardBorders[i] != null)
             {
                 float ct = Time.deltaTime * tweenSpeed;
-                if (i == selectedIndex)
+                if (i == rejectFlashIndex && Time.time - rejectFlashTime < rejectFlashDuration)
+                {
+                    // red flash that decays back to rarity color
+                    float flashT = (Time.time - rejectFlashTime) / rejectFlashDuration;
+                    cardBorders[i].color = Color.Lerp(rejectColor, cardRarityColors[i], flashT);
+                }
+                else if (i == selectedIndex)
                 {
                     // pulse between rarity color and glow
                     float pulse = (Mathf.Sin(Time.time * selectedColorSpeed) + 1f) / 2f;
@@ -359,6 +375,7 @@ public class HandDisplay : MonoBehaviour
     public void OnCardHover(int index)
     {
         hoveredIndex = index;
+        lastFanTime = Time.time;
     }
 
     public void OnCardUnhover(int index)
@@ -399,9 +416,24 @@ public class HandDisplay : MonoBehaviour
         if (target == null) return;
 
         string result = gameManager.PlayCard(index, target);
+        var selector = FindFirstObjectByType<RegionSelector>();
+
+        // not enough capital — flash the card red and show message
+        if (result != null && result.StartsWith("NOT_ENOUGH_CAPITAL"))
+        {
+            rejectFlashIndex = index;
+            rejectFlashTime = Time.time;
+            selectedIndex = -1;
+
+            if (selector != null)
+            {
+                selector.LastPlayResult = $"Not enough Political Capital!";
+                selector.LastPlayTime = Time.time;
+            }
+            return;
+        }
 
         // update the selector's last play result
-        var selector = FindFirstObjectByType<RegionSelector>();
         if (selector != null)
         {
             selector.LastPlayResult = result;
@@ -448,6 +480,19 @@ public class HandDisplay : MonoBehaviour
         var innerImg = inner.AddComponent<Image>();
         innerImg.color = cardBackground;
         innerImg.raycastTarget = false;
+
+        // -- cost badge top-right --
+        var costBadge = CreateChild(inner, "CostBadge",
+            new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f),
+            new Vector2(-4f, -4f), new Vector2(28f, 28f));
+        var costBg = costBadge.AddComponent<Image>();
+        costBg.color = new Color(0.15f, 0.35f, 0.6f, 0.9f);
+        costBg.raycastTarget = false;
+        string costLabel = policy.politicalCapitalCost == 0 ? "FREE" : policy.politicalCapitalCost.ToString();
+        float costFontSize = policy.politicalCapitalCost == 0 ? 9f : 14f;
+        var costText = CreateText(costBadge, costLabel, costFontSize, TextAlignmentOptions.Center, Color.white);
+        costText.fontStyle = FontStyles.Bold;
+        StretchFill(costText.gameObject);
 
         // -- stats section at top --
         // carbon: lower is better, economy/stability: higher is better

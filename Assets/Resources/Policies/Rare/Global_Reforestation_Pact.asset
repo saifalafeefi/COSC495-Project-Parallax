@@ -19,4 +19,5 @@ MonoBehaviour:
   stabilityDelta: 12
   rarity: 2
   icon: {fileID: 0}
+  politicalCapitalCost: 4
   spilloverOverride: 0.5

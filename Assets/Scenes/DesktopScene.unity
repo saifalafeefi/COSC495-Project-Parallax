@@ -451,6 +451,8 @@ MonoBehaviour:
   globalStatsText: {fileID: 2085467294}
   eventDisplayDuration: 6
   cardPlayDisplayDuration: 4
+  cardPlayHoldDuration: 1
+  cardPlayFadeDuration: 1
   roundSummaryDuration: 5
   stressedTextColor: {r: 1, g: 0.67, b: 0.27, a: 1}
   crisisTextColor: {r: 1, g: 0.27, b: 0.27, a: 1}
@@ -984,6 +986,8 @@ MonoBehaviour:
   focusEventsPath: Events/Focus
   totalRounds: 10
   handSize: 6
+  startingCapital: 10
+  capitalPerRound: 1
   rewardCarbonThreshold: 1
   focusChancePerPlay: 20
 --- !u!114 &776120565
@@ -1010,7 +1014,7 @@ MonoBehaviour:
   penaltyColor: {r: 0.9, g: 0.4, b: 0.4, a: 1}
   cardWidth: 190
   cardHeight: 260
-  cardSpacing: 16
+  cardSpacing: -35.3
   restY: -300
   hoverY: -200
   selectedY: -150
@@ -1022,10 +1026,6 @@ MonoBehaviour:
   selectedColorSpeed: 5
   fanAngle: 5
   fanYOffset: 20
-  stackX: 0
-  stackY: -100
-  stackOffsetY: 3
-  stackRotation: 2
   dealStartX: -1100
   dealStartY: -300
   dealDuration: 0.5
@@ -2233,7 +2233,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -200}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 500, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1987244034

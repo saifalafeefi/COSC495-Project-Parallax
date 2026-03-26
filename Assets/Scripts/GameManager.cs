@@ -19,6 +19,12 @@ public class GameManager : MonoBehaviour
     [SerializeField] private int totalRounds = 10;
     [SerializeField] private int handSize = 6;
 
+    [Header("Political Capital")]
+    [Tooltip("starting political capital on round 1")]
+    [SerializeField] private int startingCapital = 10;
+    [Tooltip("extra capital gained each round")]
+    [SerializeField] private int capitalPerRound = 1;
+
     [Header("Reward System")]
     [Tooltip("global carbon must drop by at least this much in a round to trigger a card reward (0 = any decrease)")]
     [SerializeField] private float rewardCarbonThreshold = 2f;
@@ -28,7 +34,8 @@ public class GameManager : MonoBehaviour
     [SerializeField] private float focusChancePerPlay = 20f;
 
     public int CurrentRound { get; private set; }
-    public int ActionsRemaining { get; private set; }
+    public int PoliticalCapital { get; private set; }
+    public int MaxCapital { get; private set; }
     public int HandSize { get; private set; }
     public bool GameOver { get; private set; }
     public string GameOverReason { get; private set; }
@@ -108,15 +115,15 @@ public class GameManager : MonoBehaviour
             Debug.Log("[GameManager] DEBUG: forced game over");
         }
 
-        // press space to skip remaining actions and end round early
-        if (kb.spaceKey.wasPressedThisFrame && !GameOver && !PauseMenu.IsPaused && !RewardActive && ActionsRemaining > 0)
+        // press space to skip remaining capital and end round early
+        if (kb.spaceKey.wasPressedThisFrame && !GameOver && !PauseMenu.IsPaused && !RewardActive && CurrentHand.Count > 0)
         {
             // discard remaining hand
             foreach (var card in CurrentHand)
                 discardPile.Add(card);
             CurrentHand.Clear();
-            ActionsRemaining = 0;
-            Debug.Log("[GameManager] skipped remaining actions");
+            PoliticalCapital = 0;
+            Debug.Log("[GameManager] skipped remaining capital");
             EndRound();
         }
     }
@@ -179,7 +186,8 @@ public class GameManager : MonoBehaviour
         SnapshotStatus();
 
         HandSize = handSize;
-        ActionsRemaining = HandSize;
+        MaxCapital = startingCapital + (CurrentRound - 1) * capitalPerRound;
+        PoliticalCapital = MaxCapital;
 
         CurrentHand.Clear();
         for (int i = 0; i < HandSize; i++)
@@ -222,6 +230,10 @@ public class GameManager : MonoBehaviour
         if (target == null) return "No region selected.";
 
         var card = CurrentHand[cardIndex];
+
+        // check political capital cost
+        if (card.politicalCapitalCost > PoliticalCapital)
+            return $"NOT_ENOUGH_CAPITAL|{card.politicalCapitalCost}|{PoliticalCapital}";
         card.GetModifiedDeltas(target, out float carbon, out float economy, out float stability);
 
         // apply to target region
@@ -268,18 +280,19 @@ public class GameManager : MonoBehaviour
         // check focus: warn or punish immediately on card play
         string focusResult = CheckFocusOnPlay(target);
 
-        // move card to discard
+        // move card to discard and deduct capital
         discardPile.Add(card);
         CurrentHand.RemoveAt(cardIndex);
-        ActionsRemaining--;
+        PoliticalCapital -= card.politicalCapitalCost;
 
-        string result = $"{card.policyName} → {target.RegionName}";
+        string result = $"{card.policyName} ({card.politicalCapitalCost}) → {target.RegionName}";
         if (focusResult != null)
             result += $"\n{focusResult}";
 
-        Debug.Log($"[GameManager] {result}");
+        Debug.Log($"[GameManager] {result} | capital: {PoliticalCapital}/{MaxCapital}");
 
-        if (ActionsRemaining <= 0)
+        // end round when hand is empty
+        if (CurrentHand.Count == 0)
             EndRound();
 
         return result;
@@ -645,13 +658,19 @@ public class GameManager : MonoBehaviour
         StartGame();
     }
 
-    // player picks one of the 3 offered reward cards — added straight to hand
+    // player picks one of the 3 offered reward cards — added straight to hand as a free copy
     public void ClaimReward(int index)
     {
         if (!RewardActive || index < 0 || index >= RewardChoices.Count) return;
-        var chosen = RewardChoices[index];
-        CurrentHand.Add(chosen);
-        Debug.Log($"[GameManager] reward claimed: {chosen.policyName} (hand now {CurrentHand.Count})");
+        var original = RewardChoices[index];
+
+        // create a runtime clone with 0 cost so reward cards are permanently free
+        var freeCard = Instantiate(original);
+        freeCard.politicalCapitalCost = 0;
+        freeCard.policyName = original.policyName + " (Reward)";
+
+        CurrentHand.Add(freeCard);
+        Debug.Log($"[GameManager] reward claimed: {freeCard.policyName} (hand now {CurrentHand.Count})");
         RewardActive = false;
         RewardChoices.Clear();
     }

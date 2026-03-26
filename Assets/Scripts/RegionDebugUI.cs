@@ -13,6 +13,10 @@ public class RegionDebugUI : MonoBehaviour
     [Header("Display Durations")]
     [SerializeField] private float eventDisplayDuration = 6f;
     [SerializeField] private float cardPlayDisplayDuration = 4f;
+    [Tooltip("how long the card play text stays fully visible before fading")]
+    [SerializeField] private float cardPlayHoldDuration = 1f;
+    [Tooltip("how long the fade-out takes after the hold")]
+    [SerializeField] private float cardPlayFadeDuration = 1f;
     [SerializeField] private float roundSummaryDuration = 5f;
 
     [Header("Health Warning Colors")]
@@ -66,7 +70,7 @@ public class RegionDebugUI : MonoBehaviour
             }
             else
             {
-                gameStateText.text = $"Round {gameManager.CurrentRound}/10   Actions: {gameManager.ActionsRemaining}/{gameManager.HandSize}   Deck: {gameManager.DeckCount}  Discard: {gameManager.DiscardCount}";
+                gameStateText.text = $"Round {gameManager.CurrentRound}/10   Capital: {gameManager.PoliticalCapital}/{gameManager.MaxCapital}   Deck: {gameManager.DeckCount}  Discard: {gameManager.DiscardCount}";
                 gameStateText.gameObject.SetActive(true);
             }
         }
@@ -190,14 +194,30 @@ public class RegionDebugUI : MonoBehaviour
 
         if (isGameOver) { cardPlayText.gameObject.SetActive(false); return; }
 
-        if (Time.time - regionSelector.LastPlayTime < cardPlayDisplayDuration && regionSelector.LastPlayResult != null)
+        float elapsed = Time.time - regionSelector.LastPlayTime;
+        float totalDuration = cardPlayHoldDuration + cardPlayFadeDuration;
+
+        if (elapsed < totalDuration && regionSelector.LastPlayResult != null)
         {
             cardPlayText.text = regionSelector.LastPlayResult;
             cardPlayText.gameObject.SetActive(true);
+
+            // fade out after hold period
+            if (elapsed > cardPlayHoldDuration)
+            {
+                float fadeT = (elapsed - cardPlayHoldDuration) / cardPlayFadeDuration;
+                float alpha = 1f - Mathf.Clamp01(fadeT);
+                cardPlayText.alpha = alpha;
+            }
+            else
+            {
+                cardPlayText.alpha = 1f;
+            }
         }
         else
         {
             cardPlayText.gameObject.SetActive(false);
+            cardPlayText.alpha = 1f;
         }
     }
 

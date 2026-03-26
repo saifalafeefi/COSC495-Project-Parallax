@@ -31,47 +31,47 @@ public class PolicyEventGenerator
         string uncommon = "Assets/Resources/Policies/Uncommon";
         string rare = "Assets/Resources/Policies/Rare";
 
-        // -- common --
+        // -- common (cost 1-2) --
         CreatePolicy(common, "Solar Infrastructure", "Build solar farms to reduce emissions.",
-            -12f, -6f, 5f, PolicyRarity.Common);
+            -12f, -6f, 5f, PolicyRarity.Common, cost: 2);
         CreatePolicy(common, "Reforestation", "Plant forests to absorb carbon and boost morale.",
-            -8f, -3f, 8f, PolicyRarity.Common);
+            -8f, -3f, 8f, PolicyRarity.Common, cost: 1);
         CreatePolicy(common, "Industrial Expansion", "Expand factories for economic growth at environmental cost.",
-            15f, 20f, -5f, PolicyRarity.Common);
+            15f, 20f, -5f, PolicyRarity.Common, cost: 1);
         CreatePolicy(common, "Coal Subsidy", "Cheap energy now, consequences later.",
-            18f, 15f, -8f, PolicyRarity.Common);
+            18f, 15f, -8f, PolicyRarity.Common, cost: 1);
         CreatePolicy(common, "Carbon Tax", "Tax polluters. Effective but unpopular.",
-            -10f, -8f, -2f, PolicyRarity.Common);
+            -10f, -8f, -2f, PolicyRarity.Common, cost: 2);
         CreatePolicy(common, "Public Transport", "Invest in buses and trains.",
-            -6f, -5f, 6f, PolicyRarity.Common);
+            -6f, -5f, 6f, PolicyRarity.Common, cost: 1);
         CreatePolicy(common, "Wind Farms", "Harness wind energy across open terrain.",
-            -9f, -4f, 3f, PolicyRarity.Common);
+            -9f, -4f, 3f, PolicyRarity.Common, cost: 1);
         CreatePolicy(common, "Waste Management", "Reduce emissions through recycling programs.",
-            -5f, -2f, 4f, PolicyRarity.Common);
+            -5f, -2f, 4f, PolicyRarity.Common, cost: 1);
 
-        // -- uncommon --
+        // -- uncommon (cost 2-3) --
         CreatePolicy(uncommon, "Nuclear Energy", "Massive carbon reduction but expensive and controversial.",
-            -15f, -12f, -4f, PolicyRarity.Uncommon);
+            -15f, -12f, -4f, PolicyRarity.Uncommon, cost: 3);
         CreatePolicy(uncommon, "Eco Tourism", "Turn natural beauty into profit.",
-            -4f, 10f, 4f, PolicyRarity.Uncommon);
+            -4f, 10f, 4f, PolicyRarity.Uncommon, cost: 2);
         CreatePolicy(uncommon, "Emergency Rations", "Stabilize a region in crisis at any cost.",
-            5f, -5f, 15f, PolicyRarity.Uncommon);
+            5f, -5f, 15f, PolicyRarity.Uncommon, cost: 2);
         CreatePolicy(uncommon, "Carbon Capture", "Deploy experimental carbon scrubbing tech.",
-            -14f, -10f, 2f, PolicyRarity.Uncommon);
+            -14f, -10f, 2f, PolicyRarity.Uncommon, cost: 3);
         CreatePolicy(uncommon, "Trade Agreement", "Open borders boost trade but increase shipping emissions.",
-            3f, 15f, 6f, PolicyRarity.Uncommon);
+            3f, 15f, 6f, PolicyRarity.Uncommon, cost: 2);
         CreatePolicy(uncommon, "Desalination Plant", "Fresh water for all, at an energy cost.",
-            4f, 8f, 10f, PolicyRarity.Uncommon);
+            4f, 8f, 10f, PolicyRarity.Uncommon, cost: 2);
 
-        // -- rare --
+        // -- rare (cost 3-4) --
         CreatePolicy(rare, "Green New Deal", "Revolutionary overhaul. Expensive but transformative.",
-            -20f, -15f, 10f, PolicyRarity.Rare);
+            -20f, -15f, 10f, PolicyRarity.Rare, cost: 4);
         CreatePolicy(rare, "Corporate Bailout", "Prop up the economy. The planet pays the price.",
-            10f, 25f, -12f, PolicyRarity.Rare);
+            10f, 25f, -12f, PolicyRarity.Rare, cost: 3);
         CreatePolicy(rare, "Global Reforestation Pact", "Every region plants trees together. 50% spillover.",
-            -10f, -8f, 12f, PolicyRarity.Rare, 0.5f);
+            -10f, -8f, 12f, PolicyRarity.Rare, spillover: 0.5f, cost: 4);
         CreatePolicy(rare, "Tech Embargo", "Ban all fossil fuel imports. Brutal but effective.",
-            -15f, -20f, -8f, PolicyRarity.Rare);
+            -15f, -20f, -8f, PolicyRarity.Rare, cost: 3);
     }
 
     static void GenerateEvents()
@@ -156,7 +156,7 @@ public class PolicyEventGenerator
     }
 
     static void CreatePolicy(string folder, string pName, string desc,
-        float carbon, float economy, float stability, PolicyRarity rarity, float spillover = 0f)
+        float carbon, float economy, float stability, PolicyRarity rarity, float spillover = 0f, int cost = 1)
     {
         string safeName = pName.Replace(" ", "_");
         string path = $"{folder}/{safeName}.asset";
@@ -176,6 +176,7 @@ public class PolicyEventGenerator
         policy.stabilityDelta = stability;
         policy.rarity = rarity;
         policy.spilloverOverride = spillover;
+        policy.politicalCapitalCost = cost;
 
         AssetDatabase.CreateAsset(policy, path);
         Debug.Log($"[Generator] created policy: {pName}");
