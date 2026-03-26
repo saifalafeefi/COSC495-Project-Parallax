@@ -123,6 +123,8 @@ public class RegionManager : MonoBehaviour
     private List<PulseLayer> stressedLayers = new List<PulseLayer>();
     private List<PulseLayer> crisisLayers = new List<PulseLayer>();
 
+    private GameManager gameManager;
+
 
     private Vector3[] allVertices;
     private int[] allTriangles;
@@ -198,15 +200,18 @@ public class RegionManager : MonoBehaviour
     {
         if (Regions == null) return;
 
-        // split regions by status
+        if (gameManager == null)
+            gameManager = FindFirstObjectByType<GameManager>();
+
+        // split regions by health score
         var stressedRegions = new List<Region>();
         var crisisRegions = new List<Region>();
 
         foreach (var r in Regions)
         {
-            if (r.CarbonLevel > 85f)
+            if (gameManager != null ? gameManager.IsCrisis(r) : r.CarbonLevel > 85f)
                 crisisRegions.Add(r);
-            else if (r.CarbonLevel > 70f)
+            else if (gameManager != null ? gameManager.IsStressed(r) : r.CarbonLevel > 70f)
                 stressedRegions.Add(r);
         }
 

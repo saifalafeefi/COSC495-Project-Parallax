@@ -986,8 +986,12 @@ MonoBehaviour:
   focusEventsPath: Events/Focus
   totalRounds: 10
   handSize: 6
-  startingCapital: 10
+  startingCapital: 7
   capitalPerRound: 1
+  stabilityMidpoint: 50
+  stabilityMultMin: 0.5
+  stabilityMultMax: 1.5
+  fundsIncomeMultiplier: 0.1
   rewardCarbonThreshold: 1
   focusChancePerPlay: 20
 --- !u!114 &776120565

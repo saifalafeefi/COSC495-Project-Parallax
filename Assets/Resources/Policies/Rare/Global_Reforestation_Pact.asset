@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PolicyData
   policyName: Global Reforestation Pact
   description: Every region plants trees together. 50% spillover.
-  carbonDelta: -10
-  economyDelta: -8
-  stabilityDelta: 12
+  carbonDelta: -12
+  economyDelta: -3
+  stabilityDelta: 10
   rarity: 2
   icon: {fileID: 0}
   politicalCapitalCost: 4

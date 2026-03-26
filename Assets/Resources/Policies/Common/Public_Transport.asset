@@ -15,8 +15,8 @@ MonoBehaviour:
   policyName: Public Transport
   description: Invest in buses and trains.
   carbonDelta: -6
-  economyDelta: -5
-  stabilityDelta: 6
+  economyDelta: -2
+  stabilityDelta: 5
   rarity: 0
   icon: {fileID: 0}
   politicalCapitalCost: 1

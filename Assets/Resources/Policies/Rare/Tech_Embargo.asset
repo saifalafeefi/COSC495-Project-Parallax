@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PolicyData
   policyName: Tech Embargo
   description: Ban all fossil fuel imports. Brutal but effective.
-  carbonDelta: -15
-  economyDelta: -20
-  stabilityDelta: -8
+  carbonDelta: -16
+  economyDelta: -6
+  stabilityDelta: 2
   rarity: 2
   icon: {fileID: 0}
   politicalCapitalCost: 3

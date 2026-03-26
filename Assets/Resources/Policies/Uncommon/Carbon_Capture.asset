@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PolicyData
   policyName: Carbon Capture
   description: Deploy experimental carbon scrubbing tech.
-  carbonDelta: -14
-  economyDelta: -10
+  carbonDelta: -12
+  economyDelta: -4
   stabilityDelta: 2
   rarity: 1
   icon: {fileID: 0}

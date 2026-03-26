@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PolicyData
   policyName: Carbon Tax
   description: Tax polluters. Effective but unpopular.
-  carbonDelta: -10
-  economyDelta: -8
-  stabilityDelta: -2
+  carbonDelta: -8
+  economyDelta: -4
+  stabilityDelta: 0
   rarity: 0
   icon: {fileID: 0}
   politicalCapitalCost: 2

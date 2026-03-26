@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PolicyData
   policyName: Desalination Plant
   description: Fresh water for all, at an energy cost.
-  carbonDelta: 4
-  economyDelta: 8
-  stabilityDelta: 10
+  carbonDelta: 2
+  economyDelta: 6
+  stabilityDelta: 8
   rarity: 1
   icon: {fileID: 0}
   politicalCapitalCost: 2

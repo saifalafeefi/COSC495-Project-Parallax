@@ -15,7 +15,7 @@ MonoBehaviour:
   policyName: Waste Management
   description: Reduce emissions through recycling programs.
   carbonDelta: -5
-  economyDelta: -2
+  economyDelta: 0
   stabilityDelta: 4
   rarity: 0
   icon: {fileID: 0}

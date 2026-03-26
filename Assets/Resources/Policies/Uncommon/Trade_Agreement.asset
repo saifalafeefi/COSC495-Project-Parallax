@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PolicyData
   policyName: Trade Agreement
   description: Open borders boost trade but increase shipping emissions.
-  carbonDelta: 3
-  economyDelta: 15
-  stabilityDelta: 6
+  carbonDelta: 2
+  economyDelta: 12
+  stabilityDelta: 5
   rarity: 1
   icon: {fileID: 0}
   politicalCapitalCost: 2

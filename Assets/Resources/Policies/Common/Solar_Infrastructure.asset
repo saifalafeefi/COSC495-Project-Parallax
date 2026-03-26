@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PolicyData
   policyName: Solar Infrastructure
   description: Build solar farms to reduce emissions.
-  carbonDelta: -12
-  economyDelta: -6
-  stabilityDelta: 5
+  carbonDelta: -10
+  economyDelta: -3
+  stabilityDelta: 4
   rarity: 0
   icon: {fileID: 0}
   politicalCapitalCost: 2

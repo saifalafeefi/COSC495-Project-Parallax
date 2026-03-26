@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PolicyData
   policyName: Nuclear Energy
   description: Massive carbon reduction but expensive and controversial.
-  carbonDelta: -15
-  economyDelta: -12
-  stabilityDelta: -4
+  carbonDelta: -14
+  economyDelta: -5
+  stabilityDelta: -2
   rarity: 1
   icon: {fileID: 0}
   politicalCapitalCost: 3

@@ -15,8 +15,8 @@ MonoBehaviour:
   policyName: Reforestation
   description: Plant forests to absorb carbon and boost morale.
   carbonDelta: -8
-  economyDelta: -3
-  stabilityDelta: 8
+  economyDelta: -2
+  stabilityDelta: 6
   rarity: 0
   icon: {fileID: 0}
   politicalCapitalCost: 1

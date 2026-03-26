@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PolicyData
   policyName: Corporate Bailout
   description: Prop up the economy. The planet pays the price.
-  carbonDelta: 10
-  economyDelta: 25
-  stabilityDelta: -12
+  carbonDelta: 5
+  economyDelta: 20
+  stabilityDelta: -2
   rarity: 2
   icon: {fileID: 0}
   politicalCapitalCost: 3

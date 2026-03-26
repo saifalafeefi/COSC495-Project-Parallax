@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PolicyData
   policyName: Emergency Rations
   description: Stabilize a region in crisis at any cost.
-  carbonDelta: 5
-  economyDelta: -5
-  stabilityDelta: 15
+  carbonDelta: 3
+  economyDelta: -2
+  stabilityDelta: 12
   rarity: 1
   icon: {fileID: 0}
   politicalCapitalCost: 2

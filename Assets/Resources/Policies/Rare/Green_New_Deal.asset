@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PolicyData
   policyName: Green New Deal
   description: Revolutionary overhaul. Expensive but transformative.
-  carbonDelta: -20
-  economyDelta: -15
-  stabilityDelta: 10
+  carbonDelta: -18
+  economyDelta: -4
+  stabilityDelta: 8
   rarity: 2
   icon: {fileID: 0}
   politicalCapitalCost: 4

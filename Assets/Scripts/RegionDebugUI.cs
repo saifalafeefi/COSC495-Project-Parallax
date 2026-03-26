@@ -70,7 +70,8 @@ public class RegionDebugUI : MonoBehaviour
             }
             else
             {
-                gameStateText.text = $"Round {gameManager.CurrentRound}/10   Capital: {gameManager.PoliticalCapital}/{gameManager.MaxCapital}   Deck: {gameManager.DeckCount}  Discard: {gameManager.DiscardCount}";
+                string stabMult = gameManager.StabilityMultiplier != 1f ? $" (x{gameManager.StabilityMultiplier:F1})" : "";
+                gameStateText.text = $"Round {gameManager.CurrentRound}/10   Capital: {gameManager.PoliticalCapital}/{gameManager.MaxCapital}{stabMult}   Funds: {gameManager.Funds}";
                 gameStateText.gameObject.SetActive(true);
             }
         }
@@ -110,8 +111,8 @@ public class RegionDebugUI : MonoBehaviour
                 : "none";
 
             string status = "";
-            if (selected.CarbonLevel > 85f) status = $"  <color=#{crisisHex}>CRISIS</color>";
-            else if (selected.CarbonLevel > 70f) status = $"  <color=#{stressedHex}>STRESSED</color>";
+            if (gameManager != null && gameManager.IsCrisis(selected)) status = $"  <color=#{crisisHex}>CRISIS</color>";
+            else if (gameManager != null && gameManager.IsStressed(selected)) status = $"  <color=#{stressedHex}>STRESSED</color>";
 
             string preview = BuildCardPreview(selected, isGameOver);
 
@@ -260,14 +261,13 @@ public class RegionDebugUI : MonoBehaviour
 
         float totalCarbon = 0f, totalEcon = 0f, totalStab = 0f;
         int stressed = 0, crisis = 0;
-
         foreach (var r in regions)
         {
             totalCarbon += r.CarbonLevel;
             totalEcon += r.EconomyLevel;
             totalStab += r.StabilityLevel;
-            if (r.CarbonLevel > 85f) crisis++;
-            else if (r.CarbonLevel > 70f) stressed++;
+            if (gameManager != null && gameManager.IsCrisis(r)) crisis++;
+            else if (gameManager != null && gameManager.IsStressed(r)) stressed++;
         }
 
         int count = regions.Count;

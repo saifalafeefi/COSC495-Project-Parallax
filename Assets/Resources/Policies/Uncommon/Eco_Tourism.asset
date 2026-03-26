@@ -16,7 +16,7 @@ MonoBehaviour:
   description: Turn natural beauty into profit.
   carbonDelta: -4
   economyDelta: 10
-  stabilityDelta: 4
+  stabilityDelta: 5
   rarity: 1
   icon: {fileID: 0}
   politicalCapitalCost: 2

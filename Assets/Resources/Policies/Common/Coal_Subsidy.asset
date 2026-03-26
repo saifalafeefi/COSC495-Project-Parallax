@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PolicyData
   policyName: Coal Subsidy
   description: Cheap energy now, consequences later.
-  carbonDelta: 18
-  economyDelta: 15
-  stabilityDelta: -8
+  carbonDelta: 12
+  economyDelta: 12
+  stabilityDelta: -4
   rarity: 0
   icon: {fileID: 0}
   politicalCapitalCost: 1

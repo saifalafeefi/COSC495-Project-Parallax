@@ -25,6 +25,34 @@ public class GameManager : MonoBehaviour
     [Tooltip("extra capital gained each round")]
     [SerializeField] private int capitalPerRound = 1;
 
+    [Header("Stability → Capital Multiplier")]
+    [Tooltip("avg stability at which multiplier is 1.0 (no change)")]
+    [SerializeField] private float stabilityMidpoint = 50f;
+    [Tooltip("minimum capital multiplier when stability is 0")]
+    [SerializeField] private float stabilityMultMin = 0.5f;
+    [Tooltip("maximum capital multiplier when stability is 100")]
+    [SerializeField] private float stabilityMultMax = 1.5f;
+
+    [Header("Funds (Economy → Income)")]
+    [Tooltip("multiplier for income: income = avgEconomy * this")]
+    [SerializeField] private float fundsIncomeMultiplier = 0.1f;
+
+    [Header("Stressed Thresholds (any stat crossing = stressed)")]
+    [Tooltip("carbon above this = stressed")]
+    [SerializeField] private float stressedCarbon = 70f;
+    [Tooltip("economy below this = stressed")]
+    [SerializeField] private float stressedEconomy = 30f;
+    [Tooltip("stability below this = stressed")]
+    [SerializeField] private float stressedStability = 30f;
+
+    [Header("Crisis Thresholds (any stat crossing = crisis)")]
+    [Tooltip("carbon above this = crisis")]
+    [SerializeField] private float crisisCarbon = 85f;
+    [Tooltip("economy below this = crisis")]
+    [SerializeField] private float crisisEconomy = 15f;
+    [Tooltip("stability below this = crisis")]
+    [SerializeField] private float crisisStability = 15f;
+
     [Header("Reward System")]
     [Tooltip("global carbon must drop by at least this much in a round to trigger a card reward (0 = any decrease)")]
     [SerializeField] private float rewardCarbonThreshold = 2f;
@@ -37,6 +65,20 @@ public class GameManager : MonoBehaviour
     public int PoliticalCapital { get; private set; }
     public int MaxCapital { get; private set; }
     public int HandSize { get; private set; }
+    public int Funds { get; private set; }
+    public int LastIncome { get; private set; }
+    public float StabilityMultiplier { get; private set; }
+    // returns true if the region meets any stressed condition
+    public bool IsStressed(Region r)
+    {
+        return r.CarbonLevel > stressedCarbon || r.EconomyLevel < stressedEconomy || r.StabilityLevel < stressedStability;
+    }
+
+    // returns true if the region meets any crisis condition
+    public bool IsCrisis(Region r)
+    {
+        return r.CarbonLevel > crisisCarbon || r.EconomyLevel < crisisEconomy || r.StabilityLevel < crisisStability;
+    }
     public bool GameOver { get; private set; }
     public string GameOverReason { get; private set; }
     public float FinalScore { get; private set; }
@@ -139,6 +181,9 @@ public class GameManager : MonoBehaviour
         LastWarningText = null;
         LastWarningTime = 0f;
         CurrentRound = 0;
+        Funds = 0;
+        LastIncome = 0;
+        StabilityMultiplier = 1f;
         FinalScore = 0;
         FinalRating = null;
 
@@ -186,8 +231,20 @@ public class GameManager : MonoBehaviour
         SnapshotStatus();
 
         HandSize = handSize;
-        MaxCapital = startingCapital + (CurrentRound - 1) * capitalPerRound;
+
+        // stability affects how much political capital the player gets this round
+        float avgStability = GetAverageStability();
+        float t = Mathf.Clamp01(avgStability / 100f);
+        StabilityMultiplier = Mathf.Lerp(stabilityMultMin, stabilityMultMax, t);
+
+        int baseCapital = startingCapital + (CurrentRound - 1) * capitalPerRound;
+        MaxCapital = Mathf.Max(1, Mathf.RoundToInt(baseCapital * StabilityMultiplier));
         PoliticalCapital = MaxCapital;
+
+        // economy generates funds income each round
+        float avgEconomy = GetAverageEconomy();
+        LastIncome = Mathf.RoundToInt(avgEconomy * fundsIncomeMultiplier);
+        Funds += LastIncome;
 
         CurrentHand.Clear();
         for (int i = 0; i < HandSize; i++)
@@ -209,7 +266,7 @@ public class GameManager : MonoBehaviour
         }
 
         string cardNames = string.Join(", ", CurrentHand.ConvertAll(c => c.policyName));
-        Debug.Log($"[GameManager] round {CurrentRound} | drew: {cardNames}");
+        Debug.Log($"[GameManager] round {CurrentRound} | capital: {PoliticalCapital} (x{StabilityMultiplier:F1}) | income: +{LastIncome} funds (total: {Funds}) | drew: {cardNames}");
 
         // show reward popup if last round was net-positive
         if (rewardPending)
@@ -327,10 +384,10 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        // 2. crisis spillover: carbon > 85 spreads to neighbors
+        // 2. crisis spillover: crisis regions spread problems to neighbors
         foreach (var r in regions)
         {
-            if (r.CarbonLevel > 85f)
+            if (IsCrisis(r))
             {
                 foreach (var n in r.Neighbors)
                 {
@@ -349,13 +406,13 @@ public class GameManager : MonoBehaviour
                 r.StabilityLevel = Mathf.Clamp(r.StabilityLevel + 3f, 0f, 100f);
         }
 
-        // 4. penalties
+        // 4. penalties based on health score
         foreach (var r in regions)
         {
-            if (r.CarbonLevel > 70f)
+            if (IsStressed(r))
                 r.StabilityLevel = Mathf.Clamp(r.StabilityLevel - 2f, 0f, 100f);
 
-            if (r.CarbonLevel > 85f)
+            if (IsCrisis(r))
             {
                 r.EconomyLevel = Mathf.Clamp(r.EconomyLevel - 10f, 0f, 100f);
                 r.StabilityLevel = Mathf.Clamp(r.StabilityLevel - 10f, 0f, 100f);
@@ -420,8 +477,8 @@ public class GameManager : MonoBehaviour
 
         foreach (var r in regionManager.Regions)
         {
-            if (r.CarbonLevel > 85f) snapshotStatus[r] = 2;
-            else if (r.CarbonLevel > 70f) snapshotStatus[r] = 1;
+            if (IsCrisis(r)) snapshotStatus[r] = 2;
+            else if (IsStressed(r)) snapshotStatus[r] = 1;
             else snapshotStatus[r] = 0;
         }
     }
@@ -439,7 +496,7 @@ public class GameManager : MonoBehaviour
 
         foreach (var r in regions)
         {
-            int newSt = r.CarbonLevel > 85f ? 2 : (r.CarbonLevel > 70f ? 1 : 0);
+            int newSt = IsCrisis(r) ? 2 : (IsStressed(r) ? 1 : 0);
             int oldSt = oldStatus[r];
 
             if (newSt == 2)
@@ -464,6 +521,12 @@ public class GameManager : MonoBehaviour
             summary += $"\nStressed: {string.Join(", ", stressedNames)}";
         if (recovered.Count > 0)
             summary += $"\nRecovered: {string.Join(", ", recovered)}";
+
+        // show income and capital modifier for the upcoming round
+        if (LastIncome > 0)
+            summary += $"\nIncome: +{LastIncome} funds";
+        if (StabilityMultiplier != 1f)
+            summary += $"\nStability modifier: x{StabilityMultiplier:F1} capital";
 
         RoundSummaryText = summary;
         RoundSummaryTime = Time.time;
@@ -575,7 +638,7 @@ public class GameManager : MonoBehaviour
         var crisisRegionNames = new List<string>();
         foreach (var r in regions)
         {
-            if (r.CarbonLevel > 85f)
+            if (IsCrisis(r))
                 crisisRegionNames.Add(r.RegionName);
         }
 
@@ -629,12 +692,14 @@ public class GameManager : MonoBehaviour
         float carbonPenalty = globalCarbon * 1.5f;
         float crisisPenalty = crisisCount * 10f;
 
-        FinalScore = thrivingPts + healthyPts + stabilityPts + economyPts - carbonPenalty - crisisPenalty;
+        float fundsPts = Funds * 0.5f;
+        FinalScore = thrivingPts + healthyPts + stabilityPts + economyPts + fundsPts - carbonPenalty - crisisPenalty;
 
         ScoreBreakdown = $"Thriving regions ({thriving}): +{thrivingPts:F0}\n"
             + $"Healthy regions ({healthy}): +{healthyPts:F0}\n"
             + $"Avg Stability ({avgStability:F0}): +{stabilityPts:F0}\n"
             + $"Avg Economy ({avgEconomy:F0}): +{economyPts:F0}\n"
+            + $"Funds ({Funds}): +{fundsPts:F0}\n"
             + $"Global Carbon ({globalCarbon:F0}): -{carbonPenalty:F0}\n"
             + $"Crisis events ({crisisCount}): -{crisisPenalty:F0}";
 
@@ -701,6 +766,28 @@ public class GameManager : MonoBehaviour
         float total = 0f;
         foreach (var r in regionManager.Regions)
             total += r.CarbonLevel;
+        return total / regionManager.Regions.Count;
+    }
+
+    public float GetAverageStability()
+    {
+        if (regionManager == null || regionManager.Regions == null || regionManager.Regions.Count == 0)
+            return 50f;
+
+        float total = 0f;
+        foreach (var r in regionManager.Regions)
+            total += r.StabilityLevel;
+        return total / regionManager.Regions.Count;
+    }
+
+    public float GetAverageEconomy()
+    {
+        if (regionManager == null || regionManager.Regions == null || regionManager.Regions.Count == 0)
+            return 50f;
+
+        float total = 0f;
+        foreach (var r in regionManager.Regions)
+            total += r.EconomyLevel;
         return total / regionManager.Regions.Count;
     }
 
