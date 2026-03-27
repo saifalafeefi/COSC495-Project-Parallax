@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
 
 public class DesktopInteraction : MonoBehaviour
 {
@@ -67,9 +68,11 @@ public class DesktopInteraction : MonoBehaviour
         if (currentDistance == 0f)
             InitOrbit();
 
-        // block user input while reward popup is showing, but keep orbit applied
+        // block all user input while overlay is showing or pointer is over UI
         var gm = FindFirstObjectByType<GameManager>();
-        bool rewardBlocked = gm != null && gm.RewardActive;
+        bool overlayBlocked = gm != null && (gm.RewardActive || gm.ShopActive);
+        bool pointerOverUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+        bool rewardBlocked = overlayBlocked || PauseMenu.IsPaused || pointerOverUI;
 
         if (isFocused)
         {

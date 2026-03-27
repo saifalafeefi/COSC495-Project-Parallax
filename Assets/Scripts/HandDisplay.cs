@@ -387,14 +387,14 @@ public class HandDisplay : MonoBehaviour
     public void OnCardDeselect()
     {
         if (PauseMenu.IsPaused) return;
-        if (gameManager != null && gameManager.RewardActive) return;
+        if (gameManager != null && (gameManager.RewardActive || gameManager.ShopActive)) return;
         selectedIndex = -1;
     }
 
     public void OnCardClick(int index)
     {
         if (PauseMenu.IsPaused) return;
-        if (gameManager != null && gameManager.RewardActive) return;
+        if (gameManager != null && (gameManager.RewardActive || gameManager.ShopActive)) return;
 
         if (selectedIndex == index)
         {

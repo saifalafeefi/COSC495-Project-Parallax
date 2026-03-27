@@ -139,6 +139,16 @@ public class GameManager : MonoBehaviour
     public bool RewardActive { get; private set; }
     public List<PolicyData> RewardChoices { get; private set; } = new List<PolicyData>();
     private bool rewardPending;
+
+    // shop system
+    public bool ShopActive { get; private set; }
+    public List<PolicyData> ShopCards { get; private set; } = new List<PolicyData>();
+    private int shopStockedRound = -1;
+
+    // cards bought from shop — persist in hand until played
+    private HashSet<PolicyData> shopBoughtCards = new HashSet<PolicyData>();
+
+    public bool IsShopCard(PolicyData card) => shopBoughtCards.Contains(card);
     private PolicyData[] allPolicies;
 
     // tracks consecutive rounds where player had capital to spare but skipped
@@ -180,20 +190,37 @@ public class GameManager : MonoBehaviour
         }
 
         // press space to skip remaining capital and end round early
-        if (kb.spaceKey.wasPressedThisFrame && !GameOver && !PauseMenu.IsPaused && !RewardActive && CurrentHand.Count > 0)
+        // check if there are non-shop cards to skip
+        bool hasNonShopCards = false;
+        if (CurrentHand != null)
         {
-            // check if player could have played at least one card (wasteful skip)
+            foreach (var c in CurrentHand)
+            {
+                if (!shopBoughtCards.Contains(c)) { hasNonShopCards = true; break; }
+            }
+        }
+
+        if (kb.spaceKey.wasPressedThisFrame && !GameOver && !PauseMenu.IsPaused && !RewardActive && !ShopActive && hasNonShopCards)
+        {
+            // check if player could have played at least one non-shop card (wasteful skip)
             bool couldPlay = false;
             foreach (var c in CurrentHand)
             {
-                if (c.politicalCapitalCost <= PoliticalCapital) { couldPlay = true; break; }
+                if (!shopBoughtCards.Contains(c) && c.politicalCapitalCost <= PoliticalCapital) { couldPlay = true; break; }
             }
             capitalWhenSkipped = couldPlay ? PoliticalCapital : 0;
 
-            // discard remaining hand
+            // discard remaining hand, but keep shop-bought cards
+            var kept = new List<PolicyData>();
             foreach (var card in CurrentHand)
-                discardPile.Add(card);
+            {
+                if (shopBoughtCards.Contains(card))
+                    kept.Add(card);
+                else
+                    discardPile.Add(card);
+            }
             CurrentHand.Clear();
+            CurrentHand.AddRange(kept);
             PoliticalCapital = 0;
             Debug.Log("[GameManager] skipped remaining capital");
             EndRound();
@@ -249,6 +276,10 @@ public class GameManager : MonoBehaviour
         rewardPending = false;
         RewardActive = false;
         RewardChoices.Clear();
+        ShopActive = false;
+        ShopCards.Clear();
+        shopBoughtCards.Clear();
+        shopStockedRound = -1;
 
         ShuffleDeck();
         Debug.Log($"[GameManager] deck built with {deck.Count} cards");
@@ -282,7 +313,18 @@ public class GameManager : MonoBehaviour
         LastIncome = Mathf.RoundToInt(avgEconomy * fundsIncomeMultiplier);
         Funds += LastIncome;
 
+        // preserve shop-bought cards, discard the rest
+        var shopKept = new List<PolicyData>();
+        foreach (var card in CurrentHand)
+        {
+            if (shopBoughtCards.Contains(card))
+                shopKept.Add(card);
+            else
+                discardPile.Add(card);
+        }
         CurrentHand.Clear();
+        CurrentHand.AddRange(shopKept);
+
         for (int i = 0; i < HandSize; i++)
         {
             if (deck.Count == 0)
@@ -319,6 +361,7 @@ public class GameManager : MonoBehaviour
     {
         if (GameOver) return "Game is over.";
         if (RewardActive) return "Choose a reward first.";
+        if (ShopActive) return "Close the shop first.";
         if (cardIndex < 0 || cardIndex >= CurrentHand.Count) return "Invalid card.";
         if (target == null) return "No region selected.";
 
@@ -374,6 +417,7 @@ public class GameManager : MonoBehaviour
         string focusResult = CheckFocusOnPlay(target);
 
         // move card to discard and deduct capital
+        shopBoughtCards.Remove(card);
         discardPile.Add(card);
         CurrentHand.RemoveAt(cardIndex);
         PoliticalCapital -= card.politicalCapitalCost;
@@ -385,8 +429,13 @@ public class GameManager : MonoBehaviour
 
         Debug.Log($"[GameManager] {result} | capital: {PoliticalCapital}/{MaxCapital}");
 
-        // end round when hand is empty
-        if (CurrentHand.Count == 0)
+        // end round when only shop-bought cards remain (they persist)
+        bool onlyShopCards = true;
+        foreach (var c in CurrentHand)
+        {
+            if (!shopBoughtCards.Contains(c)) { onlyShopCards = false; break; }
+        }
+        if (CurrentHand.Count == 0 || onlyShopCards)
             EndRound();
 
         return result;
@@ -829,6 +878,110 @@ public class GameManager : MonoBehaviour
 
         for (int i = 0; i < 3; i++)
             RewardChoices.Add(allPolicies[Random.Range(0, allPolicies.Length)]);
+    }
+
+    // shop: open/close, stock generation, purchase
+
+    public void OpenShop()
+    {
+        if (GameOver || RewardActive || ShopActive) return;
+        // only generate stock if we haven't this round
+        if (shopStockedRound != CurrentRound)
+        {
+            GenerateShopStock();
+            shopStockedRound = CurrentRound;
+        }
+        ShopActive = true;
+        Debug.Log("[GameManager] shop opened");
+    }
+
+    public void CloseShop()
+    {
+        if (!ShopActive) return;
+        ShopActive = false;
+        Debug.Log("[GameManager] shop closed");
+    }
+
+    // returns the funds price for a given rarity
+    public int GetShopPrice(PolicyRarity rarity)
+    {
+        switch (rarity)
+        {
+            case PolicyRarity.Common: return 5;
+            case PolicyRarity.Uncommon: return 10;
+            case PolicyRarity.Rare: return 25;
+            default: return 5;
+        }
+    }
+
+    // buy a card from the shop — adds to deck, deducts funds
+    public string BuyShopCard(int index)
+    {
+        if (!ShopActive || index < 0 || index >= ShopCards.Count) return null;
+
+        var card = ShopCards[index];
+        if (card == null) return "Already sold.";
+
+        int price = GetShopPrice(card.rarity);
+        if (Funds < price)
+            return $"NOT_ENOUGH_FUNDS|{price}|{Funds}";
+
+        Funds -= price;
+        CurrentHand.Add(card);
+        shopBoughtCards.Add(card);
+        ShopCards[index] = null;
+
+        Debug.Log($"[GameManager] bought {card.policyName} for {price} funds → hand (remaining: {Funds})");
+        return $"Purchased {card.policyName} for {price} funds!";
+    }
+
+    void GenerateShopStock()
+    {
+        ShopCards.Clear();
+        if (allPolicies == null || allPolicies.Length == 0) return;
+
+        // separate policies by rarity
+        var commons = new List<PolicyData>();
+        var uncommons = new List<PolicyData>();
+        var rares = new List<PolicyData>();
+
+        foreach (var p in allPolicies)
+        {
+            switch (p.rarity)
+            {
+                case PolicyRarity.Common: commons.Add(p); break;
+                case PolicyRarity.Uncommon: uncommons.Add(p); break;
+                case PolicyRarity.Rare: rares.Add(p); break;
+            }
+        }
+
+        // guarantee 1 of each rarity
+        if (commons.Count > 0) ShopCards.Add(commons[Random.Range(0, commons.Count)]);
+        if (uncommons.Count > 0) ShopCards.Add(uncommons[Random.Range(0, uncommons.Count)]);
+        if (rares.Count > 0) ShopCards.Add(rares[Random.Range(0, rares.Count)]);
+
+        // fill remaining slots with weighted random (60% common, 30% uncommon, 10% rare)
+        while (ShopCards.Count < 6)
+        {
+            float roll = Random.Range(0f, 1f);
+            if (roll < 0.6f && commons.Count > 0)
+                ShopCards.Add(commons[Random.Range(0, commons.Count)]);
+            else if (roll < 0.9f && uncommons.Count > 0)
+                ShopCards.Add(uncommons[Random.Range(0, uncommons.Count)]);
+            else if (rares.Count > 0)
+                ShopCards.Add(rares[Random.Range(0, rares.Count)]);
+            else if (commons.Count > 0)
+                ShopCards.Add(commons[Random.Range(0, commons.Count)]);
+        }
+
+        // shuffle the stock so guaranteed slots aren't always first
+        for (int i = ShopCards.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            var temp = ShopCards[i];
+            ShopCards[i] = ShopCards[j];
+            ShopCards[j] = temp;
+        }
     }
 
     public float GetGlobalCarbon()
