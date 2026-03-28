@@ -1276,7 +1276,7 @@ MonoBehaviour:
   shopkeeperSize: {x: 1000, y: 1250}
   shopkeeperOffsetX: -425
   shopkeeperOffsetY: -30
-  shopkeeperSlideSpeed: 2
+  shopkeeperSlideSpeed: 1
   shopkeeperBobSpeed: 1.5
   shopkeeperBobAmount: 8
   shopkeeperSwaySpeed: 1
@@ -1318,18 +1318,28 @@ MonoBehaviour:
   listItemHeight: 52
   panelOffsetX: 0
   panelOffsetY: 0
+  detailSpacing: 12
+  detailSectionGap: 10
+  detailTopPadding: 22
+  detailTitleHeight: 35
+  detailTraitHeight: 34
+  detailStatsHeight: 40
+  detailStatusHeight: 30
+  detailNeighborsHeight: 23
+  detailFocusHeight: 8
+  detailHistHeaderHeight: 37
   titleFontSize: 32
   listNameFontSize: 25
   listStatsFontSize: 15
   sortButtonFontSize: 14
   detailNameFontSize: 38
-  detailTraitFontSize: 17
+  detailTraitFontSize: 27
   detailStatsFontSize: 21
-  detailStatusFontSize: 24
-  detailNeighborsFontSize: 15
+  detailStatusFontSize: 36
+  detailNeighborsFontSize: 20
   detailFocusFontSize: 19
-  eventHistoryHeaderFontSize: 24
-  eventHistoryFontSize: 11
+  eventHistoryHeaderFontSize: 33
+  eventHistoryFontSize: 20
   statBarLabelFontSize: 16
   scrollForce: 100
   scrollDamping: 8

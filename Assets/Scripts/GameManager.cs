@@ -488,6 +488,7 @@ public class GameManager : MonoBehaviour
             {
                 r.CarbonLevel = Mathf.Clamp(r.CarbonLevel + penalty, 0f, 100f);
                 r.StabilityLevel = Mathf.Clamp(r.StabilityLevel - stabPenalty, 0f, 100f);
+                RecordRegionEvent(r, "Neglect Penalty", penalty, 0f, -stabPenalty);
             }
 
             // trade-off: random capital bonus banked for next round

@@ -58,9 +58,18 @@ public class PauseMenu : MonoBehaviour
         // ESC priority: unfocus region first, then toggle pause
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
-            // block pause while reward/shop/banner popup is showing
-            if (gameManager.RewardActive || gameManager.BannerActive)
+            // block pause while reward popup is showing
+            if (gameManager.RewardActive)
             { }
+            else if (gameManager.BannerActive)
+            {
+                // banner is playing — only allow pause toggle, nothing else
+                if (!gameManager.GameOver)
+                {
+                    if (IsPaused) Resume();
+                    else Pause();
+                }
+            }
             else if (gameManager.DashboardActive)
             {
                 gameManager.CloseDashboard();

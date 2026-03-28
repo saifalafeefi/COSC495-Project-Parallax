@@ -71,14 +71,20 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 
     public void OnPointerClick(PointerEventData eventData)
     {
+        if (eventData.button != PointerEventData.InputButton.Left) return;
+
+        if (gameManager == null)
+            gameManager = FindFirstObjectByType<GameManager>();
+
+        // block interaction during banners and other overlays
+        if (gameManager != null && (gameManager.BannerActive || gameManager.RewardActive)) return;
+
         if (OnClicked != null)
         {
             OnClicked.Invoke();
             return;
         }
 
-        if (gameManager == null)
-            gameManager = FindFirstObjectByType<GameManager>();
         if (gameManager == null) return;
 
         switch (action)

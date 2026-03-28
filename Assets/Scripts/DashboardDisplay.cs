@@ -26,6 +26,28 @@ public class DashboardDisplay : MonoBehaviour
     [SerializeField] private float panelOffsetX = 0f;
     [SerializeField] private float panelOffsetY = 0f;
 
+    [Header("Detail Panel Spacing")]
+    [Tooltip("vertical gap between detail panel elements")]
+    [SerializeField] private float detailSpacing = 6f;
+    [Tooltip("extra gap before section headers (event history)")]
+    [SerializeField] private float detailSectionGap = 12f;
+    [Tooltip("top padding inside the detail panel")]
+    [SerializeField] private float detailTopPadding = 10f;
+    [Tooltip("height of region name row")]
+    [SerializeField] private float detailTitleHeight = 28f;
+    [Tooltip("height of trait row")]
+    [SerializeField] private float detailTraitHeight = 20f;
+    [Tooltip("height of stats text row")]
+    [SerializeField] private float detailStatsHeight = 18f;
+    [Tooltip("height of status row")]
+    [SerializeField] private float detailStatusHeight = 20f;
+    [Tooltip("height of neighbors row")]
+    [SerializeField] private float detailNeighborsHeight = 18f;
+    [Tooltip("height of focus info row")]
+    [SerializeField] private float detailFocusHeight = 18f;
+    [Tooltip("height of event history header row")]
+    [SerializeField] private float detailHistHeaderHeight = 18f;
+
     [Header("Font Sizes")]
     [SerializeField] private float titleFontSize = 22f;
     [SerializeField] private float listNameFontSize = 13f;
@@ -89,6 +111,11 @@ public class DashboardDisplay : MonoBehaviour
     private Image stabilityBar;
     private List<TMP_Text> sortButtonTexts = new List<TMP_Text>();
     private List<TMP_Text> statBarLabelTexts = new List<TMP_Text>();
+
+    // container rects for live layout repositioning
+    private RectTransform titleRect, traitRect, statsRect, statusRect, neighborsRect, focusRect;
+    private RectTransform histHeaderRect, histPanelRect;
+    private RectTransform[] statBarRects = new RectTransform[3]; // carbon, economy, stability rows
 
     private enum SortMode { Name, Status, Carbon, Economy, Stability, Trait }
     private SortMode currentSort = SortMode.Name;
@@ -465,96 +492,103 @@ public class DashboardDisplay : MonoBehaviour
 
     void BuildDetailPanel(Transform parent)
     {
-        float y = -8f;
-        float spacing = 4f;
+        float y = -detailTopPadding;
 
         // region name
         var titleObj = CreateUIObj("Title", parent,
             new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
-            new Vector2(0f, y), new Vector2(-16f, 28f));
+            new Vector2(0f, y), new Vector2(-16f, detailTitleHeight));
+        titleRect = titleObj.GetComponent<RectTransform>();
         detailTitle = CreateText(titleObj, "Select a region", detailNameFontSize, TextAlignmentOptions.Center, Color.white);
         detailTitle.fontStyle = FontStyles.Bold;
         StretchFill(detailTitle.gameObject);
-        y -= 28f + spacing;
+        y -= detailTitleHeight + detailSpacing;
 
         // trait
         var traitObj = CreateUIObj("Trait", parent,
             new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
-            new Vector2(0f, y), new Vector2(-16f, 20f));
+            new Vector2(0f, y), new Vector2(-16f, detailTraitHeight));
+        traitRect = traitObj.GetComponent<RectTransform>();
         detailTrait = CreateText(traitObj, "", detailTraitFontSize, TextAlignmentOptions.Center, new Color(0.7f, 0.8f, 0.7f));
         detailTrait.fontStyle = FontStyles.Italic;
         StretchFill(detailTrait.gameObject);
-        y -= 20f + spacing * 2;
+        y -= detailTraitHeight + detailSectionGap;
 
         // stat bars
-        y = BuildStatBar(parent, "Carbon", carbonColor, y, out carbonBar);
-        y = BuildStatBar(parent, "Economy", economyColor, y, out economyBar);
-        y = BuildStatBar(parent, "Stability", stabilityColor, y, out stabilityBar);
-        y -= spacing;
+        y = BuildStatBar(parent, "C", carbonColor, y, out carbonBar, out statBarRects[0]);
+        y = BuildStatBar(parent, "E", economyColor, y, out economyBar, out statBarRects[1]);
+        y = BuildStatBar(parent, "S", stabilityColor, y, out stabilityBar, out statBarRects[2]);
+        y -= detailSpacing;
 
         // stats text (exact numbers)
         var statsObj = CreateUIObj("StatsText", parent,
             new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
-            new Vector2(0f, y), new Vector2(-16f, 18f));
+            new Vector2(0f, y), new Vector2(-16f, detailStatsHeight));
+        statsRect = statsObj.GetComponent<RectTransform>();
         detailStats = CreateText(statsObj, "", detailStatsFontSize, TextAlignmentOptions.Center, Color.white);
         detailStats.richText = true;
         StretchFill(detailStats.gameObject);
-        y -= 18f + spacing;
+        y -= detailStatsHeight + detailSpacing;
 
         // status
         var statusObj = CreateUIObj("Status", parent,
             new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
-            new Vector2(0f, y), new Vector2(-16f, 20f));
+            new Vector2(0f, y), new Vector2(-16f, detailStatusHeight));
+        statusRect = statusObj.GetComponent<RectTransform>();
         detailStatus = CreateText(statusObj, "", detailStatusFontSize, TextAlignmentOptions.Center, healthyColor);
         detailStatus.fontStyle = FontStyles.Bold;
         StretchFill(detailStatus.gameObject);
-        y -= 20f + spacing;
+        y -= detailStatusHeight + detailSpacing;
 
         // neighbors
         var neighborsObj = CreateUIObj("Neighbors", parent,
             new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
-            new Vector2(0f, y), new Vector2(-16f, 18f));
+            new Vector2(0f, y), new Vector2(-16f, detailNeighborsHeight));
+        neighborsRect = neighborsObj.GetComponent<RectTransform>();
         detailNeighbors = CreateText(neighborsObj, "", detailNeighborsFontSize, TextAlignmentOptions.Center, new Color(0.65f, 0.65f, 0.7f));
         StretchFill(detailNeighbors.gameObject);
-        y -= 18f + spacing;
+        y -= detailNeighborsHeight + detailSpacing;
 
         // focus info
         var focusObj = CreateUIObj("Focus", parent,
             new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
-            new Vector2(0f, y), new Vector2(-16f, 18f));
+            new Vector2(0f, y), new Vector2(-16f, detailFocusHeight));
+        focusRect = focusObj.GetComponent<RectTransform>();
         detailFocus = CreateText(focusObj, "", detailFocusFontSize, TextAlignmentOptions.Center, new Color(0.9f, 0.6f, 0.2f));
         StretchFill(detailFocus.gameObject);
-        y -= 18f + spacing * 2;
+        y -= detailFocusHeight + detailSectionGap;
 
         // event history header
         var histHeader = CreateUIObj("HistHeader", parent,
             new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
-            new Vector2(0f, y), new Vector2(-16f, 18f));
+            new Vector2(0f, y), new Vector2(-16f, detailHistHeaderHeight));
+        histHeaderRect = histHeader.GetComponent<RectTransform>();
         eventHistoryHeader = CreateText(histHeader, "Event History", eventHistoryHeaderFontSize, TextAlignmentOptions.Left,
             new Color(0.8f, 0.8f, 0.5f));
         eventHistoryHeader.fontStyle = FontStyles.Bold;
         StretchFill(eventHistoryHeader.gameObject);
-        y -= 18f + spacing;
+        y -= detailHistHeaderHeight + detailSpacing;
 
         // event history scrollable area
         float remainingHeight = panelHeight - 44f - Mathf.Abs(y) - 8f;
-        var histPanel = CreateUIObj("HistPanel", parent,
+        var histPanelObj = CreateUIObj("HistPanel", parent,
             new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
-            new Vector2(0f, y), new Vector2(-16f, -Mathf.Abs(y) - 8f));
+            new Vector2(0f, y), new Vector2(-16f, remainingHeight));
+        histPanelRect = histPanelObj.GetComponent<RectTransform>();
 
-        historyScroll = histPanel.AddComponent<ScrollRect>();
+        historyScroll = histPanelObj.AddComponent<ScrollRect>();
         historyScroll.vertical = true;
         historyScroll.horizontal = false;
         historyScroll.scrollSensitivity = 0f;
         historyScroll.inertia = false;
         historyScroll.movementType = ScrollRect.MovementType.Clamped;
 
-        var histSmoother = histPanel.AddComponent<SmoothScrollHandler>();
+        var histSmoother = histPanelObj.AddComponent<SmoothScrollHandler>();
         histSmoother.scrollRect = historyScroll;
         histSmoother.scrollForce = scrollForce;
         histSmoother.damping = scrollDamping;
 
-        var histViewport = CreateUIObj("Viewport", histPanel.transform,
+        var histViewport = CreateUIObj("Viewport", histPanelObj.transform,
             new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(0.5f, 0.5f),
             Vector2.zero, Vector2.zero);
         histViewport.AddComponent<RectMask2D>();
@@ -572,7 +606,7 @@ public class DashboardDisplay : MonoBehaviour
         StretchFill(detailEventHistory.gameObject);
     }
 
-    float BuildStatBar(Transform parent, string label, Color color, float y, out Image bar)
+    float BuildStatBar(Transform parent, string label, Color color, float y, out Image bar, out RectTransform rowRect)
     {
         float barHeight = 16f;
         float labelWidth = 70f;
@@ -605,6 +639,7 @@ public class DashboardDisplay : MonoBehaviour
         bar.color = color;
         bar.raycastTarget = false;
 
+        rowRect = row.GetComponent<RectTransform>();
         return y - barHeight - 4f;
     }
 
@@ -815,6 +850,44 @@ public class DashboardDisplay : MonoBehaviour
             if (t != null) t.fontSize = sortButtonFontSize;
         foreach (var t in statBarLabelTexts)
             if (t != null) t.fontSize = statBarLabelFontSize;
+
+        // live-reposition detail panel elements based on Inspector spacing values
+        UpdateDetailLayout();
+    }
+
+    void UpdateDetailLayout()
+    {
+        float y = -detailTopPadding;
+
+        if (titleRect != null) { SetRow(titleRect, y, detailTitleHeight); y -= detailTitleHeight + detailSpacing; }
+        if (traitRect != null) { SetRow(traitRect, y, detailTraitHeight); y -= detailTraitHeight + detailSectionGap; }
+
+        float barHeight = 16f;
+        float barGap = 4f;
+        for (int i = 0; i < 3; i++)
+        {
+            if (statBarRects[i] != null) { SetRow(statBarRects[i], y, barHeight); y -= barHeight + barGap; }
+        }
+        y -= detailSpacing - barGap; // adjust since bars use their own gap
+
+        if (statsRect != null) { SetRow(statsRect, y, detailStatsHeight); y -= detailStatsHeight + detailSpacing; }
+        if (statusRect != null) { SetRow(statusRect, y, detailStatusHeight); y -= detailStatusHeight + detailSpacing; }
+        if (neighborsRect != null) { SetRow(neighborsRect, y, detailNeighborsHeight); y -= detailNeighborsHeight + detailSpacing; }
+        if (focusRect != null) { SetRow(focusRect, y, detailFocusHeight); y -= detailFocusHeight + detailSectionGap; }
+        if (histHeaderRect != null) { SetRow(histHeaderRect, y, detailHistHeaderHeight); y -= detailHistHeaderHeight + detailSpacing; }
+
+        if (histPanelRect != null)
+        {
+            float remaining = panelHeight - 44f - Mathf.Abs(y) - 8f;
+            histPanelRect.anchoredPosition = new Vector2(0f, y);
+            histPanelRect.sizeDelta = new Vector2(-16f, remaining);
+        }
+    }
+
+    void SetRow(RectTransform rect, float y, float height)
+    {
+        rect.anchoredPosition = new Vector2(rect.anchoredPosition.x, y);
+        rect.sizeDelta = new Vector2(rect.sizeDelta.x, height);
     }
 
     void StartClosing()
