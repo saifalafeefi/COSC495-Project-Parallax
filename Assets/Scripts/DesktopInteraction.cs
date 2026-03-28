@@ -70,7 +70,7 @@ public class DesktopInteraction : MonoBehaviour
 
         // block all user input while overlay is showing or pointer is over UI
         var gm = FindFirstObjectByType<GameManager>();
-        bool overlayBlocked = gm != null && (gm.RewardActive || gm.ShopActive || gm.DashboardActive);
+        bool overlayBlocked = gm != null && (gm.RewardActive || gm.ShopActive || gm.DashboardActive || gm.BannerActive);
         bool pointerOverUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
         bool rewardBlocked = overlayBlocked || PauseMenu.IsPaused || pointerOverUI;
 

@@ -4,21 +4,16 @@ using TMPro;
 public class RegionDebugUI : MonoBehaviour
 {
     [SerializeField] private TMP_Text displayText;
-    [SerializeField] private TMP_Text eventText;
     [SerializeField] private TMP_Text cardPlayText;
     [SerializeField] private TMP_Text gameStateText;
     [SerializeField] private TMP_Text gameOverText;
     [SerializeField] private TMP_Text globalStatsText;
 
     [Header("Display Durations")]
-    [SerializeField] private float eventDisplayDuration = 6f;
-    [SerializeField] private float cardPlayDisplayDuration = 4f;
     [Tooltip("how long the card play text stays fully visible before fading")]
     [SerializeField] private float cardPlayHoldDuration = 1f;
     [Tooltip("how long the fade-out takes after the hold")]
     [SerializeField] private float cardPlayFadeDuration = 1f;
-    [SerializeField] private float roundSummaryDuration = 5f;
-
     [Header("Health Warning Colors")]
     [SerializeField] private Color stressedTextColor = new Color(1f, 0.67f, 0.27f);
     [SerializeField] private Color crisisTextColor = new Color(1f, 0.27f, 0.27f);
@@ -52,7 +47,6 @@ public class RegionDebugUI : MonoBehaviour
 
         UpdateGameState();
         UpdateRegionInfo(isGameOver);
-        UpdateEventText(isGameOver);
         UpdateCardPlayText(isGameOver);
         UpdateGlobalStats(isGameOver);
     }
@@ -148,45 +142,6 @@ public class RegionDebugUI : MonoBehaviour
         else
         {
             displayText.text = "";
-        }
-    }
-
-    void UpdateEventText(bool isGameOver)
-    {
-        if (eventText == null || gameManager == null) return;
-
-        if (isGameOver) { eventText.gameObject.SetActive(false); return; }
-
-        bool showSummary = Time.time - gameManager.RoundSummaryTime < roundSummaryDuration
-            && gameManager.RoundSummaryText != null;
-        bool showEvent = Time.time - gameManager.LastEventTime < eventDisplayDuration
-            && gameManager.LastEventText != null;
-        bool showWarning = Time.time - gameManager.LastWarningTime < eventDisplayDuration
-            && gameManager.LastWarningText != null;
-
-        if (showSummary || showEvent || showWarning)
-        {
-            string text = "";
-            if (showWarning)
-            {
-                string warningHex = ColorUtility.ToHtmlStringRGB(stressedTextColor);
-                text += $"<color=#{warningHex}>{gameManager.LastWarningText}</color>";
-            }
-            if (showWarning && (showSummary || showEvent))
-                text += "\n\n";
-            if (showSummary)
-                text += gameManager.RoundSummaryText;
-            if (showSummary && showEvent)
-                text += "\n\n";
-            if (showEvent)
-                text += gameManager.LastEventText;
-
-            eventText.text = text;
-            eventText.gameObject.SetActive(true);
-        }
-        else
-        {
-            eventText.gameObject.SetActive(false);
         }
     }
 

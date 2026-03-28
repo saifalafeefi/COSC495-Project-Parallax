@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -111,9 +112,8 @@ public class GameManager : MonoBehaviour
     // cards in hand this round
     public List<PolicyData> CurrentHand { get; private set; }
 
-    // last event that fired, for UI display
-    public string LastEventText { get; private set; }
-    public float LastEventTime { get; private set; }
+    // pending banner events to show at start of next round
+    private List<(string title, string description)> pendingBannerEvents = new List<(string, string)>();
 
     // round summary shown briefly after end-of-round processing
     public string RoundSummaryText { get; private set; }
@@ -157,6 +157,9 @@ public class GameManager : MonoBehaviour
     // per-region event history: region -> list of (round, eventName, carbon, economy, stability)
     public Dictionary<Region, List<RegionEventRecord>> RegionEventHistory { get; private set; }
         = new Dictionary<Region, List<RegionEventRecord>>();
+
+    // event banner system — true while banners are animating
+    public bool BannerActive { get; private set; }
 
     // shop system
     public bool ShopActive { get; private set; }
@@ -218,7 +221,7 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        if (kb.spaceKey.wasPressedThisFrame && !GameOver && !PauseMenu.IsPaused && !RewardActive && !ShopActive && !DashboardActive && hasNonShopCards)
+        if (kb.spaceKey.wasPressedThisFrame && !GameOver && !PauseMenu.IsPaused && !RewardActive && !ShopActive && !DashboardActive && !BannerActive && hasNonShopCards)
         {
             // check if player could have played at least one non-shop card (wasteful skip)
             bool couldPlay = false;
@@ -380,6 +383,7 @@ public class GameManager : MonoBehaviour
     public string PlayCard(int cardIndex, Region target)
     {
         if (GameOver) return "Game is over.";
+        if (BannerActive) return "Event in progress.";
         if (RewardActive) return "Choose a reward first.";
         if (ShopActive) return "Close the shop first.";
         if (DashboardActive) return "Close the dashboard first.";
@@ -608,6 +612,34 @@ public class GameManager : MonoBehaviour
             Debug.Log($"[GameManager] net-positive round! carbon {snapshotGlobalCarbon:F1} → {endCarbon:F1} (drop: {carbonDrop:F1}, threshold: {rewardCarbonThreshold})");
         }
 
+        // show event banners before starting the next round
+        if (pendingBannerEvents.Count > 0)
+        {
+            StartCoroutine(ShowBannersThenStartRound());
+        }
+        else
+        {
+            StartRound();
+        }
+    }
+
+    IEnumerator ShowBannersThenStartRound()
+    {
+        BannerActive = true;
+
+        var banner = FindFirstObjectByType<EventBanner>();
+        if (banner != null)
+        {
+            var events = new List<(string, string)>(pendingBannerEvents);
+            pendingBannerEvents.Clear();
+            yield return banner.ShowEvents(events);
+        }
+        else
+        {
+            pendingBannerEvents.Clear();
+        }
+
+        BannerActive = false;
         StartRound();
     }
 
@@ -760,8 +792,8 @@ public class GameManager : MonoBehaviour
             RecordRegionEvent(r, evt.eventName, evt.carbonDelta, evt.economyDelta, evt.stabilityDelta);
         }
 
-        LastEventText = $"{evt.eventName}\n{evt.description}\n({affected.Count} region{(affected.Count != 1 ? "s" : "")} affected)";
-        LastEventTime = Time.time;
+        // queue for the breaking news banner
+        pendingBannerEvents.Add((evt.eventName, $"{evt.description} ({affected.Count} region{(affected.Count != 1 ? "s" : "")} affected)"));
 
         // add to rolling event log
         string logEntry = $"R{CurrentRound}: {evt.eventName} ({affected.Count} region{(affected.Count != 1 ? "s" : "")})";
@@ -865,9 +897,10 @@ public class GameManager : MonoBehaviour
         if (regionManager != null)
             regionManager.ResetAllRegions();
 
-        // clear event display
-        LastEventText = null;
-        LastEventTime = 0f;
+        // stop any running banner animation
+        BannerActive = false;
+        pendingBannerEvents.Clear();
+        StopAllCoroutines();
 
         StartGame();
     }

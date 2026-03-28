@@ -30,7 +30,7 @@ public class RegionSelector : MonoBehaviour
         if (PauseMenu.IsPaused) return;
 
         var gm = FindFirstObjectByType<GameManager>();
-        if (gm != null && (gm.RewardActive || gm.ShopActive || gm.DashboardActive)) return;
+        if (gm != null && (gm.RewardActive || gm.ShopActive || gm.DashboardActive || gm.BannerActive)) return;
 
         if (Mouse.current == null) return;
 
