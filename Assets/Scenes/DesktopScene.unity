@@ -1042,6 +1042,7 @@ GameObject:
   - component: {fileID: 776120566}
   - component: {fileID: 776120567}
   - component: {fileID: 776120568}
+  - component: {fileID: 776120569}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -1291,6 +1292,52 @@ MonoBehaviour:
   selectedColorSpeed: 2.5
   dealDuration: 0.35
   dealStagger: 0.08
+--- !u!114 &776120569
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 776120559}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08b0dee8abd05fc4b9013cff80d8b26d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DashboardDisplay
+  panelBackground: {r: 0.08, g: 0.08, b: 0.12, a: 0.92}
+  listItemNormal: {r: 0.14, g: 0.14, b: 0.18, a: 0.9}
+  listItemHovered: {r: 0.2, g: 0.2, b: 0.28, a: 0.95}
+  listItemSelected: {r: 0.25, g: 0.22, b: 0.12, a: 0.95}
+  healthyColor: {r: 0.3, g: 0.8, b: 0.4, a: 1}
+  stressedColor: {r: 0.9, g: 0.75, b: 0.2, a: 1}
+  crisisColor: {r: 0.9, g: 0.3, b: 0.3, a: 1}
+  carbonColor: {r: 0.75, g: 0.45, b: 0.3, a: 1}
+  economyColor: {r: 0.85, g: 0.75, b: 0.3, a: 1}
+  stabilityColor: {r: 0.4, g: 0.6, b: 0.85, a: 1}
+  listWidth: 500
+  detailWidth: 800
+  panelHeight: 800
+  listItemHeight: 52
+  panelOffsetX: 0
+  panelOffsetY: 0
+  titleFontSize: 32
+  listNameFontSize: 25
+  listStatsFontSize: 15
+  sortButtonFontSize: 14
+  detailNameFontSize: 38
+  detailTraitFontSize: 17
+  detailStatsFontSize: 21
+  detailStatusFontSize: 24
+  detailNeighborsFontSize: 15
+  detailFocusFontSize: 19
+  eventHistoryHeaderFontSize: 24
+  eventHistoryFontSize: 11
+  statBarLabelFontSize: 16
+  scrollForce: 100
+  scrollDamping: 8
+  sortButtonNormal: {r: 0.18, g: 0.18, b: 0.24, a: 0.9}
+  sortButtonActive: {r: 0.35, g: 0.3, b: 0.15, a: 0.95}
+  fadeDuration: 0.3
 --- !u!1 &785006178
 GameObject:
   m_ObjectHideFlags: 0

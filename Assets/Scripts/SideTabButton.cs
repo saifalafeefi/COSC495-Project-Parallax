@@ -90,8 +90,10 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
                     gameManager.OpenShop();
                 break;
             case TabAction.Dashboard:
-                // placeholder for dashboard overlay
-                Debug.Log("[SideTabButton] dashboard not implemented yet");
+                if (gameManager.DashboardActive)
+                    gameManager.CloseDashboard();
+                else
+                    gameManager.OpenDashboard();
                 break;
         }
     }

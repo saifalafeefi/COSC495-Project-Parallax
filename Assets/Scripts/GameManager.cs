@@ -1,6 +1,17 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+// stores one event that affected a region, for the dashboard history
+[System.Serializable]
+public struct RegionEventRecord
+{
+    public int round;
+    public string eventName;
+    public float carbonDelta;
+    public float economyDelta;
+    public float stabilityDelta;
+}
+
 public class GameManager : MonoBehaviour
 {
     [Header("Data Folders (Resources)")]
@@ -140,6 +151,13 @@ public class GameManager : MonoBehaviour
     public List<PolicyData> RewardChoices { get; private set; } = new List<PolicyData>();
     private bool rewardPending;
 
+    // dashboard system
+    public bool DashboardActive { get; private set; }
+
+    // per-region event history: region -> list of (round, eventName, carbon, economy, stability)
+    public Dictionary<Region, List<RegionEventRecord>> RegionEventHistory { get; private set; }
+        = new Dictionary<Region, List<RegionEventRecord>>();
+
     // shop system
     public bool ShopActive { get; private set; }
     public List<PolicyData> ShopCards { get; private set; } = new List<PolicyData>();
@@ -200,7 +218,7 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        if (kb.spaceKey.wasPressedThisFrame && !GameOver && !PauseMenu.IsPaused && !RewardActive && !ShopActive && hasNonShopCards)
+        if (kb.spaceKey.wasPressedThisFrame && !GameOver && !PauseMenu.IsPaused && !RewardActive && !ShopActive && !DashboardActive && hasNonShopCards)
         {
             // check if player could have played at least one non-shop card (wasteful skip)
             bool couldPlay = false;
@@ -280,6 +298,8 @@ public class GameManager : MonoBehaviour
         ShopCards.Clear();
         shopBoughtCards.Clear();
         shopStockedRound = -1;
+        DashboardActive = false;
+        RegionEventHistory.Clear();
 
         ShuffleDeck();
         Debug.Log($"[GameManager] deck built with {deck.Count} cards");
@@ -362,6 +382,7 @@ public class GameManager : MonoBehaviour
         if (GameOver) return "Game is over.";
         if (RewardActive) return "Choose a reward first.";
         if (ShopActive) return "Close the shop first.";
+        if (DashboardActive) return "Close the dashboard first.";
         if (cardIndex < 0 || cardIndex >= CurrentHand.Count) return "Invalid card.";
         if (target == null) return "No region selected.";
 
@@ -688,6 +709,9 @@ public class GameManager : MonoBehaviour
             target.EconomyLevel = Mathf.Clamp(target.EconomyLevel + matchedEvent.economyDelta * multiplier, 0f, 100f);
             target.StabilityLevel = Mathf.Clamp(target.StabilityLevel + matchedEvent.stabilityDelta * multiplier, 0f, 100f);
 
+            RecordRegionEvent(target, matchedEvent.eventName,
+                matchedEvent.carbonDelta * multiplier, matchedEvent.economyDelta * multiplier, matchedEvent.stabilityDelta * multiplier);
+
             string severity = multiplier > 1f ? $" (x{multiplier:F0})" : "";
             string punishText = $"{matchedEvent.eventName}!{severity} {matchedEvent.description}";
             LastWarningText = punishText;
@@ -731,6 +755,9 @@ public class GameManager : MonoBehaviour
             r.CarbonLevel = Mathf.Clamp(r.CarbonLevel + evt.carbonDelta, 0f, 100f);
             r.EconomyLevel = Mathf.Clamp(r.EconomyLevel + evt.economyDelta, 0f, 100f);
             r.StabilityLevel = Mathf.Clamp(r.StabilityLevel + evt.stabilityDelta, 0f, 100f);
+
+            // record for dashboard history
+            RecordRegionEvent(r, evt.eventName, evt.carbonDelta, evt.economyDelta, evt.stabilityDelta);
         }
 
         LastEventText = $"{evt.eventName}\n{evt.description}\n({affected.Count} region{(affected.Count != 1 ? "s" : "")} affected)";
@@ -1049,6 +1076,38 @@ public class GameManager : MonoBehaviour
         float above = plays - avg;
         if (above <= 0f) return 0f;
         return Mathf.Clamp(above * focusChancePerPlay, 0f, 100f);
+    }
+
+    // dashboard: open/close
+
+    public void OpenDashboard()
+    {
+        if (GameOver || RewardActive || ShopActive || DashboardActive) return;
+        DashboardActive = true;
+        Debug.Log("[GameManager] dashboard opened");
+    }
+
+    public void CloseDashboard()
+    {
+        if (!DashboardActive) return;
+        DashboardActive = false;
+        Debug.Log("[GameManager] dashboard closed");
+    }
+
+    // record an event that affected a region for dashboard history
+    void RecordRegionEvent(Region region, string eventName, float carbon, float economy, float stability)
+    {
+        if (!RegionEventHistory.ContainsKey(region))
+            RegionEventHistory[region] = new List<RegionEventRecord>();
+
+        RegionEventHistory[region].Add(new RegionEventRecord
+        {
+            round = CurrentRound,
+            eventName = eventName,
+            carbonDelta = carbon,
+            economyDelta = economy,
+            stabilityDelta = stability
+        });
     }
 
     void ShuffleDeck()

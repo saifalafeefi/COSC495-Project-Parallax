@@ -61,6 +61,10 @@ public class PauseMenu : MonoBehaviour
             // block pause while reward/shop popup is showing
             if (gameManager.RewardActive)
             { }
+            else if (gameManager.DashboardActive)
+            {
+                gameManager.CloseDashboard();
+            }
             else if (gameManager.ShopActive)
             {
                 gameManager.CloseShop();
