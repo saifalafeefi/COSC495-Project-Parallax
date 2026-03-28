@@ -444,16 +444,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RegionDebugUI
   displayText: {fileID: 207634239}
-  eventText: {fileID: 0}
   cardPlayText: {fileID: 1987244034}
   gameStateText: {fileID: 19542590}
   gameOverText: {fileID: 1659998578}
   globalStatsText: {fileID: 2085467294}
-  eventDisplayDuration: 6
-  cardPlayDisplayDuration: 4
   cardPlayHoldDuration: 1
   cardPlayFadeDuration: 1
-  roundSummaryDuration: 5
   stressedTextColor: {r: 1, g: 0.67, b: 0.27, a: 1}
   crisisTextColor: {r: 1, g: 0.27, b: 0.27, a: 1}
   previewGoodColor: {r: 0.4, g: 0.9, b: 0.4, a: 1}
@@ -1155,6 +1151,7 @@ MonoBehaviour:
   skipStabilityFraction: 0.5
   skipCapitalBonusMin: 0
   skipCapitalBonusMax: 5
+  defaultSpillover: 0.5
   focusChancePerPlay: 20
 --- !u!114 &776120565
 MonoBehaviour:

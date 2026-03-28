@@ -81,6 +81,10 @@ public class GameManager : MonoBehaviour
     [Tooltip("maximum bonus capital for skipping early (exclusive)")]
     [SerializeField] private int skipCapitalBonusMax = 5;
 
+    [Header("Spillover")]
+    [Tooltip("default fraction of positive effects that spill to neighbors (0.25 = 25%)")]
+    [SerializeField] private float defaultSpillover = 0.25f;
+
     [Header("Focus System")]
     [Tooltip("chance per play above average to trigger a focus event (e.g. 20 = 20% per extra play)")]
     [SerializeField] private float focusChancePerPlay = 20f;
@@ -406,13 +410,16 @@ public class GameManager : MonoBehaviour
         target.EconomyLevel = Mathf.Clamp(target.EconomyLevel + economy, 0f, 100f);
         target.StabilityLevel = Mathf.Clamp(target.StabilityLevel + stability, 0f, 100f);
 
-        // spillover to neighbors
-        float spill = card.GetSpillover();
+        // spillover to neighbors — only positive effects spread
+        float spill = card.spilloverOverride > 0 ? card.spilloverOverride : defaultSpillover;
+        float spillCarbon = Mathf.Min(carbon, 0f) * spill;      // negative carbon = good
+        float spillEconomy = Mathf.Max(economy, 0f) * spill;    // positive economy = good
+        float spillStability = Mathf.Max(stability, 0f) * spill; // positive stability = good
         foreach (var neighbor in target.Neighbors)
         {
-            neighbor.CarbonLevel = Mathf.Clamp(neighbor.CarbonLevel + carbon * spill, 0f, 100f);
-            neighbor.EconomyLevel = Mathf.Clamp(neighbor.EconomyLevel + economy * spill, 0f, 100f);
-            neighbor.StabilityLevel = Mathf.Clamp(neighbor.StabilityLevel + stability * spill, 0f, 100f);
+            neighbor.CarbonLevel = Mathf.Clamp(neighbor.CarbonLevel + spillCarbon, 0f, 100f);
+            neighbor.EconomyLevel = Mathf.Clamp(neighbor.EconomyLevel + spillEconomy, 0f, 100f);
+            neighbor.StabilityLevel = Mathf.Clamp(neighbor.StabilityLevel + spillStability, 0f, 100f);
         }
 
         // track plays for focus system
@@ -486,13 +493,14 @@ public class GameManager : MonoBehaviour
             // trade-off: random capital bonus banked for next round
             bankedCapitalBonus = Random.Range(skipCapitalBonusMin, skipCapitalBonusMax);
 
-            string warnText = $"Neglect Penalty! (+{penalty:F0} carbon, -{stabPenalty:F0} stability to all regions)";
+            string desc = $"+{penalty:F0} carbon, -{stabPenalty:F0} stability to all regions";
             if (bankedCapitalBonus > 0)
-                warnText += $"\n+{bankedCapitalBonus} bonus capital next round";
+                desc += $" | +{bankedCapitalBonus} bonus capital next round";
             if (consecutiveWastefulSkips >= 2)
-                warnText += $" [x{consecutiveWastefulSkips} consecutive]";
-            LastWarningText = warnText;
-            LastWarningTime = Time.time;
+                desc += $" [x{consecutiveWastefulSkips} consecutive]";
+
+            // show as banner alongside normal events
+            pendingBannerEvents.Add(("Neglect Penalty", desc));
 
             string logEntry = $"R{CurrentRound}: Neglect penalty (skip x{consecutiveWastefulSkips}, +{bankedCapitalBonus} capital banked)";
             EventLog.Add(logEntry);

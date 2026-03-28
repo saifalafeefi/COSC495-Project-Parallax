@@ -21,14 +21,8 @@ public class PolicyData : ScriptableObject
     [Tooltip("political capital cost to play this card (0 = free)")]
     public int politicalCapitalCost = 1;
 
-    [Tooltip("overrides the default 0.25 spillover to neighbors. 0 = use default.")]
+    [Tooltip("overrides the default spillover % to neighbors (0 = use GameManager default)")]
     public float spilloverOverride;
-
-    // returns the spillover multiplier for this policy
-    public float GetSpillover()
-    {
-        return spilloverOverride > 0 ? spilloverOverride : 0.25f;
-    }
 
     // returns adjusted deltas based on region trait
     public void GetModifiedDeltas(Region target, out float carbon, out float economy, out float stability)
