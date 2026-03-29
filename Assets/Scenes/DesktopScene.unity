@@ -1263,17 +1263,17 @@ MonoBehaviour:
   economyColor: {r: 0.85, g: 0.75, b: 0.3, a: 1}
   stabilityColor: {r: 0.4, g: 0.6, b: 0.85, a: 1}
   gridColumns: 3
-  cardWidth: 190
-  cardHeight: 270
-  cardSpacingX: 20
-  cardSpacingY: 20
-  gridOffsetX: 250
-  gridOffsetY: 0
+  cardWidth: 200
+  cardHeight: 300
+  cardSpacingX: 30
+  cardSpacingY: 40
+  gridOffsetX: 350
+  gridOffsetY: -150
   shopkeeperIdle: {fileID: 21300000, guid: 013fcca8a89abb646b6cd644f21639c3, type: 3}
   shopkeeperSuccess: {fileID: 21300000, guid: 8e53873239bf7924ea4c24ce9c5a5a6e, type: 3}
   shopkeeperFail: {fileID: 21300000, guid: 853a08750db101e46b09a16c1f31674f, type: 3}
   shopkeeperReactDuration: 1.5
-  shopkeeperSize: {x: 1000, y: 1250}
+  shopkeeperSize: {x: 800, y: 1050}
   shopkeeperOffsetX: -425
   shopkeeperOffsetY: -30
   shopkeeperSlideSpeed: 1
@@ -1281,6 +1281,15 @@ MonoBehaviour:
   shopkeeperBobAmount: 8
   shopkeeperSwaySpeed: 1
   shopkeeperSwayAngle: 3
+  tableSprite: {fileID: 21300000, guid: efae4fb3f6ec87248b0bd8658f2dffc8, type: 3}
+  tableSize: {x: 900, y: 250}
+  tableOffsetX: -460.8
+  tableOffsetY: -366
+  tableSlideSpeed: 3
+  shopBackgroundSprite: {fileID: 21300000, guid: 92264c43c01bebb48be9a98336391f31, type: 3}
+  shopBgSize: {x: 1920, y: 1080}
+  shopBgFinalY: 0
+  shopBgSlideSpeed: 3
   hoverLift: 20
   hoverScale: 1.08
   selectedScale: 1.12

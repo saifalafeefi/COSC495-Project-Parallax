@@ -56,6 +56,28 @@ public class ShopDisplay : MonoBehaviour
     [Tooltip("max tilt angle in degrees")]
     [SerializeField] private float shopkeeperSwayAngle = 3f;
 
+    [Header("Cashier Table")]
+    [Tooltip("table sprite that slides in from the left, layered above shopkeeper")]
+    [SerializeField] private Sprite tableSprite;
+    [Tooltip("size of the table image")]
+    [SerializeField] private Vector2 tableSize = new Vector2(500f, 200f);
+    [Tooltip("final horizontal position")]
+    [SerializeField] private float tableOffsetX = -300f;
+    [Tooltip("vertical position")]
+    [SerializeField] private float tableOffsetY = -150f;
+    [Tooltip("how fast the table slides in (higher = faster)")]
+    [SerializeField] private float tableSlideSpeed = 4f;
+
+    [Header("Shop Background Image")]
+    [Tooltip("sprite that slides up from below the screen when shop opens")]
+    [SerializeField] private Sprite shopBackgroundSprite;
+    [Tooltip("size of the background image")]
+    [SerializeField] private Vector2 shopBgSize = new Vector2(1920f, 600f);
+    [Tooltip("final vertical position (anchored to bottom-center)")]
+    [SerializeField] private float shopBgFinalY = 0f;
+    [Tooltip("how fast the background slides up (higher = faster)")]
+    [SerializeField] private float shopBgSlideSpeed = 3f;
+
     [Header("Tween Settings")]
     [SerializeField] private float hoverLift = 20f;
     [SerializeField] private float hoverScale = 1.08f;
@@ -96,6 +118,14 @@ public class ShopDisplay : MonoBehaviour
     private TMP_Text feedbackText;
     private float feedbackTime;
 
+    // shop background image
+    private RectTransform shopBgRect;
+    private float shopBgSlideT;
+
+    // cashier table
+    private RectTransform tableRect;
+    private float tableSlideT;
+
     // shopkeeper NPC
     private Image shopkeeperImage;
     private RectTransform shopkeeperRect;
@@ -133,6 +163,8 @@ public class ShopDisplay : MonoBehaviour
             AnimateCards();
             UpdateFeedback();
             UpdateShopkeeper();
+            UpdateTable();
+            UpdateShopBackground();
         }
     }
 
@@ -168,6 +200,27 @@ public class ShopDisplay : MonoBehaviour
         var bdImg = backdrop.AddComponent<Image>();
         bdImg.color = new Color(0f, 0f, 0f, 0.7f);
         bdImg.raycastTarget = true;
+
+        // shop background image — slides up from below the screen
+        if (shopBackgroundSprite != null)
+        {
+            var bgObj = new GameObject("ShopBackground");
+            bgObj.transform.SetParent(root.transform, false);
+            shopBgRect = bgObj.AddComponent<RectTransform>();
+            shopBgRect.anchorMin = new Vector2(0.5f, 0f);
+            shopBgRect.anchorMax = new Vector2(0.5f, 0f);
+            shopBgRect.pivot = new Vector2(0.5f, 0f);
+            // start fully below the screen
+            shopBgRect.anchoredPosition = new Vector2(0f, -shopBgSize.y);
+            shopBgRect.sizeDelta = shopBgSize;
+
+            var bgImg = bgObj.AddComponent<Image>();
+            bgImg.sprite = shopBackgroundSprite;
+            bgImg.preserveAspect = false;
+            bgImg.raycastTarget = false;
+
+            shopBgSlideT = 0f;
+        }
 
         // calculate grid dimensions for positioning header/footer
         int rows = Mathf.CeilToInt((float)gameManager.ShopCards.Count / gridColumns);
@@ -271,6 +324,27 @@ public class ShopDisplay : MonoBehaviour
         // shopkeeper NPC on the left side
         BuildShopkeeper(root.transform);
 
+        // cashier table — created after shopkeeper so it renders on top
+        if (tableSprite != null)
+        {
+            float offscreenX = tableOffsetX - 800f;
+            var tblObj = new GameObject("CashierTable");
+            tblObj.transform.SetParent(root.transform, false);
+            tableRect = tblObj.AddComponent<RectTransform>();
+            tableRect.anchorMin = new Vector2(0.5f, 0.5f);
+            tableRect.anchorMax = new Vector2(0.5f, 0.5f);
+            tableRect.pivot = new Vector2(0.5f, 0.5f);
+            tableRect.anchoredPosition = new Vector2(offscreenX, tableOffsetY);
+            tableRect.sizeDelta = tableSize;
+
+            var tblImg = tblObj.AddComponent<Image>();
+            tblImg.sprite = tableSprite;
+            tblImg.preserveAspect = false;
+            tblImg.raycastTarget = false;
+
+            tableSlideT = 0f;
+        }
+
         // close button
         BuildCloseButton(root.transform);
     }
@@ -304,6 +378,21 @@ public class ShopDisplay : MonoBehaviour
             shopkeeperRect.localRotation = Quaternion.Euler(0f, 0f, sway);
         }
 
+        // slide table back out to the left
+        if (tableRect != null)
+        {
+            float tblX = Mathf.Lerp(tableOffsetX, tableOffsetX - 800f, t * t);
+            tableRect.anchoredPosition = new Vector2(tblX, tableOffsetY);
+        }
+
+        // slide background back down
+        if (shopBgRect != null)
+        {
+            // ease-in: slow at first, fast at end
+            float bgY = Mathf.Lerp(shopBgFinalY, -shopBgSize.y, t * t);
+            shopBgRect.anchoredPosition = new Vector2(0f, bgY);
+        }
+
         if (t >= 1f)
             FinishClosing();
     }
@@ -324,6 +413,8 @@ public class ShopDisplay : MonoBehaviour
         shopkeeperReacting = false;
         rootCanvasGroup = null;
         backdropImage = null;
+        shopBgRect = null;
+        tableRect = null;
 
         if (root != null)
         {
@@ -616,6 +707,38 @@ public class ShopDisplay : MonoBehaviour
             if (shopkeeperIdle != null)
                 shopkeeperImage.sprite = shopkeeperIdle;
         }
+    }
+
+    void UpdateTable()
+    {
+        if (tableRect == null) return;
+
+        if (tableSlideT < 1f)
+        {
+            tableSlideT += Time.deltaTime * tableSlideSpeed;
+            if (tableSlideT > 1f) tableSlideT = 1f;
+        }
+
+        // ease-out cubic
+        float eased = 1f - (1f - tableSlideT) * (1f - tableSlideT) * (1f - tableSlideT);
+        float x = Mathf.Lerp(tableOffsetX - 800f, tableOffsetX, eased);
+        tableRect.anchoredPosition = new Vector2(x, tableOffsetY);
+    }
+
+    void UpdateShopBackground()
+    {
+        if (shopBgRect == null) return;
+
+        if (shopBgSlideT < 1f)
+        {
+            shopBgSlideT += Time.deltaTime * shopBgSlideSpeed;
+            if (shopBgSlideT > 1f) shopBgSlideT = 1f;
+        }
+
+        // ease-out cubic
+        float eased = 1f - (1f - shopBgSlideT) * (1f - shopBgSlideT) * (1f - shopBgSlideT);
+        float y = Mathf.Lerp(-shopBgSize.y, shopBgFinalY, eased);
+        shopBgRect.anchoredPosition = new Vector2(0f, y);
     }
 
     void SetShopkeeperReaction(bool success)
