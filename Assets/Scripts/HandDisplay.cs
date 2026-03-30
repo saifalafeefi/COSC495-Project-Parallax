@@ -104,6 +104,17 @@ public class HandDisplay : MonoBehaviour
         // don't update cards while paused
         if (PauseMenu.IsPaused) return;
 
+        // hide cards during event banners so shop-bought cards don't linger on screen
+        if (gameManager.BannerActive)
+        {
+            if (cardContainer != null) cardContainer.gameObject.SetActive(false);
+            return;
+        }
+        else if (cardContainer != null && !cardContainer.gameObject.activeSelf)
+        {
+            cardContainer.gameObject.SetActive(true);
+        }
+
         var hand = gameManager.CurrentHand;
         int handCount = hand != null ? hand.Count : 0;
         int round = gameManager.CurrentRound;
@@ -132,9 +143,18 @@ public class HandDisplay : MonoBehaviour
         }
         else if (selectedRegion != lastSelectedRegion)
         {
-            // just refresh card content (stat previews) without resetting deal animation
-            lastSelectedRegion = selectedRegion;
-            RefreshCardContent();
+            // skip stat preview refresh while overlays are open — prevents shop cards
+            // from getting rebuilt and misbehaving when focusing regions via dashboard
+            if (gameManager.DashboardActive || gameManager.ShopActive || gameManager.RewardActive)
+            {
+                lastSelectedRegion = selectedRegion;
+            }
+            else
+            {
+                // just refresh card content (stat previews) without resetting deal animation
+                lastSelectedRegion = selectedRegion;
+                RefreshCardContent();
+            }
         }
 
         AnimateCards();
@@ -201,15 +221,20 @@ public class HandDisplay : MonoBehaviour
 
     void RefreshCardContent()
     {
-        // save state keyed by PolicyData reference so positions survive index shifts
-        var savedState = new Dictionary<PolicyData, (Vector2 pos, Vector3 scale, Vector3 rot, float dealTime)>();
+        // save state by index — avoids duplicate PolicyData references (same ScriptableObject
+        // in hand from both deal and shop purchase) colliding in a dictionary
+        var savedPositions = new List<(Vector2 pos, Vector3 scale, Vector3 rot, float dealTime)>();
 
-        for (int i = 0; i < cardPolicies.Count; i++)
+        for (int i = 0; i < cardRects.Count; i++)
         {
-            if (i >= cardRects.Count || cardRects[i] == null) continue;
+            if (cardRects[i] == null)
+            {
+                savedPositions.Add((Vector2.zero, Vector3.one, Vector3.zero, 0f));
+                continue;
+            }
             var rect = cardRects[i];
             float dt = i < cardDealTimes.Count ? cardDealTimes[i] : 0f;
-            savedState[cardPolicies[i]] = (rect.anchoredPosition, rect.localScale, rect.localEulerAngles, dt);
+            savedPositions.Add((rect.anchoredPosition, rect.localScale, rect.localEulerAngles, dt));
         }
 
         foreach (var obj in cardObjects)
@@ -233,9 +258,10 @@ public class HandDisplay : MonoBehaviour
 
             var rect = cardObj.GetComponent<RectTransform>();
 
-            // restore position from old state if this card existed before
-            if (savedState.TryGetValue(card, out var state))
+            // restore position from old state if this index existed before
+            if (i < savedPositions.Count)
             {
+                var state = savedPositions[i];
                 rect.anchoredPosition = state.pos;
                 rect.localScale = state.scale;
                 rect.localEulerAngles = state.rot;
@@ -243,7 +269,7 @@ public class HandDisplay : MonoBehaviour
 
             cardObjects.Add(cardObj);
             cardRects.Add(rect);
-            cardDealTimes.Add(savedState.ContainsKey(card) ? savedState[card].dealTime : 0f);
+            cardDealTimes.Add(i < savedPositions.Count ? savedPositions[i].dealTime : 0f);
             cardPolicies.Add(card);
         }
     }
