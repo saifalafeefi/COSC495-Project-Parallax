@@ -48,14 +48,9 @@ public class RegionSelector : MonoBehaviour
                 {
                     regionManager.SelectedRegion = region;
 
-                    // get the direction from earth center to the region and focus the camera there
+                    // focus the camera on the region — camera will track it as earth spins
                     if (region != null && desktopInteraction != null)
-                    {
-                        Vector3 earthPos = regionManager.transform.position;
-                        Vector3 regionCenter = regionManager.GetRegionWorldCenter(region);
-                        Vector3 dir = (regionCenter - earthPos).normalized;
-                        desktopInteraction.FocusOnDirection(dir);
-                    }
+                        desktopInteraction.FocusOnRegion(region, regionManager);
                 }
 
                 return;

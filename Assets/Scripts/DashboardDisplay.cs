@@ -956,15 +956,10 @@ public class DashboardDisplay : MonoBehaviour
         if (index < 0 || index >= regionList.Count) return;
         selectedIndex = index;
 
-        // focus camera on the selected region
+        // focus camera on the selected region — camera tracks it as earth spins
         var region = regionList[index];
         if (desktopInteraction != null && regionManager != null)
-        {
-            Vector3 earthPos = regionManager.transform.position;
-            Vector3 regionCenter = regionManager.GetRegionWorldCenter(region);
-            Vector3 dir = (regionCenter - earthPos).normalized;
-            desktopInteraction.FocusOnDirection(dir);
-        }
+            desktopInteraction.FocusOnRegion(region, regionManager);
     }
 
     // ---- UI helpers ----

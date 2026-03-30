@@ -45,6 +45,10 @@ public class DesktopInteraction : MonoBehaviour
     private float focusCenterYaw;
     private float focusCenterPitch;
 
+    // tracked region so camera follows it as the earth spins
+    private Region focusedRegion;
+    private RegionManager focusedRegionManager;
+
     public bool IsFocused => isFocused;
 
     void Start()
@@ -76,7 +80,32 @@ public class DesktopInteraction : MonoBehaviour
 
         if (isFocused)
         {
-            // smoothly tween toward the region
+            // compute how much the region moved since last frame due to earth spin,
+            // then shift the camera by the same amount so it rides with the rotation
+            if (focusedRegion != null && focusedRegionManager != null)
+            {
+                Vector3 earthPos = focusedRegionManager.transform.position;
+                Vector3 regionCenter = focusedRegionManager.GetRegionWorldCenter(focusedRegion);
+                Vector3 dir = (regionCenter - earthPos).normalized;
+
+                float newCenterYaw = Mathf.Atan2(-dir.x, -dir.z) * Mathf.Rad2Deg;
+                float newCenterPitch = Mathf.Asin(Mathf.Clamp(dir.y, -1f, 1f)) * Mathf.Rad2Deg;
+
+                // how much the region drifted this frame
+                float yawDelta = Mathf.DeltaAngle(focusCenterYaw, newCenterYaw);
+                float pitchDelta = newCenterPitch - focusCenterPitch;
+
+                // shift camera and target by the same amount so manual orbit is preserved
+                yaw += yawDelta;
+                pitch += pitchDelta;
+                targetYaw += yawDelta;
+                targetPitch += pitchDelta;
+
+                focusCenterYaw = newCenterYaw;
+                focusCenterPitch = newCenterPitch;
+            }
+
+            // smoothly tween toward the target (only matters during initial snap)
             yaw = Mathf.LerpAngle(yaw, targetYaw, focusSmoothSpeed * Time.deltaTime);
             pitch = Mathf.Lerp(pitch, targetPitch, focusSmoothSpeed * Time.deltaTime);
             currentDistance = Mathf.Lerp(currentDistance, targetDistance, focusSmoothSpeed * Time.deltaTime);
@@ -222,10 +251,11 @@ public class DesktopInteraction : MonoBehaviour
     }
 
     // called by RegionSelector when a region is right-clicked
-    // dir should be the direction from earth center to the region surface
-    public void FocusOnDirection(Vector3 dir)
+    // stores the region so the camera can track it as the earth spins
+    public void FocusOnRegion(Region region, RegionManager rm)
     {
         if (desktopPlacement == null || desktopPlacement.SpawnedEarth == null) return;
+        if (region == null || rm == null) return;
 
         // save the distance so we can pull back to it on unfocus
         if (!isFocused)
@@ -233,9 +263,14 @@ public class DesktopInteraction : MonoBehaviour
 
         isFocused = true;
         isReturning = false;
+        focusedRegion = region;
+        focusedRegionManager = rm;
 
-        // the orbit offset is Euler(pitch,yaw) * (0,0,-dist), so we need to
-        // flip the direction to place the camera on the region's side of the earth
+        // compute initial target from the region's current world position
+        Vector3 earthPos = rm.transform.position;
+        Vector3 regionCenter = rm.GetRegionWorldCenter(region);
+        Vector3 dir = (regionCenter - earthPos).normalized;
+
         focusCenterYaw = Mathf.Atan2(-dir.x, -dir.z) * Mathf.Rad2Deg;
         focusCenterPitch = Mathf.Asin(Mathf.Clamp(dir.y, -1f, 1f)) * Mathf.Rad2Deg;
         targetYaw = focusCenterYaw;
@@ -249,6 +284,8 @@ public class DesktopInteraction : MonoBehaviour
 
         isFocused = false;
         isReturning = true;
+        focusedRegion = null;
+        focusedRegionManager = null;
 
         // stay facing the same direction, just pull back to the old distance
         targetDistance = unfocusedDistance;

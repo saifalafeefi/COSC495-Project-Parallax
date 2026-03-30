@@ -37,39 +37,39 @@ public class DesktopPlacement : MonoBehaviour
     {
         if (SpawnedEarth == null) return;
 
-        // don't spin while the camera is focused on a region
         if (cachedInteraction == null)
             cachedInteraction = FindFirstObjectByType<DesktopInteraction>();
-        if (cachedInteraction != null && cachedInteraction.IsFocused)
+
+        // when focused on a region, keep spinning at full speed regardless of mouse
+        bool focused = cachedInteraction != null && cachedInteraction.IsFocused;
+
+        if (!focused)
         {
-            timeSinceRelease = 0f;
-            return;
+            // check if the player is dragging the mouse
+            bool mouseDown = Mouse.current != null && Mouse.current.leftButton.isPressed;
+
+            if (mouseDown)
+            {
+                playerControlling = true;
+                timeSinceRelease = 0f;
+                return;
+            }
+
+            if (playerControlling)
+            {
+                // player just released the mouse
+                playerControlling = false;
+                timeSinceRelease = 0f;
+            }
+
+            timeSinceRelease += Time.deltaTime;
+
+            // wait for the delay before starting to spin again
+            if (timeSinceRelease < resumeDelay) return;
         }
 
-        // check if the player is dragging the mouse
-        bool mouseDown = Mouse.current != null && Mouse.current.leftButton.isPressed;
-
-        if (mouseDown)
-        {
-            playerControlling = true;
-            timeSinceRelease = 0f;
-            return;
-        }
-
-        if (playerControlling)
-        {
-            // player just released the mouse
-            playerControlling = false;
-            timeSinceRelease = 0f;
-        }
-
-        timeSinceRelease += Time.deltaTime;
-
-        // wait for the delay before starting to spin again
-        if (timeSinceRelease < resumeDelay) return;
-
-        // gradually ramp up to full speed
-        float rampProgress = Mathf.Clamp01((timeSinceRelease - resumeDelay) / resumeRampTime);
+        // gradually ramp up to full speed (instant when focused)
+        float rampProgress = focused ? 1f : Mathf.Clamp01((timeSinceRelease - resumeDelay) / resumeRampTime);
         float currentSpeed = autoRotateSpeed * rampProgress;
 
         float angle = currentSpeed * Time.deltaTime;
