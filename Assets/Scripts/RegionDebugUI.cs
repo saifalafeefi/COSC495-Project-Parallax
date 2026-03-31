@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 
@@ -21,10 +22,24 @@ public class RegionDebugUI : MonoBehaviour
     [SerializeField] private Color previewGoodColor = new Color(0.4f, 0.9f, 0.4f);
     [SerializeField] private Color previewBadColor = new Color(0.9f, 0.4f, 0.4f);
 
+    [Header("Shop Hide (slide offscreen)")]
+    [Tooltip("how fast UI slides off/on screen when shop opens/closes")]
+    [SerializeField] private float shopSlideSpeed = 6f;
+    [Tooltip("how far the top bar slides up")]
+    [SerializeField] private float topSlideDistance = 200f;
+    [Tooltip("how far the bottom elements slide down")]
+    [SerializeField] private float bottomSlideDistance = 300f;
+    [Tooltip("how far the left panel slides left")]
+    [SerializeField] private float leftSlideDistance = 500f;
+
     private RegionManager regionManager;
     private GameManager gameManager;
     private RegionSelector regionSelector;
     private HandDisplay handDisplay;
+
+    // shop slide state per text element
+    private Dictionary<TMP_Text, Vector2> originalPositions = new Dictionary<TMP_Text, Vector2>();
+    private float shopSlideBlend; // 0 = normal, 1 = fully hidden
 
     void Update()
     {
@@ -49,6 +64,7 @@ public class RegionDebugUI : MonoBehaviour
         UpdateRegionInfo(isGameOver);
         UpdateCardPlayText(isGameOver);
         UpdateGlobalStats(isGameOver);
+        UpdateShopSlide();
     }
 
     void UpdateGameState()
@@ -245,5 +261,45 @@ public class RegionDebugUI : MonoBehaviour
 
         globalStatsText.text = text;
         globalStatsText.gameObject.SetActive(true);
+    }
+
+    void CacheOriginalPosition(TMP_Text text)
+    {
+        if (text == null || originalPositions.ContainsKey(text)) return;
+        var rect = text.GetComponent<RectTransform>();
+        if (rect != null)
+            originalPositions[text] = rect.anchoredPosition;
+    }
+
+    void SlideElement(TMP_Text text, float offsetX, float offsetY)
+    {
+        if (text == null) return;
+        CacheOriginalPosition(text);
+        var rect = text.GetComponent<RectTransform>();
+        if (rect == null) return;
+        Vector2 origin = originalPositions[text];
+        Vector2 target = origin + new Vector2(offsetX * shopSlideBlend, offsetY * shopSlideBlend);
+        rect.anchoredPosition = target;
+    }
+
+    void UpdateShopSlide()
+    {
+        if (gameManager == null) return;
+
+        float target = gameManager.ShopActive ? 1f : 0f;
+        shopSlideBlend = Mathf.Lerp(shopSlideBlend, target, shopSlideSpeed * Time.deltaTime);
+        if (Mathf.Abs(shopSlideBlend - target) < 0.005f) shopSlideBlend = target;
+
+        // skip work when fully restored
+        if (shopSlideBlend < 0.001f) return;
+
+        // top bar → slide up
+        SlideElement(gameStateText, 0f, topSlideDistance);
+        // global stats → slide down
+        SlideElement(globalStatsText, 0f, -bottomSlideDistance);
+        // region info → slide left
+        SlideElement(displayText, -leftSlideDistance, 0f);
+        // card play text → slide down
+        SlideElement(cardPlayText, 0f, -bottomSlideDistance);
     }
 }

@@ -42,6 +42,11 @@ public class HandDisplay : MonoBehaviour
     [SerializeField] private float dealDuration = 0.5f;
     [SerializeField] private float dealStagger = 0.12f;
 
+    [Header("Shop Hide")]
+    [Tooltip("how far the card hand slides down when shop is open")]
+    [SerializeField] private float shopSlideDistance = 400f;
+    [SerializeField] private float shopSlideSpeed = 6f;
+
     private GameManager gameManager;
     private RegionManager regionManager;
     private Canvas canvas;
@@ -68,6 +73,8 @@ public class HandDisplay : MonoBehaviour
     // keeps cards fanned briefly after unhover to prevent jitter
     private float lastFanTime;
     private const float fanCooldown = 0.4f;
+
+    private float shopSlideBlend;
 
     // expose the currently selected card for other scripts (e.g. stat preview)
     public PolicyData SelectedCard
@@ -113,6 +120,16 @@ public class HandDisplay : MonoBehaviour
         else if (cardContainer != null && !cardContainer.gameObject.activeSelf)
         {
             cardContainer.gameObject.SetActive(true);
+        }
+
+        // slide cards down when shop is open
+        if (cardContainer != null)
+        {
+            float shopTarget = gameManager.ShopActive ? 1f : 0f;
+            shopSlideBlend = Mathf.Lerp(shopSlideBlend, shopTarget, shopSlideSpeed * Time.deltaTime);
+            var cPos = cardContainer.anchoredPosition;
+            cPos.y = -shopSlideDistance * shopSlideBlend;
+            cardContainer.anchoredPosition = cPos;
         }
 
         var hand = gameManager.CurrentHand;

@@ -454,6 +454,10 @@ MonoBehaviour:
   crisisTextColor: {r: 1, g: 0.27, b: 0.27, a: 1}
   previewGoodColor: {r: 0.4, g: 0.9, b: 0.4, a: 1}
   previewBadColor: {r: 0.9, g: 0.4, b: 0.4, a: 1}
+  shopSlideSpeed: 6
+  topSlideDistance: 200
+  bottomSlideDistance: -200
+  leftSlideDistance: 500
 --- !u!114 &207634239
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -729,6 +733,8 @@ MonoBehaviour:
   hiddenOffsetX: 250
   tweenDuration: 0.25
   action: 1
+  shopHideOffset: 200
+  shopSlideSpeed: 6
 --- !u!114 &698503715
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1086,6 +1092,10 @@ MonoBehaviour:
   focusSmoothSpeed: 4
   focusedOrbitMultiplier: 0.3
   focusDeadzoneAngle: 25
+  shopExtraDistance: 150
+  shopLookOffsetX: -24
+  shopLookOffsetY: 20
+  shopSmoothSpeed: 5
 --- !u!4 &776120562
 Transform:
   m_ObjectHideFlags: 0
@@ -1193,6 +1203,8 @@ MonoBehaviour:
   dealStartY: -300
   dealDuration: 0.5
   dealStagger: 0.12
+  shopSlideDistance: 400
+  shopSlideSpeed: 6
 --- !u!114 &776120566
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2426,6 +2438,8 @@ MonoBehaviour:
   hiddenOffsetX: 250
   tweenDuration: 0.25
   action: 2
+  shopHideOffset: 200
+  shopSlideSpeed: 6
 --- !u!1 &1814361857
 GameObject:
   m_ObjectHideFlags: 0

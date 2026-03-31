@@ -20,11 +20,17 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     [Tooltip("what this tab button does when clicked")]
     [SerializeField] private TabAction action = TabAction.None;
 
+    [Header("Shop Hide")]
+    [Tooltip("extra offset to push the button fully offscreen when shop is open")]
+    [SerializeField] private float shopHideOffset = 200f;
+    [SerializeField] private float shopSlideSpeed = 6f;
+
     private RectTransform rect;
     private float shownX;
     private float hiddenX;
     private float tweenProgress = 1f;
     private bool hovering;
+    private float shopSlideBlend;
 
     private GameManager gameManager;
 
@@ -46,16 +52,30 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
 
     void Update()
     {
-        float target = hovering ? 1f : 0f;
-        if (Mathf.Abs(tweenProgress - target) < 0.001f) return;
+        // shop slide — always update even when hover tween is settled
+        if (gameManager == null)
+            gameManager = FindFirstObjectByType<GameManager>();
+        float shopTarget = (gameManager != null && gameManager.ShopActive) ? 1f : 0f;
+        shopSlideBlend = Mathf.Lerp(shopSlideBlend, shopTarget, shopSlideSpeed * Time.unscaledDeltaTime);
+        if (Mathf.Abs(shopSlideBlend - shopTarget) < 0.005f) shopSlideBlend = shopTarget;
 
-        float step = Time.unscaledDeltaTime / Mathf.Max(tweenDuration, 0.01f);
-        tweenProgress = Mathf.MoveTowards(tweenProgress, target, step);
+        // hover tween
+        float hoverTarget = hovering ? 1f : 0f;
+        bool hoverSettled = Mathf.Abs(tweenProgress - hoverTarget) < 0.001f;
+        bool shopSettled = Mathf.Abs(shopSlideBlend - shopTarget) < 0.001f;
+
+        if (hoverSettled && shopSettled) return;
+
+        if (!hoverSettled)
+        {
+            float step = Time.unscaledDeltaTime / Mathf.Max(tweenDuration, 0.01f);
+            tweenProgress = Mathf.MoveTowards(tweenProgress, hoverTarget, step);
+        }
 
         // ease out cubic
         float t = 1f - Mathf.Pow(1f - tweenProgress, 3f);
         var pos = rect.anchoredPosition;
-        pos.x = Mathf.Lerp(hiddenX, shownX, t);
+        pos.x = Mathf.Lerp(hiddenX, shownX, t) + shopHideOffset * shopSlideBlend;
         rect.anchoredPosition = pos;
     }
 

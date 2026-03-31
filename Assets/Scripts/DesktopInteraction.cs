@@ -27,6 +27,20 @@ public class DesktopInteraction : MonoBehaviour
     [SerializeField, Range(5f, 60f)]
     private float focusDeadzoneAngle = 25f;
 
+    [Header("Shop Camera")]
+    [Tooltip("how far to pull back from current distance when shop opens")]
+    [SerializeField] private float shopExtraDistance = 4f;
+
+    [Tooltip("horizontal look offset in degrees (positive = earth moves left on screen)")]
+    [SerializeField] private float shopLookOffsetX = 25f;
+
+    [Tooltip("vertical look offset in degrees (positive = earth moves down on screen)")]
+    [SerializeField] private float shopLookOffsetY = -10f;
+
+    [Tooltip("how smooth the camera tweens to/from the shop view")]
+    [SerializeField, Range(0.5f, 20f)]
+    private float shopSmoothSpeed = 4f;
+
     private float currentDistance;
     private float yaw;
     private float pitch;
@@ -49,7 +63,15 @@ public class DesktopInteraction : MonoBehaviour
     private Region focusedRegion;
     private RegionManager focusedRegionManager;
 
+    // shop camera state
+    private bool isInShopView;
+    private bool shopReturning;
+    private float savedShopDistance;
+    private float shopLookBlend; // 0 = normal (look at earth), 1 = full shop offset
+    private bool wasShopActive;
+
     public bool IsFocused => isFocused;
+    public bool IsInShopView => isInShopView;
 
     void Start()
     {
@@ -77,6 +99,44 @@ public class DesktopInteraction : MonoBehaviour
         bool overlayBlocked = gm != null && (gm.RewardActive || gm.ShopActive || gm.DashboardActive || gm.BannerActive);
         bool pointerOverUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
         bool rewardBlocked = overlayBlocked || PauseMenu.IsPaused || pointerOverUI;
+
+        // shop camera: pull back and offset look so earth slides to the corner
+        bool shopNowActive = gm != null && gm.ShopActive;
+        if (shopNowActive && !wasShopActive)
+        {
+            savedShopDistance = currentDistance;
+            isInShopView = true;
+            shopReturning = false;
+        }
+        else if (!shopNowActive && wasShopActive && isInShopView)
+        {
+            isInShopView = false;
+            shopReturning = true;
+        }
+        wasShopActive = shopNowActive;
+
+        // tween distance and look offset for shop
+        if (isInShopView || shopReturning)
+        {
+            float targetBlend = isInShopView ? 1f : 0f;
+            float targetDist = isInShopView ? savedShopDistance + shopExtraDistance : savedShopDistance;
+            float t = shopSmoothSpeed * Time.deltaTime;
+
+            shopLookBlend = Mathf.Lerp(shopLookBlend, targetBlend, t);
+            currentDistance = Mathf.Lerp(currentDistance, targetDist, t);
+            ApplyOrbit();
+
+            // done returning — resume normal orbit
+            if (shopReturning && Mathf.Abs(shopLookBlend) < 0.005f &&
+                Mathf.Abs(currentDistance - savedShopDistance) < 0.05f)
+            {
+                shopLookBlend = 0f;
+                currentDistance = savedShopDistance;
+                targetDistance = currentDistance;
+                shopReturning = false;
+            }
+            return;
+        }
 
         if (isFocused)
         {
@@ -248,6 +308,15 @@ public class DesktopInteraction : MonoBehaviour
 
         mainCamera.transform.position = target + offset;
         mainCamera.transform.LookAt(target);
+
+        // apply shop look offset so earth slides to corner of screen
+        if (shopLookBlend > 0.001f)
+        {
+            mainCamera.transform.rotation *= Quaternion.Euler(
+                shopLookOffsetY * shopLookBlend,
+                shopLookOffsetX * shopLookBlend,
+                0f);
+        }
     }
 
     // called by RegionSelector when a region is right-clicked
