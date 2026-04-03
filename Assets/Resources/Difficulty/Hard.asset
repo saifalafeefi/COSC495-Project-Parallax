@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80be3f9be41735449bab7f62a8ace7e9, type: 3}
+  m_Name: Hard
+  m_EditorClassIdentifier: Assembly-CSharp::DifficultyPreset
+  difficulty: 2
+  description: "For seasoned leaders only.\n- 8 rounds \u2014 every move counts\n-
+    Harsh carbon drift (+2/round)\n- Less political capital\n- Tight crisis thresholds\n-
+    Rewards require big carbon drops"
+  totalRounds: 8
+  handSize: 6
+  carbonDrift: 2
+  startingCarbon: 55
+  startingEconomy: 45
+  startingStability: 45
+  startingCapital: 8
+  capitalPerRound: 1
+  stabilityMidpoint: 50
+  stabilityMultMin: 0.4
+  stabilityMultMax: 1.3
+  fundsIncomeMultiplier: 0.08
+  stressedCarbon: 65
+  stressedEconomy: 35
+  stressedStability: 35
+  crisisCarbon: 80
+  crisisEconomy: 20
+  crisisStability: 20
+  rewardCarbonThreshold: 4
+  skipBasePenalty: 5
+  skipEscalation: 2.5
+  skipStabilityFraction: 0.7
+  skipCapitalBonusMin: 0
+  skipCapitalBonusMax: 3
+  defaultSpillover: 0.2
+  focusChancePerPlay: 25

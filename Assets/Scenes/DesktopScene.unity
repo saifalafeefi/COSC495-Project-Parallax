@@ -1224,6 +1224,7 @@ MonoBehaviour:
   mainMenuButton: {fileID: 2081331752}
   mainMenuSceneName: MainMenuScene
   gameOverRestartButton: {fileID: 210047966}
+  gameOverMainMenuButton: {fileID: 1912698792}
 --- !u!114 &776120567
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using TMPro;
 
 public class MainMenu : MonoBehaviour
 {
@@ -12,22 +13,32 @@ public class MainMenu : MonoBehaviour
     [SerializeField] private GameObject earthObject;
     [SerializeField] private float spinSpeed = 8f;
 
-    [Header("Panels (assign in Inspector)")]
-    [Tooltip("the main menu panel (title, start, quit) — needs CanvasGroup")]
+    [Header("Panels (assign in Inspector — each needs CanvasGroup)")]
+    [Tooltip("the main menu panel (title, start, quit)")]
     [SerializeField] private CanvasGroup mainPanel;
-    [Tooltip("the difficulty selection panel (easy, normal, hard, back) — needs CanvasGroup")]
+    [Tooltip("the difficulty selection panel (easy, normal, hard, back)")]
     [SerializeField] private CanvasGroup difficultyPanel;
+    [Tooltip("the difficulty preview panel (description text, confirm button)")]
+    [SerializeField] private CanvasGroup previewPanel;
+
+    [Header("Preview UI (inside previewPanel)")]
+    [Tooltip("text showing the difficulty name")]
+    [SerializeField] private TMP_Text previewTitle;
+    [Tooltip("text showing the difficulty description")]
+    [SerializeField] private TMP_Text previewDescription;
 
     [Header("Fade Settings")]
     [SerializeField] private float fadeSpeed = 4f;
 
-    private enum MenuState { Main, FadeToDifficulty, Difficulty, FadeToMain, FadeToGame }
+    private enum MenuState { Main, FadeToDifficulty, Difficulty, FadeToPreview, Preview, FadeBackToDifficulty, FadeToGame, FadeToMain }
     private MenuState state = MenuState.Main;
+    private Difficulty selectedDifficulty;
 
     void Start()
     {
         if (mainPanel != null) SetGroup(mainPanel, true);
         if (difficultyPanel != null) SetGroup(difficultyPanel, false);
+        if (previewPanel != null) SetGroup(previewPanel, false);
     }
 
     void Update()
@@ -45,12 +56,10 @@ public class MainMenu : MonoBehaviour
         switch (state)
         {
             case MenuState.Main:
-                // fade in main panel
                 mainPanel.alpha = Mathf.MoveTowards(mainPanel.alpha, 1f, t);
                 break;
 
             case MenuState.FadeToDifficulty:
-                // fade out main panel, then show difficulty
                 mainPanel.alpha = Mathf.MoveTowards(mainPanel.alpha, 0f, t);
                 if (mainPanel.alpha <= 0.01f)
                 {
@@ -62,16 +71,48 @@ public class MainMenu : MonoBehaviour
                 break;
 
             case MenuState.Difficulty:
-                // fade in difficulty panel
                 difficultyPanel.alpha = Mathf.MoveTowards(difficultyPanel.alpha, 1f, t);
                 break;
 
-            case MenuState.FadeToMain:
-                // fade out difficulty panel, then show main
+            case MenuState.FadeToPreview:
                 difficultyPanel.alpha = Mathf.MoveTowards(difficultyPanel.alpha, 0f, t);
                 if (difficultyPanel.alpha <= 0.01f)
                 {
                     SetGroup(difficultyPanel, false);
+                    SetGroup(previewPanel, true);
+                    previewPanel.alpha = 0f;
+                    state = MenuState.Preview;
+                }
+                break;
+
+            case MenuState.Preview:
+                previewPanel.alpha = Mathf.MoveTowards(previewPanel.alpha, 1f, t);
+                break;
+
+            case MenuState.FadeBackToDifficulty:
+                previewPanel.alpha = Mathf.MoveTowards(previewPanel.alpha, 0f, t);
+                if (previewPanel.alpha <= 0.01f)
+                {
+                    SetGroup(previewPanel, false);
+                    SetGroup(difficultyPanel, true);
+                    difficultyPanel.alpha = 0f;
+                    state = MenuState.Difficulty;
+                }
+                break;
+
+            case MenuState.FadeToMain:
+                // fade out whichever panel is active
+                if (difficultyPanel != null && difficultyPanel.alpha > 0f)
+                    difficultyPanel.alpha = Mathf.MoveTowards(difficultyPanel.alpha, 0f, t);
+                if (previewPanel != null && previewPanel.alpha > 0f)
+                    previewPanel.alpha = Mathf.MoveTowards(previewPanel.alpha, 0f, t);
+
+                bool done = (difficultyPanel == null || difficultyPanel.alpha <= 0.01f)
+                         && (previewPanel == null || previewPanel.alpha <= 0.01f);
+                if (done)
+                {
+                    SetGroup(difficultyPanel, false);
+                    SetGroup(previewPanel, false);
                     SetGroup(mainPanel, true);
                     mainPanel.alpha = 0f;
                     state = MenuState.Main;
@@ -79,9 +120,8 @@ public class MainMenu : MonoBehaviour
                 break;
 
             case MenuState.FadeToGame:
-                // fade out difficulty panel, then load game
-                difficultyPanel.alpha = Mathf.MoveTowards(difficultyPanel.alpha, 0f, t);
-                if (difficultyPanel.alpha <= 0.01f)
+                previewPanel.alpha = Mathf.MoveTowards(previewPanel.alpha, 0f, t);
+                if (previewPanel.alpha <= 0.01f)
                     SceneManager.LoadScene(gameSceneName);
                 break;
         }
@@ -89,6 +129,7 @@ public class MainMenu : MonoBehaviour
 
     // -- button callbacks (wire in Inspector) --
 
+    // main panel
     public void OnStartGame()
     {
         state = MenuState.FadeToDifficulty;
@@ -104,37 +145,53 @@ public class MainMenu : MonoBehaviour
         #endif
     }
 
-    public void SelectEasy()
+    // difficulty panel — click to preview
+    public void SelectEasy() { ShowPreview(Difficulty.Easy); }
+    public void SelectNormal() { ShowPreview(Difficulty.Normal); }
+    public void SelectHard() { ShowPreview(Difficulty.Hard); }
+
+    void ShowPreview(Difficulty diff)
     {
-        DifficultySettings.Current = Difficulty.Easy;
-        StartGameWithFade();
+        selectedDifficulty = diff;
+
+        // load the preset to show its description
+        var presets = Resources.LoadAll<DifficultyPreset>("Difficulty");
+        DifficultyPreset match = null;
+        foreach (var p in presets)
+        {
+            if (p.difficulty == diff) { match = p; break; }
+        }
+
+        if (previewTitle != null)
+            previewTitle.text = diff.ToString();
+        if (previewDescription != null)
+            previewDescription.text = match != null ? match.description : "No description available.";
+
+        state = MenuState.FadeToPreview;
     }
 
-    public void SelectNormal()
+    // preview panel
+    public void OnConfirm()
     {
-        DifficultySettings.Current = Difficulty.Normal;
-        StartGameWithFade();
+        DifficultySettings.Current = selectedDifficulty;
+        if (previewPanel != null) previewPanel.interactable = false;
+        state = MenuState.FadeToGame;
     }
 
-    public void SelectHard()
+    public void OnPreviewBack()
     {
-        DifficultySettings.Current = Difficulty.Hard;
-        StartGameWithFade();
+        state = MenuState.FadeBackToDifficulty;
     }
 
+    // difficulty panel back to main
     public void OnBack()
     {
         state = MenuState.FadeToMain;
     }
 
-    void StartGameWithFade()
-    {
-        if (difficultyPanel != null) difficultyPanel.interactable = false;
-        state = MenuState.FadeToGame;
-    }
-
     void SetGroup(CanvasGroup group, bool active)
     {
+        if (group == null) return;
         group.alpha = active ? 1f : 0f;
         group.interactable = active;
         group.blocksRaycasts = active;

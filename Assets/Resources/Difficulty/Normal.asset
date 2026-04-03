@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80be3f9be41735449bab7f62a8ace7e9, type: 3}
+  m_Name: Normal
+  m_EditorClassIdentifier: Assembly-CSharp::DifficultyPreset
+  difficulty: 1
+  description: 'The standard challenge.
+
+    - 10 rounds
+
+    - Balanced carbon drift
+    (+1/round)
+
+    - Standard political capital
+
+    - Default thresholds
+
+    -
+    Moderate reward requirements'
+  totalRounds: 10
+  handSize: 6
+  carbonDrift: 1
+  startingCarbon: 50
+  startingEconomy: 50
+  startingStability: 50
+  startingCapital: 10
+  capitalPerRound: 1
+  stabilityMidpoint: 50
+  stabilityMultMin: 0.5
+  stabilityMultMax: 1.5
+  fundsIncomeMultiplier: 0.1
+  stressedCarbon: 70
+  stressedEconomy: 30
+  stressedStability: 30
+  crisisCarbon: 85
+  crisisEconomy: 15
+  crisisStability: 15
+  rewardCarbonThreshold: 2
+  skipBasePenalty: 3
+  skipEscalation: 2
+  skipStabilityFraction: 0.5
+  skipCapitalBonusMin: 0
+  skipCapitalBonusMax: 5
+  defaultSpillover: 0.25
+  focusChancePerPlay: 20

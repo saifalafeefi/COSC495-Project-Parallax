@@ -89,6 +89,16 @@ public class GameManager : MonoBehaviour
     [Tooltip("chance per play above average to trigger a focus event (e.g. 20 = 20% per extra play)")]
     [SerializeField] private float focusChancePerPlay = 20f;
 
+    // carbon added to every region at end of each round
+    private float carbonDrift = 1f;
+    // starting stats applied on game start / restart
+    private float startingCarbon = 50f;
+    private float startingEconomy = 50f;
+    private float startingStability = 50f;
+
+    // the loaded difficulty preset (null = use Inspector defaults)
+    public DifficultyPreset ActivePreset { get; private set; }
+
     public int CurrentRound { get; private set; }
     public int PoliticalCapital { get; private set; }
     public int MaxCapital { get; private set; }
@@ -252,8 +262,75 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    void ApplyDifficultyPreset()
+    {
+        // load the preset matching the selected difficulty
+        var presets = Resources.LoadAll<DifficultyPreset>("Difficulty");
+        ActivePreset = null;
+        foreach (var p in presets)
+        {
+            if (p.difficulty == DifficultySettings.Current)
+            { ActivePreset = p; break; }
+        }
+
+        if (ActivePreset == null)
+        {
+            Debug.LogWarning($"[GameManager] no preset found for {DifficultySettings.Current}, using Inspector defaults");
+            return;
+        }
+
+        Debug.Log($"[GameManager] applying difficulty: {ActivePreset.difficulty}");
+
+        totalRounds = ActivePreset.totalRounds;
+        handSize = ActivePreset.handSize;
+        carbonDrift = ActivePreset.carbonDrift;
+        startingCarbon = ActivePreset.startingCarbon;
+        startingEconomy = ActivePreset.startingEconomy;
+        startingStability = ActivePreset.startingStability;
+
+        startingCapital = ActivePreset.startingCapital;
+        capitalPerRound = ActivePreset.capitalPerRound;
+
+        stabilityMidpoint = ActivePreset.stabilityMidpoint;
+        stabilityMultMin = ActivePreset.stabilityMultMin;
+        stabilityMultMax = ActivePreset.stabilityMultMax;
+
+        fundsIncomeMultiplier = ActivePreset.fundsIncomeMultiplier;
+
+        stressedCarbon = ActivePreset.stressedCarbon;
+        stressedEconomy = ActivePreset.stressedEconomy;
+        stressedStability = ActivePreset.stressedStability;
+
+        crisisCarbon = ActivePreset.crisisCarbon;
+        crisisEconomy = ActivePreset.crisisEconomy;
+        crisisStability = ActivePreset.crisisStability;
+
+        rewardCarbonThreshold = ActivePreset.rewardCarbonThreshold;
+
+        skipBasePenalty = ActivePreset.skipBasePenalty;
+        skipEscalation = ActivePreset.skipEscalation;
+        skipStabilityFraction = ActivePreset.skipStabilityFraction;
+        skipCapitalBonusMin = ActivePreset.skipCapitalBonusMin;
+        skipCapitalBonusMax = ActivePreset.skipCapitalBonusMax;
+
+        defaultSpillover = ActivePreset.defaultSpillover;
+        focusChancePerPlay = ActivePreset.focusChancePerPlay;
+    }
+
+    void ApplyStartingStats()
+    {
+        if (regionManager == null || regionManager.Regions == null) return;
+        foreach (var r in regionManager.Regions)
+        {
+            r.CarbonLevel = r.Trait == RegionTrait.Industrial ? startingCarbon + 10f : startingCarbon;
+            r.EconomyLevel = startingEconomy;
+            r.StabilityLevel = startingStability;
+        }
+    }
+
     void StartGame()
     {
+        ApplyDifficultyPreset();
         GameOver = false;
         GameOverReason = null;
         crisisCount = 0;
@@ -307,6 +384,8 @@ public class GameManager : MonoBehaviour
         shopStockedRound = -1;
         DashboardActive = false;
         RegionEventHistory.Clear();
+
+        ApplyStartingStats();
 
         ShuffleDeck();
         Debug.Log($"[GameManager] deck built with {deck.Count} cards");
@@ -518,7 +597,7 @@ public class GameManager : MonoBehaviour
 
         // 0. global carbon drift — the world gets worse on its own
         foreach (var r in regions)
-            r.CarbonLevel = Mathf.Clamp(r.CarbonLevel + 1f, 0f, 100f);
+            r.CarbonLevel = Mathf.Clamp(r.CarbonLevel + carbonDrift, 0f, 100f);
 
         // 1. passive trait effects
         foreach (var r in regions)
@@ -902,9 +981,9 @@ public class GameManager : MonoBehaviour
     // called by PauseMenu to start a completely fresh game
     public void RestartGame()
     {
-        // reset region stats
+        // reset region stats using difficulty starting values
         if (regionManager != null)
-            regionManager.ResetAllRegions();
+            regionManager.ResetAllRegions(startingCarbon, startingEconomy, startingStability);
 
         // stop any running banner animation
         BannerActive = false;
