@@ -15,20 +15,36 @@ MonoBehaviour:
   difficulty: 1
   description: 'The standard challenge.
 
+
     - 10 rounds
 
-    - Balanced carbon drift
-    (+1/round)
-
-    - Standard political capital
-
-    - Default thresholds
+    - Carbon drift +0.8/round
 
     -
-    Moderate reward requirements'
+    Balanced starting stats (C:50 E:50 S:50)
+
+    - 10 starting capital, +1 per round
+
+    -
+    Standard thresholds (crisis at C>85, E<15, S<15)
+
+    - Tipping point at 90 avg
+    carbon
+
+    - Chain collapse at 3+ crisis regions
+
+    - 50% positive spillover
+    to neighbors
+
+    - Rewards after 2+ carbon drop
+
+    - Standard skip penalties
+
+    -
+    20% focus event chance'
   totalRounds: 10
   handSize: 6
-  carbonDrift: 1
+  carbonDrift: 0.8
   startingCarbon: 50
   startingEconomy: 50
   startingStability: 50
@@ -50,5 +66,8 @@ MonoBehaviour:
   skipStabilityFraction: 0.5
   skipCapitalBonusMin: 0
   skipCapitalBonusMax: 5
-  defaultSpillover: 0.25
+  defaultSpillover: 0.5
+  policyMultiplier: 1
   focusChancePerPlay: 20
+  tippingPointCarbon: 90
+  chainCollapseCount: 3

@@ -52,6 +52,16 @@ public class DifficultyPreset : ScriptableObject
     [Header("Spillover")]
     public float defaultSpillover = 0.25f;
 
+    [Header("Policy Scaling")]
+    [Tooltip("invisible multiplier on card effects — higher = stronger cards")]
+    public float policyMultiplier = 1f;
+
     [Header("Focus System")]
     public float focusChancePerPlay = 20f;
+
+    [Header("Game Over Conditions")]
+    [Tooltip("global avg carbon above this = tipping point game over")]
+    public float tippingPointCarbon = 90f;
+    [Tooltip("how many regions in crisis for consecutive rounds = chain collapse")]
+    public int chainCollapseCount = 3;
 }
