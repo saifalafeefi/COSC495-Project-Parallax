@@ -25,6 +25,9 @@ public class PauseMenu : MonoBehaviour
     [Tooltip("restart button shown on the game over screen")]
     [SerializeField] private Button gameOverRestartButton;
 
+    [Tooltip("main menu button shown on the game over screen")]
+    [SerializeField] private Button gameOverMainMenuButton;
+
     public static bool IsPaused { get; private set; }
 
     private GameManager gameManager;
@@ -43,12 +46,16 @@ public class PauseMenu : MonoBehaviour
             mainMenuButton.onClick.AddListener(GoToMainMenu);
         if (gameOverRestartButton != null)
             gameOverRestartButton.onClick.AddListener(DoRestart);
+        if (gameOverMainMenuButton != null)
+            gameOverMainMenuButton.onClick.AddListener(GoToMainMenu);
 
         // make sure everything starts hidden
         if (pauseOverlay != null)
             pauseOverlay.SetActive(false);
         if (gameOverRestartButton != null)
             gameOverRestartButton.gameObject.SetActive(false);
+        if (gameOverMainMenuButton != null)
+            gameOverMainMenuButton.gameObject.SetActive(false);
     }
 
     void Update()
@@ -120,11 +127,15 @@ public class PauseMenu : MonoBehaviour
 
                 if (gameOverRestartButton != null)
                     gameOverRestartButton.gameObject.SetActive(true);
+                if (gameOverMainMenuButton != null)
+                    gameOverMainMenuButton.gameObject.SetActive(true);
             }
             else
             {
                 if (gameOverRestartButton != null)
                     gameOverRestartButton.gameObject.SetActive(false);
+                if (gameOverMainMenuButton != null)
+                    gameOverMainMenuButton.gameObject.SetActive(false);
             }
         }
     }
@@ -157,6 +168,8 @@ public class PauseMenu : MonoBehaviour
             pauseOverlay.SetActive(false);
         if (gameOverRestartButton != null)
             gameOverRestartButton.gameObject.SetActive(false);
+        if (gameOverMainMenuButton != null)
+            gameOverMainMenuButton.gameObject.SetActive(false);
 
         if (gameManager != null)
             gameManager.RestartGame();
