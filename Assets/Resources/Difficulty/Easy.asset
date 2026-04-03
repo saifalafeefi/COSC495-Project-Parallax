@@ -1,0 +1,73 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80be3f9be41735449bab7f62a8ace7e9, type: 3}
+  m_Name: Easy
+  m_EditorClassIdentifier: Assembly-CSharp::DifficultyPreset
+  difficulty: 0
+  description: 'A forgiving experience.
+
+
+    - 10 rounds
+
+    - Low carbon drift
+    (+0.5/round)
+
+    - Balanced starting stats (C:48 E:52 S:52)
+
+    - 10 starting
+    capital, +2 per round
+
+    - Relaxed thresholds (crisis at C>90, E<10, S<10)
+
+    -
+    Tipping point at 95 avg carbon
+
+    - Chain collapse needs 4+ crisis regions
+
+    -
+    100% positive spillover to neighbors
+
+    - Policies are 20% more effective
+
+    -
+    Rewards after any 1+ carbon drop
+
+    - Lower focus event chance (12%)'
+  totalRounds: 10
+  handSize: 6
+  carbonDrift: 0.5
+  startingCarbon: 48
+  startingEconomy: 52
+  startingStability: 52
+  startingCapital: 10
+  capitalPerRound: 2
+  stabilityMidpoint: 50
+  stabilityMultMin: 0.6
+  stabilityMultMax: 1.5
+  fundsIncomeMultiplier: 0.12
+  stressedCarbon: 75
+  stressedEconomy: 25
+  stressedStability: 25
+  crisisCarbon: 90
+  crisisEconomy: 10
+  crisisStability: 10
+  rewardCarbonThreshold: 1
+  skipBasePenalty: 3
+  skipEscalation: 2
+  skipStabilityFraction: 0.5
+  skipCapitalBonusMin: 0
+  skipCapitalBonusMax: 4
+  defaultSpillover: 1
+  policyMultiplier: 1.2
+  focusChancePerPlay: 12
+  tippingPointCarbon: 95
+  chainCollapseCount: 4

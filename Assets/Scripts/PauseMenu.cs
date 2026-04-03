@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class PauseMenu : MonoBehaviour
@@ -14,9 +15,18 @@ public class PauseMenu : MonoBehaviour
     [Tooltip("restart button inside the pause overlay")]
     [SerializeField] private Button pauseRestartButton;
 
+    [Tooltip("main menu button inside the pause overlay")]
+    [SerializeField] private Button mainMenuButton;
+
+    [Header("Scene Names")]
+    [SerializeField] private string mainMenuSceneName = "MainMenuScene";
+
     [Header("Game Over UI")]
     [Tooltip("restart button shown on the game over screen")]
     [SerializeField] private Button gameOverRestartButton;
+
+    [Tooltip("main menu button shown on the game over screen")]
+    [SerializeField] private Button gameOverMainMenuButton;
 
     public static bool IsPaused { get; private set; }
 
@@ -32,14 +42,20 @@ public class PauseMenu : MonoBehaviour
             resumeButton.onClick.AddListener(Resume);
         if (pauseRestartButton != null)
             pauseRestartButton.onClick.AddListener(DoRestart);
+        if (mainMenuButton != null)
+            mainMenuButton.onClick.AddListener(GoToMainMenu);
         if (gameOverRestartButton != null)
             gameOverRestartButton.onClick.AddListener(DoRestart);
+        if (gameOverMainMenuButton != null)
+            gameOverMainMenuButton.onClick.AddListener(GoToMainMenu);
 
         // make sure everything starts hidden
         if (pauseOverlay != null)
             pauseOverlay.SetActive(false);
         if (gameOverRestartButton != null)
             gameOverRestartButton.gameObject.SetActive(false);
+        if (gameOverMainMenuButton != null)
+            gameOverMainMenuButton.gameObject.SetActive(false);
     }
 
     void Update()
@@ -111,11 +127,15 @@ public class PauseMenu : MonoBehaviour
 
                 if (gameOverRestartButton != null)
                     gameOverRestartButton.gameObject.SetActive(true);
+                if (gameOverMainMenuButton != null)
+                    gameOverMainMenuButton.gameObject.SetActive(true);
             }
             else
             {
                 if (gameOverRestartButton != null)
                     gameOverRestartButton.gameObject.SetActive(false);
+                if (gameOverMainMenuButton != null)
+                    gameOverMainMenuButton.gameObject.SetActive(false);
             }
         }
     }
@@ -148,9 +168,18 @@ public class PauseMenu : MonoBehaviour
             pauseOverlay.SetActive(false);
         if (gameOverRestartButton != null)
             gameOverRestartButton.gameObject.SetActive(false);
+        if (gameOverMainMenuButton != null)
+            gameOverMainMenuButton.gameObject.SetActive(false);
 
         if (gameManager != null)
             gameManager.RestartGame();
+    }
+
+    public void GoToMainMenu()
+    {
+        IsPaused = false;
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(mainMenuSceneName);
     }
 
     void OnDestroy()

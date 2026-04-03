@@ -1391,15 +1391,15 @@ public class RegionManager : MonoBehaviour
     }
 
     // resets all region stats to defaults for a fresh game
-    public void ResetAllRegions()
+    public void ResetAllRegions(float carbon = 50f, float economy = 50f, float stability = 50f)
     {
         if (Regions == null) return;
 
         foreach (var r in Regions)
         {
-            r.CarbonLevel = r.Trait == RegionTrait.Industrial ? 60f : 50f;
-            r.EconomyLevel = 50f;
-            r.StabilityLevel = 50f;
+            r.CarbonLevel = r.Trait == RegionTrait.Industrial ? carbon + 10f : carbon;
+            r.EconomyLevel = economy;
+            r.StabilityLevel = stability;
         }
 
         SelectedRegion = null;
