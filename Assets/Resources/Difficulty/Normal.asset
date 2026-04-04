@@ -18,17 +18,17 @@ MonoBehaviour:
 
     - 10 rounds
 
-    - Carbon drift +0.8/round
+    - Carbon drift +0.5/round
 
     -
-    Balanced starting stats (C:50 E:50 S:50)
+    Balanced starting stats (C:48 E:52 S:52)
 
-    - 10 starting capital, +1 per round
+    - 10 starting capital, +2 per round
 
     -
     Standard thresholds (crisis at C>85, E<15, S<15)
 
-    - Tipping point at 90 avg
+    - Tipping point at 92 avg
     carbon
 
     - Chain collapse at 3+ crisis regions
@@ -41,15 +41,15 @@ MonoBehaviour:
     - Standard skip penalties
 
     -
-    20% focus event chance'
+    15% focus event chance'
   totalRounds: 10
   handSize: 6
-  carbonDrift: 0.8
-  startingCarbon: 50
-  startingEconomy: 50
-  startingStability: 50
+  carbonDrift: 0.5
+  startingCarbon: 48
+  startingEconomy: 52
+  startingStability: 52
   startingCapital: 10
-  capitalPerRound: 1
+  capitalPerRound: 2
   stabilityMidpoint: 50
   stabilityMultMin: 0.5
   stabilityMultMax: 1.5
@@ -68,6 +68,6 @@ MonoBehaviour:
   skipCapitalBonusMax: 5
   defaultSpillover: 0.5
   policyMultiplier: 1
-  focusChancePerPlay: 20
-  tippingPointCarbon: 90
+  focusChancePerPlay: 15
+  tippingPointCarbon: 92
   chainCollapseCount: 3

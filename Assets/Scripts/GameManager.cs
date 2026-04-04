@@ -1091,11 +1091,17 @@ public class GameManager : MonoBehaviour
             return $"NOT_ENOUGH_FUNDS|{price}|{Funds}";
 
         Funds -= price;
-        CurrentHand.Add(card);
-        shopBoughtCards.Add(card);
+
+        // clone as free card so it stays free forever in the deck
+        var freeCard = Instantiate(card);
+        freeCard.politicalCapitalCost = 0;
+        freeCard.policyName = card.policyName + " (Shop)";
+
+        CurrentHand.Add(freeCard);
+        shopBoughtCards.Add(freeCard);
         ShopCards[index] = null;
 
-        Debug.Log($"[GameManager] bought {card.policyName} for {price} funds → hand (remaining: {Funds})");
+        Debug.Log($"[GameManager] bought {freeCard.policyName} for {price} funds → hand (remaining: {Funds})");
         return $"Purchased {card.policyName} for {price} funds!";
     }
 

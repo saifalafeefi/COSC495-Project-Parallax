@@ -13,38 +13,51 @@ MonoBehaviour:
   m_Name: Hard
   m_EditorClassIdentifier: Assembly-CSharp::DifficultyPreset
   difficulty: 2
-  description: "For seasoned leaders only.\n\n- 10 rounds \u2014 every move counts\n-
-    Carbon drift (+1.2/round)\n- Starting stats slightly worse (C:52 E:48 S:48)\n-
-    10 starting capital, +1 per round\n- Tight thresholds (crisis at C>82, E<18,
-    S<18)\n- Tipping point at 88 avg carbon\n- Chain collapse at 3+ crisis regions\n-
-    25% positive spillover to neighbors\n- Policies are 20% less effective\n- Rewards
-    need 3+ carbon drop\n- Harsh skip penalties\n- 25% focus event chance"
+  description: 'For seasoned leaders only.
+
+
+    - 10 rounds
+
+    - Same core stats
+    as Normal
+
+    - Only 25% positive spillover to neighbors
+
+    - More frequent
+    bad events (30% focus chance)
+
+    - Rewards need 3+ carbon drop
+
+    - Harsh
+    skip penalties
+
+    - Strategic play required'
   totalRounds: 10
   handSize: 6
-  carbonDrift: 1.2
-  startingCarbon: 52
-  startingEconomy: 48
-  startingStability: 48
+  carbonDrift: 0.5
+  startingCarbon: 48
+  startingEconomy: 52
+  startingStability: 52
   startingCapital: 10
-  capitalPerRound: 1
+  capitalPerRound: 2
   stabilityMidpoint: 50
-  stabilityMultMin: 0.4
-  stabilityMultMax: 1.3
-  fundsIncomeMultiplier: 0.08
-  stressedCarbon: 68
-  stressedEconomy: 32
-  stressedStability: 32
-  crisisCarbon: 82
-  crisisEconomy: 18
-  crisisStability: 18
+  stabilityMultMin: 0.5
+  stabilityMultMax: 1.5
+  fundsIncomeMultiplier: 0.1
+  stressedCarbon: 70
+  stressedEconomy: 30
+  stressedStability: 30
+  crisisCarbon: 85
+  crisisEconomy: 15
+  crisisStability: 15
   rewardCarbonThreshold: 3
-  skipBasePenalty: 3
-  skipEscalation: 2
-  skipStabilityFraction: 0.5
+  skipBasePenalty: 4
+  skipEscalation: 2.5
+  skipStabilityFraction: 0.6
   skipCapitalBonusMin: 0
   skipCapitalBonusMax: 3
   defaultSpillover: 0.25
-  policyMultiplier: 0.8
-  focusChancePerPlay: 25
-  tippingPointCarbon: 88
+  policyMultiplier: 1
+  focusChancePerPlay: 30
+  tippingPointCarbon: 92
   chainCollapseCount: 3
