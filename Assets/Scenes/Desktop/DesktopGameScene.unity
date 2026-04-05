@@ -2999,6 +2999,17 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1987244032}
   m_CullTransparentMesh: 1
+--- !u!114 &1989695428 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1028147477575708091, guid: c8b406994308da14d8641850bb055477, type: 3}
+  m_PrefabInstance: {fileID: 6627115998738062457}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52d671289e8cd364887575699adb4c24, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DesktopPlacement
 --- !u!1 &2081331750
 GameObject:
   m_ObjectHideFlags: 0
@@ -3175,7 +3186,7 @@ PrefabInstance:
     - target: {fileID: 4447584504419430288, guid: c8b406994308da14d8641850bb055477, type: 3}
       propertyPath: desktopPlacement
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 1989695428}
     - target: {fileID: 7258739419159389907, guid: c8b406994308da14d8641850bb055477, type: 3}
       propertyPath: m_Name
       value: Desktop Placement
