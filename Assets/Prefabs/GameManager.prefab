@@ -1,0 +1,270 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &7727560216079619899
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2751372116647831215}
+  - component: {fileID: 6698374184395085694}
+  - component: {fileID: 1857915322615085484}
+  - component: {fileID: 2055392784421020625}
+  - component: {fileID: 3018978395823811346}
+  - component: {fileID: 4523181136183669541}
+  - component: {fileID: 5269089696939361187}
+  - component: {fileID: 711628363994881208}
+  m_Layer: 0
+  m_Name: GameManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2751372116647831215
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7727560216079619899}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -5.16382, y: -0, z: -3.86343}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6698374184395085694
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7727560216079619899}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1cde30d341ef19e4fb07d8020fb6d328, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RegionSelector
+  mainCamera: {fileID: 0}
+--- !u!114 &1857915322615085484
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7727560216079619899}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7cf801bb339090346bc33a99c6442b3d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameManager
+  commonPath: Policies/Common
+  uncommonPath: Policies/Uncommon
+  rarePath: Policies/Rare
+  normalEventsPath: Events/Normal
+  focusEventsPath: Events/Focus
+  totalRounds: 10
+  handSize: 6
+  startingCapital: 7
+  capitalPerRound: 1
+  stabilityMidpoint: 50
+  stabilityMultMin: 0.5
+  stabilityMultMax: 1.5
+  fundsIncomeMultiplier: 0.1
+  stressedCarbon: 70
+  stressedEconomy: 30
+  stressedStability: 30
+  crisisCarbon: 85
+  crisisEconomy: 15
+  crisisStability: 15
+  rewardCarbonThreshold: 1
+  skipBasePenalty: 3
+  skipEscalation: 2
+  skipStabilityFraction: 0.5
+  skipCapitalBonusMin: 0
+  skipCapitalBonusMax: 5
+  defaultSpillover: 0.5
+  focusChancePerPlay: 20
+--- !u!114 &2055392784421020625
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7727560216079619899}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f3c651c8808b414e910d3621809233d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HandDisplay
+  cardBackground: {r: 0.12, g: 0.12, b: 0.16, a: 0.95}
+  commonColor: {r: 0.6, g: 0.6, b: 0.6, a: 1}
+  uncommonColor: {r: 0.2, g: 0.8, b: 0.2, a: 1}
+  rareColor: {r: 0.9, g: 0.7, b: 0.1, a: 1}
+  selectedGlow: {r: 1, g: 0.9, b: 0.4, a: 1}
+  carbonColor: {r: 0.75, g: 0.45, b: 0.3, a: 1}
+  economyColor: {r: 0.85, g: 0.75, b: 0.3, a: 1}
+  stabilityColor: {r: 0.4, g: 0.6, b: 0.85, a: 1}
+  bonusColor: {r: 0.4, g: 0.9, b: 0.4, a: 1}
+  penaltyColor: {r: 0.9, g: 0.4, b: 0.4, a: 1}
+  cardWidth: 190
+  cardHeight: 260
+  cardSpacing: -35.3
+  restY: -300
+  hoverY: -200
+  selectedY: -150
+  hoverScale: 1.35
+  selectedScale: 1.5
+  tweenSpeed: 12
+  bounceSpeed: 5
+  bounceAmount: 6
+  selectedColorSpeed: 5
+  fanAngle: 5
+  fanYOffset: 20
+  dealStartX: -1100
+  dealStartY: -300
+  dealDuration: 0.5
+  dealStagger: 0.12
+  shopSlideDistance: 400
+  shopSlideSpeed: 6
+--- !u!114 &3018978395823811346
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7727560216079619899}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3658bde92cf22f4e86d8d2ae2a3401f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PauseMenu
+  pauseOverlay: {fileID: 0}
+  resumeButton: {fileID: 0}
+  pauseRestartButton: {fileID: 0}
+  mainMenuButton: {fileID: 0}
+  mainMenuSceneName: MainMenuScene
+  gameOverRestartButton: {fileID: 0}
+  gameOverMainMenuButton: {fileID: 0}
+--- !u!114 &4523181136183669541
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7727560216079619899}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30c358f9f3eca7047bca1a4f507ce0fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RewardDisplay
+  cardBackground: {r: 0.12, g: 0.12, b: 0.16, a: 0.95}
+  commonColor: {r: 0.6, g: 0.6, b: 0.6, a: 1}
+  uncommonColor: {r: 0.2, g: 0.8, b: 0.2, a: 1}
+  rareColor: {r: 0.9, g: 0.7, b: 0.1, a: 1}
+  selectedGlow: {r: 1, g: 0.9, b: 0.4, a: 1}
+  carbonColor: {r: 0.75, g: 0.45, b: 0.3, a: 1}
+  economyColor: {r: 0.85, g: 0.75, b: 0.3, a: 1}
+  stabilityColor: {r: 0.4, g: 0.6, b: 0.85, a: 1}
+  cardWidth: 200
+  cardHeight: 280
+  cardSpacing: 40
+  hoverLift: 20
+  hoverScale: 1.08
+  selectedScale: 1.12
+  tweenSpeed: 10
+  bounceSpeed: 3
+  bounceAmount: 6
+  selectedColorSpeed: 2.5
+  dealDuration: 0.4
+  dealStagger: 0.1
+--- !u!114 &5269089696939361187
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7727560216079619899}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 08b0dee8abd05fc4b9013cff80d8b26d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DashboardDisplay
+  panelBackground: {r: 0.08, g: 0.08, b: 0.12, a: 0.92}
+  listItemNormal: {r: 0.14, g: 0.14, b: 0.18, a: 0.9}
+  listItemHovered: {r: 0.2, g: 0.2, b: 0.28, a: 0.95}
+  listItemSelected: {r: 0.25, g: 0.22, b: 0.12, a: 0.95}
+  healthyColor: {r: 0.3, g: 0.8, b: 0.4, a: 1}
+  stressedColor: {r: 0.9, g: 0.75, b: 0.2, a: 1}
+  crisisColor: {r: 0.9, g: 0.3, b: 0.3, a: 1}
+  carbonColor: {r: 0.75, g: 0.45, b: 0.3, a: 1}
+  economyColor: {r: 0.85, g: 0.75, b: 0.3, a: 1}
+  stabilityColor: {r: 0.4, g: 0.6, b: 0.85, a: 1}
+  listWidth: 500
+  detailWidth: 800
+  panelHeight: 800
+  listItemHeight: 52
+  panelOffsetX: 0
+  panelOffsetY: 0
+  detailSpacing: 12
+  detailSectionGap: 10
+  detailTopPadding: 22
+  detailTitleHeight: 35
+  detailTraitHeight: 34
+  detailStatsHeight: 40
+  detailStatusHeight: 30
+  detailNeighborsHeight: 23
+  detailFocusHeight: 8
+  detailHistHeaderHeight: 37
+  titleFontSize: 32
+  listNameFontSize: 25
+  listStatsFontSize: 15
+  sortButtonFontSize: 14
+  detailNameFontSize: 38
+  detailTraitFontSize: 27
+  detailStatsFontSize: 21
+  detailStatusFontSize: 36
+  detailNeighborsFontSize: 20
+  detailFocusFontSize: 19
+  eventHistoryHeaderFontSize: 33
+  eventHistoryFontSize: 20
+  statBarLabelFontSize: 16
+  scrollForce: 100
+  scrollDamping: 8
+  sortButtonNormal: {r: 0.18, g: 0.18, b: 0.24, a: 0.9}
+  sortButtonActive: {r: 0.35, g: 0.3, b: 0.15, a: 0.95}
+  fadeDuration: 0.3
+--- !u!114 &711628363994881208
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7727560216079619899}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f7c7d4f91ad27e946a4e935ddc5d3aba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EventBanner
+  slideInDuration: 0.6
+  lingerDuration: 3
+  slideOutDuration: 0.5
+  lingerDrift: 80
+  staggerDelay: 0.3
+  bannerWidthFraction: 0.55
+  bannerHeight: 200
+  bannerSpacing: 10
+  backgroundColor: {r: 0.95, g: 0.95, b: 0.95, a: 0.95}
+  borderColor: {r: 0.8, g: 0.2, b: 0.2, a: 1}
+  borderWidth: 5
+  borderPulseColor: {r: 1, g: 0.4, b: 0.1, a: 1}
+  borderPulseSpeed: 3
+  titleFontSize: 40
+  descriptionFontSize: 28
+  titleColor: {r: 0.1, g: 0.1, b: 0.1, a: 1}
+  descriptionColor: {r: 0.3, g: 0.3, b: 0.3, a: 1}
