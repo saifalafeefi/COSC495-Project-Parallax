@@ -5,8 +5,16 @@ using TMPro;
 public class MainMenu : MonoBehaviour
 {
     [Header("Scene Names")]
-    [Tooltip("name of the gameplay scene to load")]
-    [SerializeField] private string gameSceneName = "DesktopScene";
+    [Tooltip("scene to load on desktop/PC builds")]
+    [SerializeField] private string desktopSceneName = "DesktopScene";
+    [Tooltip("scene to load on mobile/AR builds")]
+    [SerializeField] private string arSceneName = "ARGameScene";
+
+    #if UNITY_EDITOR
+    [Header("Editor Testing")]
+    [Tooltip("enable to simulate AR mode in the editor")]
+    [SerializeField] private bool simulateAR = false;
+    #endif
 
     [Header("Earth Spin")]
     [Tooltip("optional — assign the earth object in the menu scene to auto-spin it")]
@@ -122,7 +130,7 @@ public class MainMenu : MonoBehaviour
             case MenuState.FadeToGame:
                 previewPanel.alpha = Mathf.MoveTowards(previewPanel.alpha, 0f, t);
                 if (previewPanel.alpha <= 0.01f)
-                    SceneManager.LoadScene(gameSceneName);
+                    SceneManager.LoadScene(IsMobilePlatform() ? arSceneName : desktopSceneName);
                 break;
         }
     }
@@ -195,5 +203,16 @@ public class MainMenu : MonoBehaviour
         group.alpha = active ? 1f : 0f;
         group.interactable = active;
         group.blocksRaycasts = active;
+    }
+
+    bool IsMobilePlatform()
+    {
+        #if UNITY_EDITOR
+        return simulateAR;
+        #elif UNITY_ANDROID || UNITY_IOS
+        return true;
+        #else
+        return false;
+        #endif
     }
 }

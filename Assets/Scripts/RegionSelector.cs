@@ -7,6 +7,7 @@ public class RegionSelector : MonoBehaviour
 
     private RegionManager regionManager;
     private DesktopInteraction desktopInteraction;
+    private ARPlacement arPlacement;
 
     // stores the last card play result for the debug UI to read
     public string LastPlayResult { get; set; }
@@ -20,8 +21,12 @@ public class RegionSelector : MonoBehaviour
             if (regionManager == null) return;
         }
 
-        if (desktopInteraction == null)
+        if (desktopInteraction == null && arPlacement == null)
+        {
             desktopInteraction = FindFirstObjectByType<DesktopInteraction>();
+            if (desktopInteraction == null)
+                arPlacement = FindFirstObjectByType<ARPlacement>();
+        }
 
         if (mainCamera == null)
             mainCamera = Camera.main;
@@ -48,9 +53,14 @@ public class RegionSelector : MonoBehaviour
                 {
                     regionManager.SelectedRegion = region;
 
-                    // focus the camera on the region — camera will track it as earth spins
-                    if (region != null && desktopInteraction != null)
-                        desktopInteraction.FocusOnRegion(region, regionManager);
+                    // focus on the region — camera orbits (desktop) or earth rotates (AR)
+                    if (region != null)
+                    {
+                        if (desktopInteraction != null)
+                            desktopInteraction.FocusOnRegion(region, regionManager);
+                        else if (arPlacement != null)
+                            arPlacement.FocusOnRegion(region, regionManager);
+                    }
                 }
 
                 return;
@@ -66,6 +76,8 @@ public class RegionSelector : MonoBehaviour
             regionManager.SelectedRegion = null;
             if (desktopInteraction != null)
                 desktopInteraction.Unfocus();
+            else if (arPlacement != null)
+                arPlacement.Unfocus();
         }
     }
 }
