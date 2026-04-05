@@ -22,6 +22,7 @@ public class CardInteraction : MonoBehaviour, IPointerEnterHandler, IPointerExit
     {
         if (handDisplay == null) return;
 
+        // on touch devices, tap = left click. no right-click available.
         if (eventData.button == PointerEventData.InputButton.Left)
             handDisplay.OnCardClick(cardIndex);
         else if (eventData.button == PointerEventData.InputButton.Right)

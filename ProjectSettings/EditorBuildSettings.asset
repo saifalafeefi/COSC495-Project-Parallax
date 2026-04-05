@@ -9,11 +9,11 @@ EditorBuildSettings:
     path: Assets/Scenes/SampleScene.unity
     guid: 99c9720ab356a0642a771bea13969a05
   - enabled: 1
-    path: Assets/Scenes/Desktop/DesktopGameScene.unity
-    guid: 29606922a4330224087558e247d8211d
-  - enabled: 1
     path: Assets/Scenes/MainMenuScene.unity
     guid: 5e7803c75cc609f4192914794c5ed270
+  - enabled: 1
+    path: Assets/Scenes/Desktop/DesktopGameScene.unity
+    guid: 29606922a4330224087558e247d8211d
   - enabled: 1
     path: Assets/Scenes/AR/ARGameScene.unity
     guid: c8b311c771162e14eb79087b7af77aee

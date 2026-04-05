@@ -76,6 +76,9 @@ public class HandDisplay : MonoBehaviour
 
     private float shopSlideBlend;
 
+    // on mobile, cards are always fanned (no hover)
+    private bool isMobile;
+
     // expose the currently selected card for other scripts (e.g. stat preview)
     public PolicyData SelectedCard
     {
@@ -179,6 +182,12 @@ public class HandDisplay : MonoBehaviour
 
     void BuildCanvas()
     {
+        #if UNITY_EDITOR
+        isMobile = FindFirstObjectByType<ARPlacement>() != null;
+        #elif UNITY_ANDROID || UNITY_IOS
+        isMobile = true;
+        #endif
+
         var canvasObj = new GameObject("HandCanvas");
         canvasObj.transform.SetParent(transform, false);
         canvas = canvasObj.AddComponent<Canvas>();
@@ -296,8 +305,8 @@ public class HandDisplay : MonoBehaviour
         int count = cardRects.Count;
         if (count == 0) return;
 
-        // when hovered or selected, fan out with full spacing; cooldown prevents jitter at edges
-        bool anyActive = hoveredIndex >= 0 || selectedIndex >= 0 || Time.time - lastFanTime < fanCooldown;
+        // on mobile always fan out (no hover). on desktop fan when hovered/selected with cooldown.
+        bool anyActive = isMobile || hoveredIndex >= 0 || selectedIndex >= 0 || Time.time - lastFanTime < fanCooldown;
         float effectiveSpacing = anyActive ? cardSpacing : -cardWidth * 0.7f;
         float totalWidth = count * cardWidth + (count - 1) * effectiveSpacing;
         float startX = -totalWidth / 2f + cardWidth / 2f;

@@ -31,6 +31,7 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     private float tweenProgress = 1f;
     private bool hovering;
     private float shopSlideBlend;
+    private bool isMobile;
 
     private GameManager gameManager;
 
@@ -40,14 +41,31 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     void Awake()
     {
         rect = GetComponent<RectTransform>();
-        shownX = rect.anchoredPosition.x;
-        hiddenX = shownX + hiddenOffsetX;
 
-        // start in hidden position
-        var pos = rect.anchoredPosition;
-        pos.x = hiddenX;
-        rect.anchoredPosition = pos;
-        tweenProgress = 0f;
+        #if UNITY_EDITOR
+        isMobile = FindFirstObjectByType<ARPlacement>() != null;
+        #elif UNITY_ANDROID || UNITY_IOS
+        isMobile = true;
+        #endif
+
+        if (isMobile)
+        {
+            // on mobile, buttons are always visible (no hover to reveal)
+            shownX = rect.anchoredPosition.x;
+            hiddenX = shownX;
+            tweenProgress = 1f;
+        }
+        else
+        {
+            shownX = rect.anchoredPosition.x;
+            hiddenX = shownX + hiddenOffsetX;
+
+            // start in hidden position
+            var pos = rect.anchoredPosition;
+            pos.x = hiddenX;
+            rect.anchoredPosition = pos;
+            tweenProgress = 0f;
+        }
     }
 
     void Update()
