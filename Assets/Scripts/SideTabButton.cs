@@ -5,14 +5,16 @@ public enum TabAction
 {
     None,
     Shop,
-    Dashboard
+    Dashboard,
+    Pause,
+    SkipRound
 }
 
 public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
 {
     [Header("Tween Settings")]
-    [Tooltip("how far offscreen the button sits when retracted (positive = further right)")]
-    [SerializeField] private float hiddenOffsetX = 80f;
+    [Tooltip("how far offscreen the button sits when retracted (x = right, y = up)")]
+    [SerializeField] private Vector2 hiddenOffset = new Vector2(80f, 0f);
     [Tooltip("how long the slide animation takes in seconds")]
     [SerializeField] private float tweenDuration = 0.25f;
 
@@ -20,17 +22,22 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     [Tooltip("what this tab button does when clicked")]
     [SerializeField] private TabAction action = TabAction.None;
 
+    [Header("Hover")]
+    [Tooltip("disable hover slide-in/out (for buttons that should always be fully visible)")]
+    [SerializeField] private bool disableHover = false;
+
     [Header("Shop Hide")]
-    [Tooltip("extra offset to push the button fully offscreen when shop is open")]
-    [SerializeField] private float shopHideOffset = 200f;
+    [Tooltip("extra offset to push the button offscreen when shop is open (x = horizontal, y = vertical)")]
+    [SerializeField] private Vector2 shopHideOffset = new Vector2(200f, 0f);
     [SerializeField] private float shopSlideSpeed = 6f;
 
     private RectTransform rect;
-    private float shownX;
-    private float hiddenX;
+    private Vector2 shownPos;
+    private Vector2 hiddenPos;
     private float tweenProgress = 1f;
     private bool hovering;
     private float shopSlideBlend;
+    private bool isMobile;
 
     private GameManager gameManager;
 
@@ -40,21 +47,34 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     void Awake()
     {
         rect = GetComponent<RectTransform>();
-        shownX = rect.anchoredPosition.x;
-        hiddenX = shownX + hiddenOffsetX;
 
-        // start in hidden position
-        var pos = rect.anchoredPosition;
-        pos.x = hiddenX;
-        rect.anchoredPosition = pos;
-        tweenProgress = 0f;
+        #if UNITY_EDITOR
+        isMobile = FindFirstObjectByType<ARPlacement>() != null;
+        #elif UNITY_ANDROID || UNITY_IOS
+        isMobile = true;
+        #endif
+
+        shownPos = rect.anchoredPosition;
+
+        if (isMobile || disableHover)
+        {
+            hiddenPos = shownPos;
+            tweenProgress = 1f;
+        }
+        else
+        {
+            hiddenPos = shownPos + hiddenOffset;
+            rect.anchoredPosition = hiddenPos;
+            tweenProgress = 0f;
+        }
     }
 
     void Update()
     {
-        // shop slide — always update even when hover tween is settled
         if (gameManager == null)
             gameManager = FindFirstObjectByType<GameManager>();
+
+        // shop slide
         float shopTarget = (gameManager != null && gameManager.ShopActive) ? 1f : 0f;
         shopSlideBlend = Mathf.Lerp(shopSlideBlend, shopTarget, shopSlideSpeed * Time.unscaledDeltaTime);
         if (Mathf.Abs(shopSlideBlend - shopTarget) < 0.005f) shopSlideBlend = shopTarget;
@@ -72,11 +92,8 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
             tweenProgress = Mathf.MoveTowards(tweenProgress, hoverTarget, step);
         }
 
-        // ease out cubic
         float t = 1f - Mathf.Pow(1f - tweenProgress, 3f);
-        var pos = rect.anchoredPosition;
-        pos.x = Mathf.Lerp(hiddenX, shownX, t) + shopHideOffset * shopSlideBlend;
-        rect.anchoredPosition = pos;
+        rect.anchoredPosition = Vector2.Lerp(hiddenPos, shownPos, t) + shopHideOffset * shopSlideBlend;
     }
 
     public void OnPointerEnter(PointerEventData eventData)
@@ -96,8 +113,22 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
         if (gameManager == null)
             gameManager = FindFirstObjectByType<GameManager>();
 
-        // block interaction during banners and other overlays
-        if (gameManager != null && (gameManager.BannerActive || gameManager.RewardActive)) return;
+        // block during shop transition (opening/closing tween)
+        var shopDisplay = FindFirstObjectByType<ShopDisplay>();
+        if (shopDisplay != null && shopDisplay.IsTransitioning) return;
+
+        // pause only blocked during reward, everything else blocked during banners too
+        if (gameManager != null)
+        {
+            if (action == TabAction.Pause)
+            {
+                if (gameManager.RewardActive) return;
+            }
+            else
+            {
+                if (gameManager.BannerActive || gameManager.RewardActive) return;
+            }
+        }
 
         if (OnClicked != null)
         {
@@ -120,6 +151,15 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
                     gameManager.CloseDashboard();
                 else
                     gameManager.OpenDashboard();
+                break;
+            case TabAction.Pause:
+                var pauseMenu = FindFirstObjectByType<PauseMenu>();
+                if (pauseMenu != null)
+                    pauseMenu.TogglePause();
+                break;
+            case TabAction.SkipRound:
+                if (!gameManager.GameOver)
+                    gameManager.SkipRound();
                 break;
         }
     }

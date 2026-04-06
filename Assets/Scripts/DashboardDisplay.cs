@@ -79,6 +79,7 @@ public class DashboardDisplay : MonoBehaviour
     private GameManager gameManager;
     private RegionManager regionManager;
     private DesktopInteraction desktopInteraction;
+    private ARPlacement arPlacement;
 
     private GameObject root;
     private CanvasGroup rootCanvasGroup;
@@ -143,8 +144,12 @@ public class DashboardDisplay : MonoBehaviour
         }
         if (regionManager == null)
             regionManager = FindFirstObjectByType<RegionManager>();
-        if (desktopInteraction == null)
+        if (desktopInteraction == null && arPlacement == null)
+        {
             desktopInteraction = FindFirstObjectByType<DesktopInteraction>();
+            if (desktopInteraction == null)
+                arPlacement = FindFirstObjectByType<ARPlacement>();
+        }
 
         if (gameManager.DashboardActive && !showing && !closing)
             ShowDashboard();
@@ -956,10 +961,15 @@ public class DashboardDisplay : MonoBehaviour
         if (index < 0 || index >= regionList.Count) return;
         selectedIndex = index;
 
-        // focus camera on the selected region — camera tracks it as earth spins
+        // focus on the selected region
         var region = regionList[index];
-        if (desktopInteraction != null && regionManager != null)
-            desktopInteraction.FocusOnRegion(region, regionManager);
+        if (regionManager != null)
+        {
+            if (desktopInteraction != null)
+                desktopInteraction.FocusOnRegion(region, regionManager);
+            else if (arPlacement != null)
+                arPlacement.FocusOnRegion(region, regionManager);
+        }
     }
 
     // ---- UI helpers ----

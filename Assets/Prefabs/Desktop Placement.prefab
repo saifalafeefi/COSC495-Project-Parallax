@@ -1,0 +1,78 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &7258739419159389907
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1012128582061387001}
+  - component: {fileID: 4447584504419430288}
+  - component: {fileID: 1028147477575708091}
+  m_Layer: 0
+  m_Name: Desktop Placement
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1012128582061387001
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7258739419159389907}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -1.59947, y: 0, z: 1.81822}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4447584504419430288
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7258739419159389907}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2f3e22f8af7f8cd4780dc0cedc90dd9e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DesktopInteraction
+  desktopPlacement: {fileID: 1028147477575708091}
+  mainCamera: {fileID: 0}
+  orbitSpeed: 0.5
+  zoomSpeed: 100
+  minDistance: 12
+  maxDistance: 20
+  focusDistance: 9
+  focusSmoothSpeed: 4
+  focusedOrbitMultiplier: 0.3
+  focusDeadzoneAngle: 25
+  shopExtraDistance: 21.8
+  shopLookOffsetX: -23.7
+  shopLookOffsetY: 19.3
+  shopSmoothSpeed: 5
+--- !u!114 &1028147477575708091
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7258739419159389907}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52d671289e8cd364887575699adb4c24, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DesktopPlacement
+  earthPrefab: {fileID: 1406784529821176, guid: 57d277fd15f819c4c894aab4c8bb3dfa, type: 3}
+  spawnPosition: {x: 0, y: 0, z: 10}
+  autoRotateSpeed: 5
+  resumeDelay: 0
+  resumeRampTime: 0

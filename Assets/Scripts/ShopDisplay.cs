@@ -78,6 +78,44 @@ public class ShopDisplay : MonoBehaviour
     [Tooltip("how fast the background slides up (higher = faster)")]
     [SerializeField] private float shopBgSlideSpeed = 3f;
 
+    [Header("Shop Title")]
+    [Tooltip("font size for the SHOP title")]
+    [SerializeField] private float titleFontSize = 32f;
+    [Tooltip("offset from default title position (above card grid)")]
+    [SerializeField] private Vector2 titleOffset = Vector2.zero;
+    [Tooltip("font size for the funds display")]
+    [SerializeField] private float fundsFontSize = 18f;
+    [Tooltip("offset from default funds position (below title)")]
+    [SerializeField] private Vector2 fundsOffset = Vector2.zero;
+    [Tooltip("font size for the feedback text")]
+    [SerializeField] private float feedbackFontSize = 16f;
+    [Tooltip("offset from default feedback position (below card grid)")]
+    [SerializeField] private Vector2 feedbackOffset = Vector2.zero;
+
+    [Header("Close Button")]
+    [Tooltip("size of the close button")]
+    [SerializeField] private Vector2 closeButtonSize = new Vector2(140f, 40f);
+    [Tooltip("font size on the close button")]
+    [SerializeField] private float closeButtonFontSize = 18f;
+    [Tooltip("text shown on the close button")]
+    [SerializeField] private string closeButtonText = "Close";
+    [Tooltip("offset from default close button position (below feedback)")]
+    [SerializeField] private Vector2 closeButtonOffset = Vector2.zero;
+
+    [Header("Card Font Sizes")]
+    [Tooltip("font size for card title")]
+    [SerializeField] private float cardTitleFontSize = 14f;
+    [Tooltip("font size for card stats line")]
+    [SerializeField] private float cardStatsFontSize = 11f;
+    [Tooltip("font size for card description")]
+    [SerializeField] private float cardDescFontSize = 12f;
+    [Tooltip("font size for rarity label")]
+    [SerializeField] private float cardRarityFontSize = 11f;
+    [Tooltip("font size for price badge")]
+    [SerializeField] private float cardPriceFontSize = 11f;
+    [Tooltip("font size for capital cost badge")]
+    [SerializeField] private float cardCapFontSize = 11f;
+
     [Header("Tween Settings")]
     [SerializeField] private float hoverLift = 20f;
     [SerializeField] private float hoverScale = 1.08f;
@@ -103,6 +141,9 @@ public class ShopDisplay : MonoBehaviour
     private float showTime;
     private float dealFinishTime;
 
+    // true while shop is opening (deal-in) or closing (fade-out)
+    public bool IsTransitioning => (showing && Time.time < dealFinishTime) || closing;
+
     // snapshot of shop cards so we can rebuild sold cards with full visuals
     private List<PolicyData> shopSnapshot = new List<PolicyData>();
     private int shopSnapshotRound = -1;
@@ -117,6 +158,26 @@ public class ShopDisplay : MonoBehaviour
     // feedback text shown briefly after purchase
     private TMP_Text feedbackText;
     private float feedbackTime;
+
+    // live-update references
+    private TMP_Text titleTextRef;
+    private TMP_Text fundsTextRef;
+    private TMP_Text closeTextRef;
+    private RectTransform closeBtnRect;
+    private RectTransform titleRect;
+    private RectTransform fundsRect;
+    private RectTransform feedbackRect;
+    private RectTransform closeBtnParentRect;
+
+    private RectTransform containerRect;
+
+    // per-card text references for live font updates
+    private List<TMP_Text> cardTitleTexts = new List<TMP_Text>();
+    private List<TMP_Text> cardStatsTexts = new List<TMP_Text>();
+    private List<TMP_Text> cardDescTexts = new List<TMP_Text>();
+    private List<TMP_Text> cardRarityTexts = new List<TMP_Text>();
+    private List<TMP_Text> cardPriceTexts = new List<TMP_Text>();
+    private List<TMP_Text> cardCapTexts = new List<TMP_Text>();
 
     // shop background image
     private RectTransform shopBgRect;
@@ -204,15 +265,36 @@ public class ShopDisplay : MonoBehaviour
         // shop background image — slides up from below the screen
         if (shopBackgroundSprite != null)
         {
+            bool mobile = false;
+            #if UNITY_EDITOR
+            mobile = FindFirstObjectByType<ARPlacement>() != null;
+            #elif UNITY_ANDROID || UNITY_IOS
+            mobile = true;
+            #endif
+
             var bgObj = new GameObject("ShopBackground");
             bgObj.transform.SetParent(root.transform, false);
             shopBgRect = bgObj.AddComponent<RectTransform>();
-            shopBgRect.anchorMin = new Vector2(0.5f, 0f);
-            shopBgRect.anchorMax = new Vector2(0.5f, 0f);
-            shopBgRect.pivot = new Vector2(0.5f, 0f);
-            // start fully below the screen
-            shopBgRect.anchoredPosition = new Vector2(0f, -shopBgSize.y);
-            shopBgRect.sizeDelta = shopBgSize;
+
+            if (mobile)
+            {
+                // stretch to fill screen width, keep height from shopBgSize
+                shopBgRect.anchorMin = new Vector2(0f, 0f);
+                shopBgRect.anchorMax = new Vector2(1f, 0f);
+                shopBgRect.pivot = new Vector2(0.5f, 0f);
+                shopBgRect.offsetMin = new Vector2(0f, -shopBgSize.y);
+                shopBgRect.offsetMax = new Vector2(0f, 0f);
+                shopBgRect.sizeDelta = new Vector2(0f, shopBgSize.y);
+                shopBgRect.anchoredPosition = new Vector2(0f, -shopBgSize.y);
+            }
+            else
+            {
+                shopBgRect.anchorMin = new Vector2(0.5f, 0f);
+                shopBgRect.anchorMax = new Vector2(0.5f, 0f);
+                shopBgRect.pivot = new Vector2(0.5f, 0f);
+                shopBgRect.anchoredPosition = new Vector2(0f, -shopBgSize.y);
+                shopBgRect.sizeDelta = shopBgSize;
+            }
 
             var bgImg = bgObj.AddComponent<Image>();
             bgImg.sprite = shopBackgroundSprite;
@@ -230,33 +312,38 @@ public class ShopDisplay : MonoBehaviour
         // title — centered above the card grid
         var titleObj = CreateUIObj("Title", root.transform,
             new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-            new Vector2(gridOffsetX, gridOffsetY + gridH / 2f + 50f), new Vector2(gridW, 50f));
+            new Vector2(gridOffsetX + titleOffset.x, gridOffsetY + gridH / 2f + 50f + titleOffset.y), new Vector2(gridW, 50f));
         var titleText = titleObj.AddComponent<TextMeshProUGUI>();
         titleText.text = "SHOP";
-        titleText.fontSize = 32;
+        titleText.fontSize = titleFontSize;
         titleText.alignment = TextAlignmentOptions.Center;
         titleText.color = new Color(0.95f, 0.85f, 0.4f);
         titleText.fontStyle = FontStyles.Bold;
+        titleTextRef = titleText;
+        titleRect = titleObj.GetComponent<RectTransform>();
 
         // funds display — below title
         var fundsObj = CreateUIObj("Funds", root.transform,
             new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-            new Vector2(gridOffsetX, gridOffsetY + gridH / 2f + 20f), new Vector2(gridW, 30f));
+            new Vector2(gridOffsetX + fundsOffset.x, gridOffsetY + gridH / 2f + 20f + fundsOffset.y), new Vector2(gridW, 30f));
         var fundsText = fundsObj.AddComponent<TextMeshProUGUI>();
         fundsText.text = $"Funds: {gameManager.Funds}";
-        fundsText.fontSize = 18;
+        fundsText.fontSize = fundsFontSize;
         fundsText.alignment = TextAlignmentOptions.Center;
         fundsText.color = new Color(0.7f, 0.85f, 0.7f);
+        fundsTextRef = fundsText;
+        fundsRect = fundsObj.GetComponent<RectTransform>();
 
         // feedback text — below the grid
         var fbObj = CreateUIObj("Feedback", root.transform,
             new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-            new Vector2(gridOffsetX, gridOffsetY - gridH / 2f - 30f), new Vector2(gridW + 100f, 30f));
+            new Vector2(gridOffsetX + feedbackOffset.x, gridOffsetY - gridH / 2f - 30f + feedbackOffset.y), new Vector2(gridW + 100f, 30f));
         feedbackText = fbObj.AddComponent<TextMeshProUGUI>();
         feedbackText.text = "";
-        feedbackText.fontSize = 16;
+        feedbackText.fontSize = feedbackFontSize;
         feedbackText.alignment = TextAlignmentOptions.Center;
         feedbackText.color = Color.white;
+        feedbackRect = fbObj.GetComponent<RectTransform>();
 
         // card container — positioned to the right
         var container = new GameObject("CardContainer");
@@ -267,6 +354,7 @@ public class ShopDisplay : MonoBehaviour
         contRect.pivot = new Vector2(0.5f, 0.5f);
         contRect.anchoredPosition = new Vector2(gridOffsetX, gridOffsetY);
         contRect.sizeDelta = new Vector2(gridW + 40f, gridH + 40f);
+        containerRect = contRect;
 
         // snapshot shop cards so sold slots can still show full card visuals
         // refresh snapshot when a new round generates fresh stock
@@ -282,6 +370,12 @@ public class ShopDisplay : MonoBehaviour
         cardRects.Clear();
         cardBorders.Clear();
         cardRarityColors.Clear();
+        cardTitleTexts.Clear();
+        cardStatsTexts.Clear();
+        cardDescTexts.Clear();
+        cardRarityTexts.Clear();
+        cardPriceTexts.Clear();
+        cardCapTexts.Clear();
 
         int cardCount = gameManager.ShopCards.Count;
         for (int i = 0; i < cardCount; i++)
@@ -405,9 +499,23 @@ public class ShopDisplay : MonoBehaviour
         cardRects.Clear();
         cardBorders.Clear();
         cardRarityColors.Clear();
+        cardTitleTexts.Clear();
+        cardStatsTexts.Clear();
+        cardDescTexts.Clear();
+        cardRarityTexts.Clear();
+        cardPriceTexts.Clear();
+        cardCapTexts.Clear();
         hoveredIndex = -1;
         selectedIndex = -1;
         feedbackText = null;
+        titleTextRef = null;
+        fundsTextRef = null;
+        closeTextRef = null;
+        closeBtnRect = null;
+        titleRect = null;
+        fundsRect = null;
+        feedbackRect = null;
+        containerRect = null;
         shopkeeperImage = null;
         shopkeeperRect = null;
         shopkeeperReacting = false;
@@ -428,12 +536,46 @@ public class ShopDisplay : MonoBehaviour
         int count = cardRects.Count;
         if (count == 0) return;
 
-        // update funds display
-        var fundsObj = root.transform.Find("Funds");
-        if (fundsObj != null)
+        // live-update all font sizes, positions, and button sizes from Inspector
+        if (titleTextRef != null) titleTextRef.fontSize = titleFontSize;
+        if (fundsTextRef != null)
         {
-            var ft = fundsObj.GetComponent<TextMeshProUGUI>();
-            if (ft != null) ft.text = $"Funds: {gameManager.Funds}";
+            fundsTextRef.fontSize = fundsFontSize;
+            fundsTextRef.text = $"Funds: {gameManager.Funds}";
+        }
+        if (feedbackText != null) feedbackText.fontSize = feedbackFontSize;
+        if (closeTextRef != null)
+        {
+            closeTextRef.fontSize = closeButtonFontSize;
+            closeTextRef.text = closeButtonText;
+        }
+        if (closeBtnRect != null) closeBtnRect.sizeDelta = closeButtonSize;
+
+        // live-update element positions
+        int layoutRows = Mathf.CeilToInt((float)count / gridColumns);
+        float layoutGridW = gridColumns * cardWidth + (gridColumns - 1) * cardSpacingX;
+        float layoutGridH = layoutRows * cardHeight + (layoutRows - 1) * cardSpacingY;
+
+        if (titleRect != null)
+            titleRect.anchoredPosition = new Vector2(gridOffsetX + titleOffset.x, gridOffsetY + layoutGridH / 2f + 50f + titleOffset.y);
+        if (fundsRect != null)
+            fundsRect.anchoredPosition = new Vector2(gridOffsetX + fundsOffset.x, gridOffsetY + layoutGridH / 2f + 20f + fundsOffset.y);
+        if (feedbackRect != null)
+            feedbackRect.anchoredPosition = new Vector2(gridOffsetX + feedbackOffset.x, gridOffsetY - layoutGridH / 2f - 30f + feedbackOffset.y);
+        if (closeBtnRect != null)
+            closeBtnRect.anchoredPosition = new Vector2(gridOffsetX + closeButtonOffset.x, gridOffsetY - layoutGridH / 2f - 65f + closeButtonOffset.y);
+        if (containerRect != null)
+            containerRect.anchoredPosition = new Vector2(gridOffsetX, gridOffsetY);
+
+        // live-update per-card font sizes
+        for (int ci = 0; ci < count; ci++)
+        {
+            if (ci < cardTitleTexts.Count && cardTitleTexts[ci] != null) cardTitleTexts[ci].fontSize = cardTitleFontSize;
+            if (ci < cardStatsTexts.Count && cardStatsTexts[ci] != null) cardStatsTexts[ci].fontSize = cardStatsFontSize;
+            if (ci < cardDescTexts.Count && cardDescTexts[ci] != null) cardDescTexts[ci].fontSize = cardDescFontSize;
+            if (ci < cardRarityTexts.Count && cardRarityTexts[ci] != null) cardRarityTexts[ci].fontSize = cardRarityFontSize;
+            if (ci < cardPriceTexts.Count && cardPriceTexts[ci] != null) cardPriceTexts[ci].fontSize = cardPriceFontSize;
+            if (ci < cardCapTexts.Count && cardCapTexts[ci] != null) cardCapTexts[ci].fontSize = cardCapFontSize;
         }
 
         // grid layout: 3 columns × 2 rows
@@ -446,6 +588,9 @@ public class ShopDisplay : MonoBehaviour
         {
             var rect = cardRects[i];
             if (rect == null) continue;
+
+            // live-update card size so Inspector changes apply immediately
+            rect.sizeDelta = new Vector2(cardWidth, cardHeight);
 
             // check if this card has been sold
             bool sold = i < gameManager.ShopCards.Count && gameManager.ShopCards[i] == null;
@@ -613,7 +758,7 @@ public class ShopDisplay : MonoBehaviour
 
         var btnObj = CreateUIObj("CloseButton", parent,
             new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-            new Vector2(gridOffsetX, gridOffsetY - closeGridH / 2f - 65f), new Vector2(140f, 40f));
+            new Vector2(gridOffsetX + closeButtonOffset.x, gridOffsetY - closeGridH / 2f - 65f + closeButtonOffset.y), closeButtonSize);
 
         var btnImg = btnObj.AddComponent<Image>();
         btnImg.color = new Color(0.3f, 0.3f, 0.35f, 0.9f);
@@ -635,10 +780,12 @@ public class ShopDisplay : MonoBehaviour
         textRect.offsetMin = Vector2.zero;
         textRect.offsetMax = Vector2.zero;
         var text = textObj.AddComponent<TextMeshProUGUI>();
-        text.text = "Close";
-        text.fontSize = 18;
+        text.text = closeButtonText;
+        text.fontSize = closeButtonFontSize;
         text.alignment = TextAlignmentOptions.Center;
         text.color = new Color(0.8f, 0.8f, 0.8f);
+        closeTextRef = text;
+        closeBtnRect = btnObj.GetComponent<RectTransform>();
     }
 
     void BuildShopkeeper(Transform parent)
@@ -803,9 +950,10 @@ public class ShopDisplay : MonoBehaviour
         var priceBg = priceBadge.AddComponent<Image>();
         priceBg.color = canAfford ? new Color(0.2f, 0.5f, 0.7f, 0.9f) : new Color(0.5f, 0.2f, 0.2f, 0.9f);
         priceBg.raycastTarget = false;
-        var priceText = CreateText(priceBadge, $"{price}F", 11, TextAlignmentOptions.Center, Color.white);
+        var priceText = CreateText(priceBadge, $"{price}F", cardPriceFontSize, TextAlignmentOptions.Center, Color.white);
         priceText.fontStyle = FontStyles.Bold;
         StretchFill(priceText.gameObject);
+        cardPriceTexts.Add(priceText);
 
         // political capital cost badge — top-left
         var capBadge = CreateUIObj("CapBadge", inner.transform,
@@ -814,38 +962,42 @@ public class ShopDisplay : MonoBehaviour
         var capBg = capBadge.AddComponent<Image>();
         capBg.color = new Color(0.3f, 0.3f, 0.6f, 0.9f);
         capBg.raycastTarget = false;
-        var capText = CreateText(capBadge, $"{policy.politicalCapitalCost}", 11, TextAlignmentOptions.Center, Color.white);
+        var capText = CreateText(capBadge, $"{policy.politicalCapitalCost}", cardCapFontSize, TextAlignmentOptions.Center, Color.white);
         capText.fontStyle = FontStyles.Bold;
         StretchFill(capText.gameObject);
+        cardCapTexts.Add(capText);
 
         // title
         var titleArea = CreateUIObj("Title", inner.transform,
             new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
             new Vector2(0f, -30f), new Vector2(-12f, 30f));
-        var titleText = CreateText(titleArea, policy.policyName, 14, TextAlignmentOptions.Center, Color.white);
-        titleText.fontStyle = FontStyles.Bold;
-        StretchFill(titleText.gameObject);
+        var cardTitle = CreateText(titleArea, policy.policyName, cardTitleFontSize, TextAlignmentOptions.Center, Color.white);
+        cardTitle.fontStyle = FontStyles.Bold;
+        StretchFill(cardTitle.gameObject);
+        cardTitleTexts.Add(cardTitle);
 
         // rarity label
         var rarityArea = CreateUIObj("Rarity", inner.transform,
             new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
             new Vector2(0f, -55f), new Vector2(-12f, 18f));
-        var rarityText = CreateText(rarityArea, policy.rarity.ToString(), 11, TextAlignmentOptions.Center, rarityCol);
-        rarityText.fontStyle = FontStyles.Italic;
-        StretchFill(rarityText.gameObject);
+        var cardRarity = CreateText(rarityArea, policy.rarity.ToString(), cardRarityFontSize, TextAlignmentOptions.Center, rarityCol);
+        cardRarity.fontStyle = FontStyles.Italic;
+        StretchFill(cardRarity.gameObject);
+        cardRarityTexts.Add(cardRarity);
 
         // stats
         var statsArea = CreateUIObj("Stats", inner.transform,
             new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
             new Vector2(0f, -78f), new Vector2(-8f, 20f));
-        var statsText = CreateText(statsArea, statsString, 11, TextAlignmentOptions.Center, Color.white);
-        statsText.richText = true;
-        StretchFill(statsText.gameObject);
+        var cardStats = CreateText(statsArea, statsString, cardStatsFontSize, TextAlignmentOptions.Center, Color.white);
+        cardStats.richText = true;
+        StretchFill(cardStats.gameObject);
+        cardStatsTexts.Add(cardStats);
 
-        // icon area
+        // icon area (compact to leave more room for description)
         var iconArea = CreateUIObj("IconArea", inner.transform,
             new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
-            new Vector2(0f, -110f), new Vector2(-24f, 70f));
+            new Vector2(0f, -105f), new Vector2(-24f, 55f));
         var iconBg = iconArea.AddComponent<Image>();
         iconBg.color = new Color(0.2f, 0.2f, 0.25f, 0.8f);
         iconBg.raycastTarget = false;
@@ -865,14 +1017,15 @@ public class ShopDisplay : MonoBehaviour
             StretchFill(placeholder.gameObject);
         }
 
-        // description
+        // description — anchored from below icon area to bottom of card
         var descArea = CreateUIObj("Desc", inner.transform,
             new Vector2(0f, 0f), new Vector2(1f, 1f), new Vector2(0.5f, 0f),
-            new Vector2(0f, 6f), new Vector2(-12f, -190f));
-        var descText = CreateText(descArea, policy.description, 11, TextAlignmentOptions.TopLeft, new Color(0.75f, 0.75f, 0.8f));
-        descText.enableWordWrapping = true;
-        descText.overflowMode = TextOverflowModes.Truncate;
-        StretchFill(descText.gameObject);
+            new Vector2(0f, 6f), new Vector2(-12f, -165f));
+        var cardDesc = CreateText(descArea, policy.description, cardDescFontSize, TextAlignmentOptions.TopLeft, new Color(0.75f, 0.75f, 0.8f));
+        cardDesc.enableWordWrapping = true;
+        cardDesc.overflowMode = TextOverflowModes.Truncate;
+        StretchFill(cardDesc.gameObject);
+        cardDescTexts.Add(cardDesc);
 
         // sold overlay (hidden initially)
         var soldObj = CreateStretchChild(card, "SoldOverlay", 0f);
@@ -901,6 +1054,14 @@ public class ShopDisplay : MonoBehaviour
         // border/color tracking (needed for AnimateCards array indexing)
         cardBorders.Add(bgImg);
         cardRarityColors.Add(soldOutColor);
+
+        // null entries for text lists (sold cards have no editable text)
+        cardTitleTexts.Add(null);
+        cardStatsTexts.Add(null);
+        cardDescTexts.Add(null);
+        cardRarityTexts.Add(null);
+        cardPriceTexts.Add(null);
+        cardCapTexts.Add(null);
 
         // "SOLD" label
         var soldLabel = CreateText(card, "SOLD", 24, TextAlignmentOptions.Center, new Color(0.8f, 0.3f, 0.3f));

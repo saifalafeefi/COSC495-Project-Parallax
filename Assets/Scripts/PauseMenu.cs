@@ -32,6 +32,7 @@ public class PauseMenu : MonoBehaviour
 
     private GameManager gameManager;
     private DesktopInteraction desktopInteraction;
+    private ARPlacement arPlacement;
     private RegionManager regionManager;
     private bool wasGameOver;
 
@@ -66,16 +67,27 @@ public class PauseMenu : MonoBehaviour
             if (gameManager == null) return;
         }
 
-        if (desktopInteraction == null)
+        if (desktopInteraction == null && arPlacement == null)
+        {
             desktopInteraction = FindFirstObjectByType<DesktopInteraction>();
+            if (desktopInteraction == null)
+                arPlacement = FindFirstObjectByType<ARPlacement>();
+        }
         if (regionManager == null)
             regionManager = FindFirstObjectByType<RegionManager>();
 
         // ESC priority: unfocus region first, then toggle pause
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
+            // block all ESC while skip confirm popup is showing (popup handles its own ESC)
+            var skipPopup = FindFirstObjectByType<SkipConfirmPopup>();
+            if (skipPopup != null && skipPopup.IsShowing)
+            { }
+            // block all ESC actions while shop is tweening open/closed
+            else if (FindFirstObjectByType<ShopDisplay>() is ShopDisplay sd && sd.IsTransitioning)
+            { }
             // block pause while reward popup is showing
-            if (gameManager.RewardActive)
+            else if (gameManager.RewardActive)
             { }
             else if (gameManager.BannerActive)
             {
@@ -100,10 +112,12 @@ public class PauseMenu : MonoBehaviour
                 {
                     Resume();
                 }
-                else if (desktopInteraction != null && desktopInteraction.IsFocused)
+                else if ((desktopInteraction != null && desktopInteraction.IsFocused) ||
+                         (arPlacement != null && arPlacement.IsFocused))
                 {
-                    // unfocus camera and deselect region instead of pausing
-                    desktopInteraction.Unfocus();
+                    // unfocus and deselect region instead of pausing
+                    if (desktopInteraction != null) desktopInteraction.Unfocus();
+                    else if (arPlacement != null) arPlacement.Unfocus();
                     if (regionManager != null)
                         regionManager.SelectedRegion = null;
                 }
@@ -138,6 +152,12 @@ public class PauseMenu : MonoBehaviour
                     gameOverMainMenuButton.gameObject.SetActive(false);
             }
         }
+    }
+
+    public void TogglePause()
+    {
+        if (IsPaused) Resume();
+        else Pause();
     }
 
     void Pause()
