@@ -28,6 +28,8 @@ public class MainMenu : MonoBehaviour
     [SerializeField] private CanvasGroup difficultyPanel;
     [Tooltip("the difficulty preview panel (description text, confirm button)")]
     [SerializeField] private CanvasGroup previewPanel;
+    [Tooltip("the settings panel (fps selection, back)")]
+    [SerializeField] private CanvasGroup settingsPanel;
 
     [Header("Preview UI (inside previewPanel)")]
     [Tooltip("text showing the difficulty name")]
@@ -35,18 +37,35 @@ public class MainMenu : MonoBehaviour
     [Tooltip("text showing the difficulty description")]
     [SerializeField] private TMP_Text previewDescription;
 
+    [Header("Settings UI (inside settingsPanel)")]
+    [Tooltip("text showing the current FPS selection")]
+    [SerializeField] private TMP_Text fpsValueText;
+
     [Header("Fade Settings")]
     [SerializeField] private float fadeSpeed = 4f;
 
-    private enum MenuState { Main, FadeToDifficulty, Difficulty, FadeToPreview, Preview, FadeBackToDifficulty, FadeToGame, FadeToMain }
+    private enum MenuState { Main, FadeToDifficulty, Difficulty, FadeToPreview, Preview, FadeBackToDifficulty, FadeToGame, FadeToMain, FadeToSettings, Settings, FadeSettingsBack }
     private MenuState state = MenuState.Main;
     private Difficulty selectedDifficulty;
+
+    private static readonly int[] fpsOptions = { 30, 60, 75, 90, 120, 165, 240 };
+    private int fpsIndex = 1; // default 60
+    private int deviceMaxFps;
 
     void Start()
     {
         if (mainPanel != null) SetGroup(mainPanel, true);
         if (difficultyPanel != null) SetGroup(difficultyPanel, false);
         if (previewPanel != null) SetGroup(previewPanel, false);
+        if (settingsPanel != null) SetGroup(settingsPanel, false);
+
+        // detect device max refresh rate
+        deviceMaxFps = Mathf.Max(60, (int)Screen.currentResolution.refreshRateRatio.value);
+
+        // load saved fps preference
+        int savedFps = PlayerPrefs.GetInt("TargetFPS", 60);
+        fpsIndex = FindClosestFpsIndex(savedFps);
+        ApplyFps();
     }
 
     void Update()
@@ -132,6 +151,32 @@ public class MainMenu : MonoBehaviour
                 if (previewPanel.alpha <= 0.01f)
                     SceneManager.LoadScene(IsMobilePlatform() ? arSceneName : desktopSceneName);
                 break;
+
+            case MenuState.FadeToSettings:
+                mainPanel.alpha = Mathf.MoveTowards(mainPanel.alpha, 0f, t);
+                if (mainPanel.alpha <= 0.01f)
+                {
+                    SetGroup(mainPanel, false);
+                    SetGroup(settingsPanel, true);
+                    settingsPanel.alpha = 0f;
+                    state = MenuState.Settings;
+                }
+                break;
+
+            case MenuState.Settings:
+                settingsPanel.alpha = Mathf.MoveTowards(settingsPanel.alpha, 1f, t);
+                break;
+
+            case MenuState.FadeSettingsBack:
+                settingsPanel.alpha = Mathf.MoveTowards(settingsPanel.alpha, 0f, t);
+                if (settingsPanel.alpha <= 0.01f)
+                {
+                    SetGroup(settingsPanel, false);
+                    SetGroup(mainPanel, true);
+                    mainPanel.alpha = 0f;
+                    state = MenuState.Main;
+                }
+                break;
         }
     }
 
@@ -195,6 +240,71 @@ public class MainMenu : MonoBehaviour
     public void OnBack()
     {
         state = MenuState.FadeToMain;
+    }
+
+    // -- settings --
+
+    public void OnSettings()
+    {
+        state = MenuState.FadeToSettings;
+    }
+
+    public void OnSettingsBack()
+    {
+        state = MenuState.FadeSettingsBack;
+    }
+
+    // cycle fps left (<)
+    public void OnFpsLeft()
+    {
+        fpsIndex--;
+        if (fpsIndex < 0) fpsIndex = 0;
+        ApplyFps();
+    }
+
+    // cycle fps right (>)
+    public void OnFpsRight()
+    {
+        fpsIndex++;
+        // cap to highest option that doesn't exceed device max
+        int maxIndex = fpsOptions.Length - 1;
+        for (int i = fpsOptions.Length - 1; i >= 0; i--)
+        {
+            if (fpsOptions[i] <= deviceMaxFps) { maxIndex = i; break; }
+        }
+        if (fpsIndex > maxIndex) fpsIndex = maxIndex;
+        ApplyFps();
+    }
+
+    void ApplyFps()
+    {
+        int fps = fpsOptions[fpsIndex];
+        if (fps > deviceMaxFps) fps = deviceMaxFps;
+        Application.targetFrameRate = fps;
+        PlayerPrefs.SetInt("TargetFPS", fps);
+        PlayerPrefs.Save();
+        UpdateFpsText();
+    }
+
+    void UpdateFpsText()
+    {
+        if (fpsValueText == null) return;
+        int fps = fpsOptions[fpsIndex];
+        if (fps > deviceMaxFps) fps = deviceMaxFps;
+        fpsValueText.text = fps.ToString();
+    }
+
+    int FindClosestFpsIndex(int targetFps)
+    {
+        int closest = 0;
+        int minDiff = Mathf.Abs(fpsOptions[0] - targetFps);
+        for (int i = 1; i < fpsOptions.Length; i++)
+        {
+            if (fpsOptions[i] > deviceMaxFps) break;
+            int diff = Mathf.Abs(fpsOptions[i] - targetFps);
+            if (diff < minDiff) { minDiff = diff; closest = i; }
+        }
+        return closest;
     }
 
     void SetGroup(CanvasGroup group, bool active)

@@ -390,6 +390,10 @@ public class GameManager : MonoBehaviour
 
     void StartGame()
     {
+        // apply saved fps setting from main menu
+        int savedFps = PlayerPrefs.GetInt("TargetFPS", 60);
+        Application.targetFrameRate = savedFps;
+
         ApplyDifficultyPreset();
         GameOver = false;
         GameOverReason = null;
