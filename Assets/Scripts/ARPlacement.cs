@@ -44,6 +44,12 @@ public class ARPlacement : MonoBehaviour
     // pinch state
     private float previousPinchDistance;
 
+    // drag detection — ignore small movements so taps work for region selection
+    private Vector2 touchStartPos;
+    private bool isDragging;
+    private const float dragThreshold = 10f;
+    private bool touchStartedOnUI;
+
     // track earth's current rotation for focus tracking
     private Quaternion lastEarthRotation;
 
@@ -134,7 +140,29 @@ public class ARPlacement : MonoBehaviour
     void HandleRotation()
     {
         var touch = Touch.activeTouches[0];
+
+        // track drag start and ignore touches on UI
+        if (touch.phase == UnityEngine.InputSystem.TouchPhase.Began)
+        {
+            touchStartPos = touch.screenPosition;
+            isDragging = false;
+            touchStartedOnUI = UnityEngine.EventSystems.EventSystem.current != null &&
+                UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject(touch.touchId);
+            return;
+        }
+
+        // don't rotate if touch started on UI
+        if (touchStartedOnUI) return;
+
         if (touch.phase != UnityEngine.InputSystem.TouchPhase.Moved) return;
+
+        // only start rotating after finger moves past threshold (so taps work for selection)
+        if (!isDragging)
+        {
+            float dist = Vector2.Distance(touch.screenPosition, touchStartPos);
+            if (dist < dragThreshold) return;
+            isDragging = true;
+        }
 
         float deltaX = touch.delta.x;
         float deltaY = touch.delta.y;

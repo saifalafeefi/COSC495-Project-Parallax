@@ -147,6 +147,12 @@ public class PauseMenu : MonoBehaviour
         }
     }
 
+    public void TogglePause()
+    {
+        if (IsPaused) Resume();
+        else Pause();
+    }
+
     void Pause()
     {
         IsPaused = true;

@@ -244,29 +244,44 @@ public class GameManager : MonoBehaviour
 
         if (kb.spaceKey.wasPressedThisFrame && !GameOver && !PauseMenu.IsPaused && !RewardActive && !ShopActive && !DashboardActive && !BannerActive && hasNonShopCards)
         {
-            // check if player could have played at least one non-shop card (wasteful skip)
-            bool couldPlay = false;
+            SkipRound();
+        }
+    }
+
+    public void SkipRound()
+    {
+        if (GameOver || RewardActive || ShopActive || DashboardActive || BannerActive) return;
+
+        bool hasNonShopCards = false;
+        if (CurrentHand != null)
+        {
             foreach (var c in CurrentHand)
             {
-                if (!shopBoughtCards.Contains(c) && c.politicalCapitalCost <= PoliticalCapital) { couldPlay = true; break; }
+                if (!shopBoughtCards.Contains(c)) { hasNonShopCards = true; break; }
             }
-            capitalWhenSkipped = couldPlay ? PoliticalCapital : 0;
-
-            // discard remaining hand, but keep shop-bought cards
-            var kept = new List<PolicyData>();
-            foreach (var card in CurrentHand)
-            {
-                if (shopBoughtCards.Contains(card))
-                    kept.Add(card);
-                else
-                    discardPile.Add(card);
-            }
-            CurrentHand.Clear();
-            CurrentHand.AddRange(kept);
-            PoliticalCapital = 0;
-            Debug.Log("[GameManager] skipped remaining capital");
-            EndRound();
         }
+        if (!hasNonShopCards) return;
+
+        bool couldPlay = false;
+        foreach (var c in CurrentHand)
+        {
+            if (!shopBoughtCards.Contains(c) && c.politicalCapitalCost <= PoliticalCapital) { couldPlay = true; break; }
+        }
+        capitalWhenSkipped = couldPlay ? PoliticalCapital : 0;
+
+        var kept = new List<PolicyData>();
+        foreach (var card in CurrentHand)
+        {
+            if (shopBoughtCards.Contains(card))
+                kept.Add(card);
+            else
+                discardPile.Add(card);
+        }
+        CurrentHand.Clear();
+        CurrentHand.AddRange(kept);
+        PoliticalCapital = 0;
+        Debug.Log("[GameManager] skipped remaining capital");
+        EndRound();
     }
 
     void ApplyDifficultyPreset()
