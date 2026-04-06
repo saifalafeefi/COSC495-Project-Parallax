@@ -45,7 +45,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2f3e22f8af7f8cd4780dc0cedc90dd9e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DesktopInteraction
-  desktopPlacement: {fileID: 0}
+  desktopPlacement: {fileID: 1028147477575708091}
   mainCamera: {fileID: 0}
   orbitSpeed: 0.5
   zoomSpeed: 100
@@ -55,9 +55,9 @@ MonoBehaviour:
   focusSmoothSpeed: 4
   focusedOrbitMultiplier: 0.3
   focusDeadzoneAngle: 25
-  shopExtraDistance: 150
-  shopLookOffsetX: -24
-  shopLookOffsetY: 20
+  shopExtraDistance: 21.8
+  shopLookOffsetX: -23.7
+  shopLookOffsetY: 19.3
   shopSmoothSpeed: 5
 --- !u!114 &1028147477575708091
 MonoBehaviour:

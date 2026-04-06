@@ -113,6 +113,10 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
         if (gameManager == null)
             gameManager = FindFirstObjectByType<GameManager>();
 
+        // block during shop transition (opening/closing tween)
+        var shopDisplay = FindFirstObjectByType<ShopDisplay>();
+        if (shopDisplay != null && shopDisplay.IsTransitioning) return;
+
         // pause only blocked during reward, everything else blocked during banners too
         if (gameManager != null)
         {

@@ -242,7 +242,10 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        if (kb.spaceKey.wasPressedThisFrame && !GameOver && !PauseMenu.IsPaused && !RewardActive && !ShopActive && !DashboardActive && !BannerActive && hasNonShopCards)
+        var skipPopup = FindFirstObjectByType<SkipConfirmPopup>();
+        bool skipPopupActive = skipPopup != null && skipPopup.IsShowing;
+
+        if (kb.spaceKey.wasPressedThisFrame && !GameOver && !PauseMenu.IsPaused && !RewardActive && !ShopActive && !DashboardActive && !BannerActive && !skipPopupActive && hasNonShopCards)
         {
             SkipRound();
         }
@@ -253,20 +256,51 @@ public class GameManager : MonoBehaviour
         if (GameOver || RewardActive || ShopActive || DashboardActive || BannerActive) return;
 
         bool hasNonShopCards = false;
+        int nonShopCount = 0;
         if (CurrentHand != null)
         {
             foreach (var c in CurrentHand)
             {
-                if (!shopBoughtCards.Contains(c)) { hasNonShopCards = true; break; }
+                if (!shopBoughtCards.Contains(c)) { hasNonShopCards = true; nonShopCount++; }
             }
         }
         if (!hasNonShopCards) return;
 
+        // check if wasteful (can afford at least one card)
+        bool couldPlay = false;
+        int playableCount = 0;
+        foreach (var c in CurrentHand)
+        {
+            if (!shopBoughtCards.Contains(c) && c.politicalCapitalCost <= PoliticalCapital) { couldPlay = true; playableCount++; }
+        }
+
+        // show confirmation popup instead of skipping immediately
+        var popup = FindFirstObjectByType<SkipConfirmPopup>();
+        if (popup != null)
+        {
+            float penalty = couldPlay ? skipBasePenalty * Mathf.Pow(skipEscalation, consecutiveWastefulSkips) : 0f;
+            float stabPenalty = penalty * skipStabilityFraction;
+            popup.Show(couldPlay, playableCount, penalty, stabPenalty, consecutiveWastefulSkips);
+            return;
+        }
+
+        // no popup found, skip directly
+        DoSkipRound(couldPlay);
+    }
+
+    // actually performs the skip — called after confirmation
+    public void DoSkipRound()
+    {
         bool couldPlay = false;
         foreach (var c in CurrentHand)
         {
             if (!shopBoughtCards.Contains(c) && c.politicalCapitalCost <= PoliticalCapital) { couldPlay = true; break; }
         }
+        DoSkipRound(couldPlay);
+    }
+
+    void DoSkipRound(bool couldPlay)
+    {
         capitalWhenSkipped = couldPlay ? PoliticalCapital : 0;
 
         var kept = new List<PolicyData>();

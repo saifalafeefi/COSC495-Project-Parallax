@@ -141,6 +141,9 @@ public class ShopDisplay : MonoBehaviour
     private float showTime;
     private float dealFinishTime;
 
+    // true while shop is opening (deal-in) or closing (fade-out)
+    public bool IsTransitioning => (showing && Time.time < dealFinishTime) || closing;
+
     // snapshot of shop cards so we can rebuild sold cards with full visuals
     private List<PolicyData> shopSnapshot = new List<PolicyData>();
     private int shopSnapshotRound = -1;
