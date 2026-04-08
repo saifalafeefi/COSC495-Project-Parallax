@@ -817,7 +817,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &441614342
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3282,6 +3282,10 @@ MonoBehaviour:
   titleFontSize: 34
   scrollForce: 100
   scrollDamping: 8
+  scrollbarWidth: 8
+  scrollbarTrackColor: {r: 0.1, g: 0.1, b: 0.1, a: 0.3}
+  scrollbarHandleColor: {r: 0.5, g: 0.5, b: 0.5, a: 0.5}
+  fadeSpeed: 5
 --- !u!4 &1198154070
 Transform:
   m_ObjectHideFlags: 0
@@ -3451,7 +3455,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1316897966
 RectTransform:
   m_ObjectHideFlags: 0
@@ -5058,7 +5062,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1996531155
 RectTransform:
   m_ObjectHideFlags: 0
