@@ -37,6 +37,10 @@ public class MainMenu : MonoBehaviour
     [Tooltip("text showing the difficulty description")]
     [SerializeField] private TMP_Text previewDescription;
 
+    [Header("Codex")]
+    [Tooltip("the codex display component (attach to any GameObject)")]
+    [SerializeField] private CodexDisplay codexDisplay;
+
     [Header("Settings UI (inside settingsPanel)")]
     [Tooltip("text showing the current FPS selection")]
     [SerializeField] private TMP_Text fpsValueText;
@@ -44,7 +48,7 @@ public class MainMenu : MonoBehaviour
     [Header("Fade Settings")]
     [SerializeField] private float fadeSpeed = 4f;
 
-    private enum MenuState { Main, FadeToDifficulty, Difficulty, FadeToPreview, Preview, FadeBackToDifficulty, FadeToGame, FadeToMain, FadeToSettings, Settings, FadeSettingsBack }
+    private enum MenuState { Main, FadeToDifficulty, Difficulty, FadeToPreview, Preview, FadeBackToDifficulty, FadeToGame, FadeToMain, FadeToSettings, Settings, FadeSettingsBack, FadeToCodex, Codex, FadeCodexBack }
     private MenuState state = MenuState.Main;
     private Difficulty selectedDifficulty;
 
@@ -177,6 +181,25 @@ public class MainMenu : MonoBehaviour
                     state = MenuState.Main;
                 }
                 break;
+
+            case MenuState.FadeToCodex:
+                mainPanel.alpha = Mathf.MoveTowards(mainPanel.alpha, 0f, t);
+                if (mainPanel.alpha <= 0.01f)
+                {
+                    SetGroup(mainPanel, false);
+                    if (codexDisplay != null) codexDisplay.Show();
+                    state = MenuState.Codex;
+                }
+                break;
+
+            case MenuState.Codex:
+                break;
+
+            case MenuState.FadeCodexBack:
+                SetGroup(mainPanel, true);
+                mainPanel.alpha = 0f;
+                state = MenuState.Main;
+                break;
         }
     }
 
@@ -252,6 +275,18 @@ public class MainMenu : MonoBehaviour
     public void OnSettingsBack()
     {
         state = MenuState.FadeSettingsBack;
+    }
+
+    // codex
+    public void OnCodex()
+    {
+        state = MenuState.FadeToCodex;
+    }
+
+    public void OnCodexBack()
+    {
+        if (codexDisplay != null) codexDisplay.Hide();
+        state = MenuState.FadeCodexBack;
     }
 
     // cycle fps left (<)

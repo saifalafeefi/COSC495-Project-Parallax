@@ -1033,16 +1033,22 @@ public class SmoothScrollHandler : MonoBehaviour, IScrollHandler
     public float scrollForce = 800f;
     public float damping = 8f;
 
+    [Tooltip("when true, scroll wheel moves content horizontally instead of vertically")]
+    public bool horizontal;
+
     private float velocity;
 
     public void OnScroll(PointerEventData eventData)
     {
         if (scrollRect == null) return;
 
+        // skip if a nested scroll handler already consumed this event
+        if (eventData.used) return;
+
         // add velocity from scroll wheel input
         velocity += eventData.scrollDelta.y * scrollForce;
 
-        // block the default scroll rect jump
+        // block the default scroll rect jump and prevent parent handlers from firing
         eventData.Use();
     }
 
@@ -1053,43 +1059,76 @@ public class SmoothScrollHandler : MonoBehaviour, IScrollHandler
         var content = scrollRect.content;
         if (content == null || scrollRect.viewport == null) return;
 
-        float contentHeight = content.rect.height;
-        float viewportHeight = scrollRect.viewport.rect.height;
-        float maxY = contentHeight - viewportHeight;
-        if (maxY < 0f) maxY = 0f;
-
-        // apply smooth scroll velocity from wheel input
-        if (Mathf.Abs(velocity) > 0.5f)
+        if (horizontal)
         {
-            var pos = content.anchoredPosition;
-            pos.y -= velocity * Time.deltaTime;
+            float contentWidth = content.rect.width;
+            float viewportWidth = scrollRect.viewport.rect.width;
+            float minX = -(contentWidth - viewportWidth);
+            if (minX > 0f) minX = 0f;
 
-            // clamp and kill velocity at edges
-            if (pos.y < 0f)
+            if (Mathf.Abs(velocity) > 0.5f)
             {
-                pos.y = Mathf.Lerp(pos.y, 0f, Time.deltaTime * 20f);
-                velocity *= 0.5f;
+                var pos = content.anchoredPosition;
+                pos.x += velocity * Time.deltaTime;
+
+                if (pos.x > 0f)
+                {
+                    pos.x = Mathf.Lerp(pos.x, 0f, Time.deltaTime * 20f);
+                    velocity *= 0.5f;
+                }
+                else if (pos.x < minX)
+                {
+                    pos.x = Mathf.Lerp(pos.x, minX, Time.deltaTime * 20f);
+                    velocity *= 0.5f;
+                }
+
+                content.anchoredPosition = pos;
+                velocity = Mathf.Lerp(velocity, 0f, Time.deltaTime * damping);
             }
-            else if (pos.y > maxY)
+            else
             {
-                pos.y = Mathf.Lerp(pos.y, maxY, Time.deltaTime * 20f);
-                velocity *= 0.5f;
+                velocity = 0f;
             }
 
-            content.anchoredPosition = pos;
-
-            // decelerate
-            velocity = Mathf.Lerp(velocity, 0f, Time.deltaTime * damping);
+            var clamped = content.anchoredPosition;
+            clamped.x = Mathf.Clamp(clamped.x, minX, 0f);
+            content.anchoredPosition = clamped;
         }
         else
         {
-            velocity = 0f;
-        }
+            float contentHeight = content.rect.height;
+            float viewportHeight = scrollRect.viewport.rect.height;
+            float maxY = contentHeight - viewportHeight;
+            if (maxY < 0f) maxY = 0f;
 
-        // always hard clamp position so drag can't escape bounds
-        var clamped = content.anchoredPosition;
-        clamped.y = Mathf.Clamp(clamped.y, 0f, maxY);
-        content.anchoredPosition = clamped;
+            if (Mathf.Abs(velocity) > 0.5f)
+            {
+                var pos = content.anchoredPosition;
+                pos.y -= velocity * Time.deltaTime;
+
+                if (pos.y < 0f)
+                {
+                    pos.y = Mathf.Lerp(pos.y, 0f, Time.deltaTime * 20f);
+                    velocity *= 0.5f;
+                }
+                else if (pos.y > maxY)
+                {
+                    pos.y = Mathf.Lerp(pos.y, maxY, Time.deltaTime * 20f);
+                    velocity *= 0.5f;
+                }
+
+                content.anchoredPosition = pos;
+                velocity = Mathf.Lerp(velocity, 0f, Time.deltaTime * damping);
+            }
+            else
+            {
+                velocity = 0f;
+            }
+
+            var clamped = content.anchoredPosition;
+            clamped.y = Mathf.Clamp(clamped.y, 0f, maxY);
+            content.anchoredPosition = clamped;
+        }
     }
 }
 
