@@ -4533,7 +4533,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MainMenu
   desktopSceneName: DesktopGameScene
   arSceneName: ARGameScene
-  simulateAR: 0
+  simulateAR: 1
   earthObject: {fileID: 864681550}
   spinSpeed: 2
   mainPanel: {fileID: 514570781}

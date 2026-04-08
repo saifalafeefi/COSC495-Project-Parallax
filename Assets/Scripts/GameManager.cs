@@ -391,6 +391,9 @@ public class GameManager : MonoBehaviour
     void StartGame()
     {
         // apply saved fps setting from main menu
+        // disable AR session frame rate lock so our target fps takes effect on mobile
+        var arSession = FindFirstObjectByType<UnityEngine.XR.ARFoundation.ARSession>();
+        if (arSession != null) arSession.matchFrameRateRequested = false;
         int savedFps = PlayerPrefs.GetInt("TargetFPS", 60);
         Application.targetFrameRate = savedFps;
 
