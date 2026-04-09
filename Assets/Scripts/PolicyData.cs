@@ -156,10 +156,9 @@ public class PolicyData : ScriptableObject
             float econBenefit = me - economyDelta;
             float stabBenefit = ms - stabilityDelta;
 
-            bool anyBetter = carbonBenefit > 0.01f || econBenefit > 0.01f || stabBenefit > 0.01f;
-            bool anyWorse = carbonBenefit < -0.01f || econBenefit < -0.01f || stabBenefit < -0.01f;
-
-            if (anyBetter && !anyWorse)
+            // trait counts as beneficial if the overall effect is positive
+            float netBenefit = carbonBenefit + econBenefit + stabBenefit;
+            if (netBenefit > 0.01f)
                 cachedBeneficialTraits.Add(trait);
         }
 
