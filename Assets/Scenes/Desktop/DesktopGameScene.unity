@@ -2168,6 +2168,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 2055392784421020625, guid: 6f10ffdd389a0d74ca1f9c1c78b66199, type: 3}
+      propertyPath: traitColorConfig
+      value: 
+      objectReference: {fileID: 11400000, guid: beb34d3e3db705b469838d456eecc732, type: 2}
     - target: {fileID: 2751372116647831215, guid: 6f10ffdd389a0d74ca1f9c1c78b66199, type: 3}
       propertyPath: m_LocalPosition.x
       value: -5.16382
@@ -2232,6 +2236,10 @@ PrefabInstance:
       propertyPath: gameOverMainMenuButton
       value: 
       objectReference: {fileID: 1912698792}
+    - target: {fileID: 4523181136183669541, guid: 6f10ffdd389a0d74ca1f9c1c78b66199, type: 3}
+      propertyPath: traitColorConfig
+      value: 
+      objectReference: {fileID: 11400000, guid: beb34d3e3db705b469838d456eecc732, type: 2}
     - target: {fileID: 6698374184395085694, guid: 6f10ffdd389a0d74ca1f9c1c78b66199, type: 3}
       propertyPath: mainCamera
       value: 
@@ -2378,6 +2386,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: ShopDisplay
       objectReference: {fileID: 0}
+    - target: {fileID: 3759341602718114270, guid: 28736d8d3e0ee9e4087d6967771d9a88, type: 3}
+      propertyPath: traitColorConfig
+      value: 
+      objectReference: {fileID: 11400000, guid: beb34d3e3db705b469838d456eecc732, type: 2}
     - target: {fileID: 8081438395804529510, guid: 28736d8d3e0ee9e4087d6967771d9a88, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0.61655

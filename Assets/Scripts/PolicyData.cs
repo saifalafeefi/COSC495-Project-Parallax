@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public enum PolicyRarity
@@ -126,5 +127,42 @@ public class PolicyData : ScriptableObject
                     economy *= 1.3f;
                 break;
         }
+    }
+
+    // cached list of traits that benefit this card
+    private List<RegionTrait> cachedBeneficialTraits;
+
+    // returns all region traits that produce a net-positive effect on this card
+    public List<RegionTrait> GetBeneficialTraits()
+    {
+        if (cachedBeneficialTraits != null) return cachedBeneficialTraits;
+
+        cachedBeneficialTraits = new List<RegionTrait>();
+        var allTraits = new[]
+        {
+            RegionTrait.Temperate, RegionTrait.Tropical, RegionTrait.Arid,
+            RegionTrait.Frozen, RegionTrait.Industrial, RegionTrait.Coastal
+        };
+
+        foreach (var trait in allTraits)
+        {
+            var dummy = new Region("dummy", Color.white, new List<int>());
+            dummy.Trait = trait;
+            GetModifiedDeltas(dummy, out float mc, out float me, out float ms);
+
+            // carbon: lower is better (more negative = more reduction)
+            // economy/stability: higher is better
+            float carbonBenefit = carbonDelta - mc;
+            float econBenefit = me - economyDelta;
+            float stabBenefit = ms - stabilityDelta;
+
+            bool anyBetter = carbonBenefit > 0.01f || econBenefit > 0.01f || stabBenefit > 0.01f;
+            bool anyWorse = carbonBenefit < -0.01f || econBenefit < -0.01f || stabBenefit < -0.01f;
+
+            if (anyBetter && !anyWorse)
+                cachedBeneficialTraits.Add(trait);
+        }
+
+        return cachedBeneficialTraits;
     }
 }

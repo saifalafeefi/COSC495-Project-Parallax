@@ -8,10 +8,6 @@ public class HandDisplay : MonoBehaviour
 {
     [Header("Card Appearance")]
     [SerializeField] private Color cardBackground = new Color(0.12f, 0.12f, 0.16f, 0.95f);
-    [SerializeField] private Color commonColor = new Color(0.6f, 0.6f, 0.6f);
-    [SerializeField] private Color uncommonColor = new Color(0.2f, 0.8f, 0.2f);
-    [SerializeField] private Color rareColor = new Color(0.9f, 0.7f, 0.1f);
-    [SerializeField] private Color selectedGlow = new Color(1f, 0.9f, 0.4f, 1f);
 
     [Header("Stat Colors")]
     [SerializeField] private Color carbonColor = new Color(0.75f, 0.45f, 0.3f);
@@ -32,7 +28,6 @@ public class HandDisplay : MonoBehaviour
     [SerializeField] private float tweenSpeed = 12f;
     [SerializeField] private float bounceSpeed = 3f;
     [SerializeField] private float bounceAmount = 6f;
-    [SerializeField] private float selectedColorSpeed = 2.5f;
     [SerializeField] private float fanAngle = 5f;
     [SerializeField] private float fanYOffset = 20f;
 
@@ -54,8 +49,7 @@ public class HandDisplay : MonoBehaviour
 
     private List<GameObject> cardObjects = new List<GameObject>();
     private List<RectTransform> cardRects = new List<RectTransform>();
-    private List<Image> cardBorders = new List<Image>();
-    private List<Color> cardRarityColors = new List<Color>();
+    private List<TraitBorder> cardTraitBorders = new List<TraitBorder>();
     // per-card deal animation: time when deal started
     private List<float> cardDealTimes = new List<float>();
     // track which PolicyData each card slot holds so we can match across rebuilds
@@ -63,9 +57,6 @@ public class HandDisplay : MonoBehaviour
 
     // reject flash when card is too expensive
     private int rejectFlashIndex = -1;
-    private float rejectFlashTime;
-    private const float rejectFlashDuration = 0.6f;
-    private static readonly Color rejectColor = new Color(1f, 0.2f, 0.2f);
 
     private int hoveredIndex = -1;
     private int selectedIndex = -1;
@@ -220,8 +211,7 @@ public class HandDisplay : MonoBehaviour
         }
         cardObjects.Clear();
         cardRects.Clear();
-        cardBorders.Clear();
-        cardRarityColors.Clear();
+        cardTraitBorders.Clear();
         cardDealTimes.Clear();
         cardPolicies.Clear();
 
@@ -269,8 +259,7 @@ public class HandDisplay : MonoBehaviour
         }
         cardObjects.Clear();
         cardRects.Clear();
-        cardBorders.Clear();
-        cardRarityColors.Clear();
+        cardTraitBorders.Clear();
         cardDealTimes.Clear();
         cardPolicies.Clear();
 
@@ -391,25 +380,14 @@ public class HandDisplay : MonoBehaviour
                 rect.localEulerAngles = new Vector3(0f, 0f, newRot);
             }
 
-            // border color: tween between rarity color and glow when selected
-            if (dealT >= 1f && i < cardBorders.Count && cardBorders[i] != null)
+            // trait border state
+            if (dealT >= 1f && i < cardTraitBorders.Count && cardTraitBorders[i] != null)
             {
-                float ct = Time.deltaTime * tweenSpeed;
-                if (i == rejectFlashIndex && Time.time - rejectFlashTime < rejectFlashDuration)
+                cardTraitBorders[i].SetSelected(i == selectedIndex);
+                if (i == rejectFlashIndex)
                 {
-                    // red flash that decays back to rarity color
-                    float flashT = (Time.time - rejectFlashTime) / rejectFlashDuration;
-                    cardBorders[i].color = Color.Lerp(rejectColor, cardRarityColors[i], flashT);
-                }
-                else if (i == selectedIndex)
-                {
-                    // pulse between rarity color and glow
-                    float pulse = (Mathf.Sin(Time.time * selectedColorSpeed) + 1f) / 2f;
-                    cardBorders[i].color = Color.Lerp(cardRarityColors[i], selectedGlow, pulse);
-                }
-                else
-                {
-                    cardBorders[i].color = Color.Lerp(cardBorders[i].color, cardRarityColors[i], ct);
+                    cardTraitBorders[i].FlashReject();
+                    rejectFlashIndex = -1;
                 }
             }
 
@@ -474,7 +452,6 @@ public class HandDisplay : MonoBehaviour
         if (result != null && result.StartsWith("NOT_ENOUGH_CAPITAL"))
         {
             rejectFlashIndex = index;
-            rejectFlashTime = Time.time;
             selectedIndex = -1;
 
             if (selector != null)
@@ -515,12 +492,19 @@ public class HandDisplay : MonoBehaviour
         // start off-screen
         cardRect.anchoredPosition = new Vector2(0f, restY - 40f);
 
-        // border background
+        // transparent root image for raycast target
         var borderImg = card.AddComponent<Image>();
-        Color rarityCol = GetRarityColor(policy.rarity);
-        borderImg.color = rarityCol;
-        cardBorders.Add(borderImg);
-        cardRarityColors.Add(rarityCol);
+        borderImg.color = Color.clear;
+
+        // trait-colored border
+        float thickness = TraitColorConfig.Instance != null ? TraitColorConfig.Instance.borderThickness : 4f;
+        var traitBorder = card.AddComponent<TraitBorder>();
+        var traitColors = BuildTraitColors(policy);
+        traitBorder.Initialize(traitColors,
+            TraitColorConfig.Instance != null ? TraitColorConfig.Instance.rotationSpeed : 0.5f,
+            TraitColorConfig.Instance != null ? TraitColorConfig.Instance.selectedGlow : new Color(1f, 0.9f, 0.4f),
+            thickness);
+        cardTraitBorders.Add(traitBorder);
 
         // make card interactive
         var interaction = card.AddComponent<CardInteraction>();
@@ -528,7 +512,7 @@ public class HandDisplay : MonoBehaviour
         interaction.handDisplay = this;
 
         // inner background
-        var inner = CreateChild(card, "Inner", new Vector2(0, 0), new Vector2(-4f, -4f));
+        var inner = CreateChild(card, "Inner", new Vector2(thickness, thickness), new Vector2(-thickness, -thickness));
         var innerImg = inner.AddComponent<Image>();
         innerImg.color = cardBackground;
         innerImg.raycastTarget = false;
@@ -587,7 +571,8 @@ public class HandDisplay : MonoBehaviour
         }
         else
         {
-            var placeholder = CreateText(iconArea, policy.rarity.ToString(), 13, TextAlignmentOptions.Center, rarityCol);
+            var placeholder = CreateText(iconArea, policy.rarity.ToString(), 13, TextAlignmentOptions.Center,
+                TraitColorConfig.Instance != null ? TraitColorConfig.Instance.GetRarityColor(policy.rarity) : Color.gray);
             placeholder.fontStyle = FontStyles.Italic;
             StretchFill(placeholder.gameObject);
         }
@@ -630,15 +615,22 @@ public class HandDisplay : MonoBehaviour
         return $"<color=#{hex}>{label}: {baseSign}{baseValue:0}</color>";
     }
 
-    Color GetRarityColor(PolicyRarity rarity)
+    List<Color> BuildTraitColors(PolicyData policy)
     {
-        switch (rarity)
+        var colors = new List<Color>();
+        var traits = policy.GetBeneficialTraits();
+        if (TraitColorConfig.Instance != null)
         {
-            case PolicyRarity.Common: return commonColor;
-            case PolicyRarity.Uncommon: return uncommonColor;
-            case PolicyRarity.Rare: return rareColor;
-            default: return commonColor;
+            foreach (var trait in traits)
+                colors.Add(TraitColorConfig.Instance.GetTraitColor(trait));
+            if (colors.Count == 0)
+                colors.Add(TraitColorConfig.Instance.fallbackColor);
         }
+        else
+        {
+            colors.Add(Color.gray);
+        }
+        return colors;
     }
 
     GameObject CreateChild(GameObject parent, string name, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot, Vector2 anchoredPos, Vector2 sizeDelta)

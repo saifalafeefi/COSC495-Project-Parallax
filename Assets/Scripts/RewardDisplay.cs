@@ -8,10 +8,6 @@ public class RewardDisplay : MonoBehaviour
 {
     [Header("Card Appearance")]
     [SerializeField] private Color cardBackground = new Color(0.12f, 0.12f, 0.16f, 0.95f);
-    [SerializeField] private Color commonColor = new Color(0.6f, 0.6f, 0.6f);
-    [SerializeField] private Color uncommonColor = new Color(0.2f, 0.8f, 0.2f);
-    [SerializeField] private Color rareColor = new Color(0.9f, 0.7f, 0.1f);
-    [SerializeField] private Color selectedGlow = new Color(1f, 0.9f, 0.4f, 1f);
 
     [Header("Stat Colors")]
     [SerializeField] private Color carbonColor = new Color(0.75f, 0.45f, 0.3f);
@@ -30,7 +26,6 @@ public class RewardDisplay : MonoBehaviour
     [SerializeField] private float tweenSpeed = 10f;
     [SerializeField] private float bounceSpeed = 3f;
     [SerializeField] private float bounceAmount = 6f;
-    [SerializeField] private float selectedColorSpeed = 2.5f;
     [SerializeField] private float dealDuration = 0.4f;
     [SerializeField] private float dealStagger = 0.1f;
 
@@ -39,8 +34,7 @@ public class RewardDisplay : MonoBehaviour
 
     private List<GameObject> cardObjects = new List<GameObject>();
     private List<RectTransform> cardRects = new List<RectTransform>();
-    private List<Image> cardBorders = new List<Image>();
-    private List<Color> cardRarityColors = new List<Color>();
+    private List<TraitBorder> cardTraitBorders = new List<TraitBorder>();
 
     private int hoveredIndex = -1;
     private int selectedIndex = -1;
@@ -141,8 +135,7 @@ public class RewardDisplay : MonoBehaviour
         // build 3 reward cards
         cardObjects.Clear();
         cardRects.Clear();
-        cardBorders.Clear();
-        cardRarityColors.Clear();
+        cardTraitBorders.Clear();
 
         for (int i = 0; i < gameManager.RewardChoices.Count; i++)
         {
@@ -166,8 +159,7 @@ public class RewardDisplay : MonoBehaviour
         showing = false;
         cardObjects.Clear();
         cardRects.Clear();
-        cardBorders.Clear();
-        cardRarityColors.Clear();
+        cardTraitBorders.Clear();
         hoveredIndex = -1;
         selectedIndex = -1;
 
@@ -247,20 +239,9 @@ public class RewardDisplay : MonoBehaviour
                 rect.localScale = new Vector3(newScale, newScale, 1f);
             }
 
-            // border glow on selected card
-            if (i < cardBorders.Count && cardBorders[i] != null)
-            {
-                if (i == selectedIndex)
-                {
-                    float pulse = (Mathf.Sin(Time.time * selectedColorSpeed) + 1f) / 2f;
-                    cardBorders[i].color = Color.Lerp(cardRarityColors[i], selectedGlow, pulse);
-                }
-                else
-                {
-                    float ct = Time.deltaTime * tweenSpeed;
-                    cardBorders[i].color = Color.Lerp(cardBorders[i].color, cardRarityColors[i], ct);
-                }
-            }
+            // trait border state
+            if (i < cardTraitBorders.Count && cardTraitBorders[i] != null)
+                cardTraitBorders[i].SetSelected(i == selectedIndex);
 
             // z-ordering: hovered on top
             if (i == hoveredIndex)
@@ -355,12 +336,19 @@ public class RewardDisplay : MonoBehaviour
         cardRect.sizeDelta = new Vector2(cardWidth, cardHeight);
         cardRect.pivot = new Vector2(0.5f, 0.5f);
 
-        // border
+        // transparent root for raycast
         var borderImg = card.AddComponent<Image>();
-        Color rarityCol = GetRarityColor(policy.rarity);
-        borderImg.color = rarityCol;
-        cardBorders.Add(borderImg);
-        cardRarityColors.Add(rarityCol);
+        borderImg.color = Color.clear;
+
+        // trait-colored border
+        float thickness = TraitColorConfig.Instance != null ? TraitColorConfig.Instance.borderThickness : 4f;
+        var traitBorder = card.AddComponent<TraitBorder>();
+        var traitColors = BuildTraitColors(policy);
+        traitBorder.Initialize(traitColors,
+            TraitColorConfig.Instance != null ? TraitColorConfig.Instance.rotationSpeed : 0.5f,
+            TraitColorConfig.Instance != null ? TraitColorConfig.Instance.selectedGlow : new Color(1f, 0.9f, 0.4f),
+            thickness);
+        cardTraitBorders.Add(traitBorder);
 
         // pointer events
         var handler = card.AddComponent<RewardCardHandler>();
@@ -368,7 +356,7 @@ public class RewardDisplay : MonoBehaviour
         handler.rewardDisplay = this;
 
         // inner background
-        var inner = CreateStretchChild(card, "Inner", 2f);
+        var inner = CreateStretchChild(card, "Inner", thickness);
         var innerImg = inner.AddComponent<Image>();
         innerImg.color = cardBackground;
         innerImg.raycastTarget = false;
@@ -419,7 +407,8 @@ public class RewardDisplay : MonoBehaviour
         }
         else
         {
-            var placeholder = CreateText(iconArea, policy.rarity.ToString(), 13, TextAlignmentOptions.Center, rarityCol);
+            var placeholder = CreateText(iconArea, policy.rarity.ToString(), 13, TextAlignmentOptions.Center,
+                TraitColorConfig.Instance != null ? TraitColorConfig.Instance.GetRarityColor(policy.rarity) : Color.gray);
             placeholder.fontStyle = FontStyles.Italic;
             StretchFill(placeholder.gameObject);
         }
@@ -436,15 +425,22 @@ public class RewardDisplay : MonoBehaviour
         return card;
     }
 
-    Color GetRarityColor(PolicyRarity rarity)
+    List<Color> BuildTraitColors(PolicyData policy)
     {
-        switch (rarity)
+        var colors = new List<Color>();
+        var traits = policy.GetBeneficialTraits();
+        if (TraitColorConfig.Instance != null)
         {
-            case PolicyRarity.Common: return commonColor;
-            case PolicyRarity.Uncommon: return uncommonColor;
-            case PolicyRarity.Rare: return rareColor;
-            default: return commonColor;
+            foreach (var trait in traits)
+                colors.Add(TraitColorConfig.Instance.GetTraitColor(trait));
+            if (colors.Count == 0)
+                colors.Add(TraitColorConfig.Instance.fallbackColor);
         }
+        else
+        {
+            colors.Add(Color.gray);
+        }
+        return colors;
     }
 
     // ---- UI helpers ----

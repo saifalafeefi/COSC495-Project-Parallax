@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9aad67b0d5d3f6845a85030c3504f571, type: 3}
+  m_Name: TraitColorConfig
+  m_EditorClassIdentifier: Assembly-CSharp::TraitColorConfig
+  traitColors:
+  - trait: 0
+    color: {r: 0.7122441, g: 0.9716981, b: 0.26125845, a: 1}
+  - trait: 1
+    color: {r: 0.0768957, g: 0.6037736, b: 0.1635533, a: 1}
+  - trait: 2
+    color: {r: 0.9019608, g: 0.6395282, b: 0.19999999, a: 1}
+  - trait: 3
+    color: {r: 1, g: 1, b: 1, a: 1}
+  - trait: 4
+    color: {r: 0.4901961, g: 0.4901961, b: 0.48627454, a: 1}
+  - trait: 5
+    color: {r: 0.19999999, g: 0.85342103, b: 0.9019608, a: 1}
+  rotationSpeed: 0.5
+  selectedGlow: {r: 1, g: 0.9, b: 0.4, a: 1}
+  fallbackColor: {r: 0, g: 0, b: 0, a: 1}
+  borderThickness: 5
+  commonColor: {r: 0.6, g: 0.6, b: 0.6, a: 1}
+  uncommonColor: {r: 0.2, g: 0.8, b: 0.2, a: 1}
+  rareColor: {r: 0.3, g: 0.5, b: 1, a: 1}

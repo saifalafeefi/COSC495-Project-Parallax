@@ -3261,6 +3261,7 @@ MonoBehaviour:
   eventNameFontSize: 18
   eventStatFontSize: 15
   eventBadgeFontSize: 13
+  traitColorConfig: {fileID: 11400000, guid: beb34d3e3db705b469838d456eecc732, type: 2}
   cardWidth: 170
   cardHeight: 230
   cardSpacing: 10

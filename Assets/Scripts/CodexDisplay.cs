@@ -17,9 +17,6 @@ public class CodexDisplay : MonoBehaviour
     [SerializeField] private Color carbonColor = new Color(0.75f, 0.45f, 0.3f);
     [SerializeField] private Color economyColor = new Color(0.85f, 0.75f, 0.3f);
     [SerializeField] private Color stabilityColor = new Color(0.4f, 0.6f, 0.85f);
-    [SerializeField] private Color commonColor = new Color(0.6f, 0.6f, 0.6f);
-    [SerializeField] private Color uncommonColor = new Color(0.2f, 0.8f, 0.2f);
-    [SerializeField] private Color rareColor = new Color(0.9f, 0.7f, 0.1f);
     [SerializeField] private Color cardBgColor = new Color(0.12f, 0.12f, 0.16f, 0.95f);
     [SerializeField] private Color focusBadgeColor = new Color(0.8f, 0.4f, 0.1f);
     [SerializeField] private Color globalBadgeColor = new Color(0.3f, 0.6f, 0.9f);
@@ -473,9 +470,10 @@ public class CodexDisplay : MonoBehaviour
         AddVerticalScrollbar(scroll, scrollObj.transform);
 
         float yOff = 0f;
-        BuildRaritySection(content.transform, "COMMON", commonColor, commonPolicies, ref yOff);
-        BuildRaritySection(content.transform, "UNCOMMON", uncommonColor, uncommonPolicies, ref yOff);
-        BuildRaritySection(content.transform, "RARE", rareColor, rarePolicies, ref yOff);
+        var tc = TraitColorConfig.Instance;
+        BuildRaritySection(content.transform, "COMMON", tc != null ? tc.commonColor : Color.gray, commonPolicies, ref yOff);
+        BuildRaritySection(content.transform, "UNCOMMON", tc != null ? tc.uncommonColor : Color.green, uncommonPolicies, ref yOff);
+        BuildRaritySection(content.transform, "RARE", tc != null ? tc.rareColor : Color.blue, rarePolicies, ref yOff);
     }
 
     void BuildRaritySection(Transform parent, string label, Color rarityCol, PolicyData[] policies, ref float yOff)
@@ -543,13 +541,13 @@ public class CodexDisplay : MonoBehaviour
 
         for (int i = 0; i < policies.Length; i++)
         {
-            BuildPolicyCard(content.transform, policies[i], i, rarityCol);
+            BuildPolicyCard(content.transform, policies[i], i);
         }
 
         yOff += policyRowHeight + 15f;
     }
 
-    void BuildPolicyCard(Transform parent, PolicyData policy, int index, Color rarityCol)
+    void BuildPolicyCard(Transform parent, PolicyData policy, int index)
     {
         float xPos = index * (cardWidth + cardSpacing) + cardSpacing / 2f;
 
@@ -563,18 +561,33 @@ public class CodexDisplay : MonoBehaviour
         cardRect.sizeDelta = new Vector2(cardWidth, cardHeight);
 
         var borderImg = card.AddComponent<Image>();
-        borderImg.color = rarityCol;
+        borderImg.color = Color.clear;
         borderImg.raycastTarget = true;
+
+        // trait-colored border
+        float thickness = TraitColorConfig.Instance != null ? TraitColorConfig.Instance.borderThickness : cardBorderSize;
+        var traitBorder = card.AddComponent<TraitBorder>();
+        var colors = new List<Color>();
+        var traits = policy.GetBeneficialTraits();
+        if (TraitColorConfig.Instance != null)
+        {
+            foreach (var trait in traits)
+                colors.Add(TraitColorConfig.Instance.GetTraitColor(trait));
+            if (colors.Count == 0)
+                colors.Add(TraitColorConfig.Instance.fallbackColor);
+        }
+        else
+        {
+            colors.Add(Color.gray);
+        }
+        traitBorder.Initialize(colors,
+            TraitColorConfig.Instance != null ? TraitColorConfig.Instance.rotationSpeed : 0.5f,
+            TraitColorConfig.Instance != null ? TraitColorConfig.Instance.selectedGlow : new Color(1f, 0.9f, 0.4f),
+            thickness);
 
         // hover + click
         var handler = card.AddComponent<CodexRowHandler>();
-        handler.normalColor = rarityCol;
-        handler.hoverColor = new Color(
-            Mathf.Min(rarityCol.r + 0.2f, 1f),
-            Mathf.Min(rarityCol.g + 0.2f, 1f),
-            Mathf.Min(rarityCol.b + 0.2f, 1f),
-            1f);
-        handler.image = borderImg;
+        handler.traitBorder = traitBorder;
         handler.onClick = () => ShowPolicyDetail(policy);
 
         // inner background
@@ -582,8 +595,8 @@ public class CodexDisplay : MonoBehaviour
         var innerRect = inner.GetComponent<RectTransform>();
         innerRect.anchorMin = Vector2.zero;
         innerRect.anchorMax = Vector2.one;
-        innerRect.offsetMin = new Vector2(cardBorderSize, cardBorderSize);
-        innerRect.offsetMax = new Vector2(-cardBorderSize, -cardBorderSize);
+        innerRect.offsetMin = new Vector2(thickness, thickness);
+        innerRect.offsetMax = new Vector2(-thickness, -thickness);
         var innerImg = inner.AddComponent<Image>();
         innerImg.color = cardBgColor;
         innerImg.raycastTarget = false;
@@ -916,13 +929,9 @@ public class CodexDisplay : MonoBehaviour
 
     Color GetRarityColor(PolicyRarity rarity)
     {
-        switch (rarity)
-        {
-            case PolicyRarity.Common: return commonColor;
-            case PolicyRarity.Uncommon: return uncommonColor;
-            case PolicyRarity.Rare: return rareColor;
-            default: return Color.white;
-        }
+        if (TraitColorConfig.Instance != null)
+            return TraitColorConfig.Instance.GetRarityColor(rarity);
+        return Color.gray;
     }
 
     // -- scrollbar helpers --
@@ -1105,16 +1114,23 @@ public class CodexRowHandler : MonoBehaviour, IPointerEnterHandler, IPointerExit
     [HideInInspector] public Color normalColor;
     [HideInInspector] public Color hoverColor;
     [HideInInspector] public Image image;
+    [HideInInspector] public TraitBorder traitBorder;
     [HideInInspector] public System.Action onClick;
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        if (image != null) image.color = hoverColor;
+        if (traitBorder != null)
+            traitBorder.SetHovered(true);
+        else if (image != null)
+            image.color = hoverColor;
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        if (image != null) image.color = normalColor;
+        if (traitBorder != null)
+            traitBorder.SetHovered(false);
+        else if (image != null)
+            image.color = normalColor;
     }
 
     public void OnPointerClick(PointerEventData eventData)

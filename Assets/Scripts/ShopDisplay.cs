@@ -8,10 +8,6 @@ public class ShopDisplay : MonoBehaviour
 {
     [Header("Card Appearance")]
     [SerializeField] private Color cardBackground = new Color(0.12f, 0.12f, 0.16f, 0.95f);
-    [SerializeField] private Color commonColor = new Color(0.6f, 0.6f, 0.6f);
-    [SerializeField] private Color uncommonColor = new Color(0.2f, 0.8f, 0.2f);
-    [SerializeField] private Color rareColor = new Color(0.9f, 0.7f, 0.1f);
-    [SerializeField] private Color selectedGlow = new Color(1f, 0.9f, 0.4f, 1f);
     [SerializeField] private Color soldOutColor = new Color(0.3f, 0.3f, 0.3f, 0.5f);
 
     [Header("Stat Colors")]
@@ -123,7 +119,6 @@ public class ShopDisplay : MonoBehaviour
     [SerializeField] private float tweenSpeed = 10f;
     [SerializeField] private float bounceSpeed = 3f;
     [SerializeField] private float bounceAmount = 6f;
-    [SerializeField] private float selectedColorSpeed = 2.5f;
     [SerializeField] private float dealDuration = 0.35f;
     [SerializeField] private float dealStagger = 0.08f;
 
@@ -132,8 +127,7 @@ public class ShopDisplay : MonoBehaviour
 
     private List<GameObject> cardObjects = new List<GameObject>();
     private List<RectTransform> cardRects = new List<RectTransform>();
-    private List<Image> cardBorders = new List<Image>();
-    private List<Color> cardRarityColors = new List<Color>();
+    private List<TraitBorder> cardTraitBorders = new List<TraitBorder>();
 
     private int hoveredIndex = -1;
     private int selectedIndex = -1;
@@ -368,8 +362,7 @@ public class ShopDisplay : MonoBehaviour
         // build shop cards
         cardObjects.Clear();
         cardRects.Clear();
-        cardBorders.Clear();
-        cardRarityColors.Clear();
+        cardTraitBorders.Clear();
         cardTitleTexts.Clear();
         cardStatsTexts.Clear();
         cardDescTexts.Clear();
@@ -497,8 +490,7 @@ public class ShopDisplay : MonoBehaviour
         showing = false;
         cardObjects.Clear();
         cardRects.Clear();
-        cardBorders.Clear();
-        cardRarityColors.Clear();
+        cardTraitBorders.Clear();
         cardTitleTexts.Clear();
         cardStatsTexts.Clear();
         cardDescTexts.Clear();
@@ -654,23 +646,13 @@ public class ShopDisplay : MonoBehaviour
                 rect.localScale = new Vector3(newScale, newScale, 1f);
             }
 
-            // border glow
-            if (i < cardBorders.Count && cardBorders[i] != null)
+            // trait border state
+            if (i < cardTraitBorders.Count && cardTraitBorders[i] != null)
             {
                 if (sold)
-                {
-                    cardBorders[i].color = soldOutColor;
-                }
-                else if (i == selectedIndex)
-                {
-                    float pulse = (Mathf.Sin(Time.time * selectedColorSpeed) + 1f) / 2f;
-                    cardBorders[i].color = Color.Lerp(cardRarityColors[i], selectedGlow, pulse);
-                }
+                    cardTraitBorders[i].SetOverrideColor(soldOutColor);
                 else
-                {
-                    float ct = Time.deltaTime * tweenSpeed;
-                    cardBorders[i].color = Color.Lerp(cardBorders[i].color, cardRarityColors[i], ct);
-                }
+                    cardTraitBorders[i].SetSelected(i == selectedIndex);
             }
 
             // z-ordering
@@ -925,12 +907,19 @@ public class ShopDisplay : MonoBehaviour
         cardRect.sizeDelta = new Vector2(cardWidth, cardHeight);
         cardRect.pivot = new Vector2(0.5f, 0.5f);
 
-        // border
+        // transparent root for raycast
         var borderImg = card.AddComponent<Image>();
-        Color rarityCol = GetRarityColor(policy.rarity);
-        borderImg.color = rarityCol;
-        cardBorders.Add(borderImg);
-        cardRarityColors.Add(rarityCol);
+        borderImg.color = Color.clear;
+
+        // trait-colored border
+        float thickness = TraitColorConfig.Instance != null ? TraitColorConfig.Instance.borderThickness : 4f;
+        var traitBorder = card.AddComponent<TraitBorder>();
+        var traitColors = BuildTraitColors(policy);
+        traitBorder.Initialize(traitColors,
+            TraitColorConfig.Instance != null ? TraitColorConfig.Instance.rotationSpeed : 0.5f,
+            TraitColorConfig.Instance != null ? TraitColorConfig.Instance.selectedGlow : new Color(1f, 0.9f, 0.4f),
+            thickness);
+        cardTraitBorders.Add(traitBorder);
 
         // pointer events
         var handler = card.AddComponent<ShopCardHandler>();
@@ -938,7 +927,7 @@ public class ShopDisplay : MonoBehaviour
         handler.shopDisplay = this;
 
         // inner background
-        var inner = CreateStretchChild(card, "Inner", 2f);
+        var inner = CreateStretchChild(card, "Inner", thickness);
         var innerImg = inner.AddComponent<Image>();
         innerImg.color = cardBackground;
         innerImg.raycastTarget = false;
@@ -980,7 +969,8 @@ public class ShopDisplay : MonoBehaviour
         var rarityArea = CreateUIObj("Rarity", inner.transform,
             new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
             new Vector2(0f, -55f), new Vector2(-12f, 18f));
-        var cardRarity = CreateText(rarityArea, policy.rarity.ToString(), cardRarityFontSize, TextAlignmentOptions.Center, rarityCol);
+        var cardRarity = CreateText(rarityArea, policy.rarity.ToString(), cardRarityFontSize, TextAlignmentOptions.Center,
+            TraitColorConfig.Instance != null ? TraitColorConfig.Instance.GetRarityColor(policy.rarity) : Color.gray);
         cardRarity.fontStyle = FontStyles.Italic;
         StretchFill(cardRarity.gameObject);
         cardRarityTexts.Add(cardRarity);
@@ -1012,7 +1002,8 @@ public class ShopDisplay : MonoBehaviour
         }
         else
         {
-            var placeholder = CreateText(iconArea, policy.rarity.ToString(), 12, TextAlignmentOptions.Center, rarityCol);
+            var placeholder = CreateText(iconArea, policy.rarity.ToString(), 12, TextAlignmentOptions.Center,
+                TraitColorConfig.Instance != null ? TraitColorConfig.Instance.GetRarityColor(policy.rarity) : Color.gray);
             placeholder.fontStyle = FontStyles.Italic;
             StretchFill(placeholder.gameObject);
         }
@@ -1051,9 +1042,8 @@ public class ShopDisplay : MonoBehaviour
         bgImg.color = soldOutColor;
         bgImg.raycastTarget = false;
 
-        // border/color tracking (needed for AnimateCards array indexing)
-        cardBorders.Add(bgImg);
-        cardRarityColors.Add(soldOutColor);
+        // null entry for trait border tracking (needed for AnimateCards array indexing)
+        cardTraitBorders.Add(null);
 
         // null entries for text lists (sold cards have no editable text)
         cardTitleTexts.Add(null);
@@ -1071,15 +1061,22 @@ public class ShopDisplay : MonoBehaviour
         return card;
     }
 
-    Color GetRarityColor(PolicyRarity rarity)
+    List<Color> BuildTraitColors(PolicyData policy)
     {
-        switch (rarity)
+        var colors = new List<Color>();
+        var traits = policy.GetBeneficialTraits();
+        if (TraitColorConfig.Instance != null)
         {
-            case PolicyRarity.Common: return commonColor;
-            case PolicyRarity.Uncommon: return uncommonColor;
-            case PolicyRarity.Rare: return rareColor;
-            default: return commonColor;
+            foreach (var trait in traits)
+                colors.Add(TraitColorConfig.Instance.GetTraitColor(trait));
+            if (colors.Count == 0)
+                colors.Add(TraitColorConfig.Instance.fallbackColor);
         }
+        else
+        {
+            colors.Add(Color.gray);
+        }
+        return colors;
     }
 
     // ---- UI helpers ----

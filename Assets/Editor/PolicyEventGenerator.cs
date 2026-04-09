@@ -229,4 +229,26 @@ public class PolicyEventGenerator
         AssetDatabase.CreateAsset(evt, path);
         Debug.Log($"[Generator] created event: {eName}");
     }
+
+    [MenuItem("Carbon Conquest/Generate Trait Color Config")]
+    public static void GenerateTraitColorConfig()
+    {
+        string folder = "Assets/Resources/TraitColors";
+        if (!AssetDatabase.IsValidFolder("Assets/Resources"))
+            AssetDatabase.CreateFolder("Assets", "Resources");
+        if (!AssetDatabase.IsValidFolder(folder))
+            AssetDatabase.CreateFolder("Assets/Resources", "TraitColors");
+
+        string path = $"{folder}/TraitColorConfig.asset";
+        if (File.Exists(path))
+        {
+            Debug.Log("[Generator] TraitColorConfig already exists, skipping");
+            return;
+        }
+
+        var config = ScriptableObject.CreateInstance<TraitColorConfig>();
+        AssetDatabase.CreateAsset(config, path);
+        AssetDatabase.SaveAssets();
+        Debug.Log("[Generator] created TraitColorConfig at " + path);
+    }
 }
