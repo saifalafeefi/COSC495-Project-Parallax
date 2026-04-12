@@ -41,9 +41,9 @@ public class MainMenu : MonoBehaviour
     [Tooltip("the codex display component (attach to any GameObject)")]
     [SerializeField] private CodexDisplay codexDisplay;
 
-    [Header("Settings UI (inside settingsPanel)")]
-    [Tooltip("text showing the current FPS selection")]
-    [SerializeField] private TMP_Text fpsValueText;
+    [Header("Settings")]
+    [Tooltip("the settings display component (attach to any GameObject)")]
+    [SerializeField] private SettingsDisplay settingsDisplay;
 
     [Header("Fade Settings")]
     [SerializeField] private float fadeSpeed = 4f;
@@ -52,10 +52,6 @@ public class MainMenu : MonoBehaviour
     private MenuState state = MenuState.Main;
     private Difficulty selectedDifficulty;
 
-    private static readonly int[] fpsOptions = { 30, 60, 75, 90, 120, 165, 240 };
-    private int fpsIndex = 1; // default 60
-    private int deviceMaxFps;
-
     void Start()
     {
         if (mainPanel != null) SetGroup(mainPanel, true);
@@ -63,13 +59,8 @@ public class MainMenu : MonoBehaviour
         if (previewPanel != null) SetGroup(previewPanel, false);
         if (settingsPanel != null) SetGroup(settingsPanel, false);
 
-        // detect device max refresh rate
-        deviceMaxFps = Mathf.Max(60, (int)Screen.currentResolution.refreshRateRatio.value);
-
-        // load saved fps preference
-        int savedFps = PlayerPrefs.GetInt("TargetFPS", 60);
-        fpsIndex = FindClosestFpsIndex(savedFps);
-        ApplyFps();
+        // apply all saved settings on menu load
+        SettingsManager.ApplyAll();
     }
 
     void Update()
@@ -77,7 +68,7 @@ public class MainMenu : MonoBehaviour
         // spin the decorative earth
         if (earthObject != null)
         {
-            float angle = spinSpeed * Time.deltaTime;
+            float angle = spinSpeed * SettingsManager.SpinSpeed * Time.deltaTime;
             if (Mathf.Abs(angle) > 0.0001f)
                 earthObject.transform.Rotate(0f, angle, 0f, Space.World);
         }
@@ -269,12 +260,28 @@ public class MainMenu : MonoBehaviour
 
     public void OnSettings()
     {
-        state = MenuState.FadeToSettings;
+        if (settingsDisplay != null)
+        {
+            // runtime overlay renders on top — no state change needed
+            settingsDisplay.Show();
+        }
+        else
+        {
+            state = MenuState.FadeToSettings;
+        }
     }
 
     public void OnSettingsBack()
     {
-        state = MenuState.FadeSettingsBack;
+        if (settingsDisplay != null)
+        {
+            // settings display is an overlay — just hide it, main panel is still visible
+            if (settingsDisplay.IsShowing) settingsDisplay.Hide();
+        }
+        else
+        {
+            state = MenuState.FadeSettingsBack;
+        }
     }
 
     // codex
@@ -287,59 +294,6 @@ public class MainMenu : MonoBehaviour
     {
         if (codexDisplay != null) codexDisplay.Hide();
         state = MenuState.FadeCodexBack;
-    }
-
-    // cycle fps left (<)
-    public void OnFpsLeft()
-    {
-        fpsIndex--;
-        if (fpsIndex < 0) fpsIndex = 0;
-        ApplyFps();
-    }
-
-    // cycle fps right (>)
-    public void OnFpsRight()
-    {
-        fpsIndex++;
-        // cap to highest option that doesn't exceed device max
-        int maxIndex = fpsOptions.Length - 1;
-        for (int i = fpsOptions.Length - 1; i >= 0; i--)
-        {
-            if (fpsOptions[i] <= deviceMaxFps) { maxIndex = i; break; }
-        }
-        if (fpsIndex > maxIndex) fpsIndex = maxIndex;
-        ApplyFps();
-    }
-
-    void ApplyFps()
-    {
-        int fps = fpsOptions[fpsIndex];
-        if (fps > deviceMaxFps) fps = deviceMaxFps;
-        Application.targetFrameRate = fps;
-        PlayerPrefs.SetInt("TargetFPS", fps);
-        PlayerPrefs.Save();
-        UpdateFpsText();
-    }
-
-    void UpdateFpsText()
-    {
-        if (fpsValueText == null) return;
-        int fps = fpsOptions[fpsIndex];
-        if (fps > deviceMaxFps) fps = deviceMaxFps;
-        fpsValueText.text = fps.ToString();
-    }
-
-    int FindClosestFpsIndex(int targetFps)
-    {
-        int closest = 0;
-        int minDiff = Mathf.Abs(fpsOptions[0] - targetFps);
-        for (int i = 1; i < fpsOptions.Length; i++)
-        {
-            if (fpsOptions[i] > deviceMaxFps) break;
-            int diff = Mathf.Abs(fpsOptions[i] - targetFps);
-            if (diff < minDiff) { minDiff = diff; closest = i; }
-        }
-        return closest;
     }
 
     void SetGroup(CanvasGroup group, bool active)

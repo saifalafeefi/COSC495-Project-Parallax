@@ -207,9 +207,9 @@ public class RewardDisplay : MonoBehaviour
                 rect.localScale = Vector3.zero;
                 rect.anchoredPosition = Vector2.zero;
             }
-            else if (elapsed < dealDuration)
+            else if (elapsed < dealDuration / SettingsManager.DealSpeed)
             {
-                float raw = elapsed / dealDuration;
+                float raw = elapsed / (dealDuration / SettingsManager.DealSpeed);
                 // ease-out cubic
                 float t = 1f - (1f - raw) * (1f - raw) * (1f - raw);
 

@@ -406,7 +406,7 @@ public class ShopDisplay : MonoBehaviour
         }
 
         // calculate when the last card finishes dealing in
-        dealFinishTime = showTime + cardCount * dealStagger + dealDuration;
+        dealFinishTime = showTime + cardCount * dealStagger + dealDuration / SettingsManager.DealSpeed;
 
         // shopkeeper NPC on the left side
         BuildShopkeeper(root.transform);
@@ -617,9 +617,9 @@ public class ShopDisplay : MonoBehaviour
                 rect.localScale = Vector3.zero;
                 rect.anchoredPosition = Vector2.zero;
             }
-            else if (elapsed < dealDuration)
+            else if (elapsed < dealDuration / SettingsManager.DealSpeed)
             {
-                float raw = elapsed / dealDuration;
+                float raw = elapsed / (dealDuration / SettingsManager.DealSpeed);
                 float t = 1f - (1f - raw) * (1f - raw) * (1f - raw);
 
                 float x = Mathf.Lerp(0f, targetX, t);

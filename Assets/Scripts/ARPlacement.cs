@@ -168,8 +168,10 @@ public class ARPlacement : MonoBehaviour
         float deltaY = touch.delta.y;
 
         // rotate the earth itself (not the camera)
-        SpawnedEarth.transform.Rotate(Vector3.up, -deltaX * rotationSpeed, Space.World);
-        SpawnedEarth.transform.Rotate(Camera.main.transform.right, deltaY * rotationSpeed, Space.World);
+        float sens = rotationSpeed * SettingsManager.OrbitSensitivity;
+        float invertY = SettingsManager.InvertY ? -1f : 1f;
+        SpawnedEarth.transform.Rotate(Vector3.up, -deltaX * sens, Space.World);
+        SpawnedEarth.transform.Rotate(Camera.main.transform.right, deltaY * sens * invertY, Space.World);
     }
 
     void HandlePinchScale()
@@ -209,7 +211,7 @@ public class ARPlacement : MonoBehaviour
         if (!focused && timeSinceRelease < resumeDelay) return;
 
         float rampProgress = focused ? 1f : Mathf.Clamp01((timeSinceRelease - resumeDelay) / resumeRampTime);
-        float currentSpeed = autoRotateSpeed * rampProgress;
+        float currentSpeed = autoRotateSpeed * rampProgress * SettingsManager.SpinSpeed;
 
         float angle = currentSpeed * Time.deltaTime;
         if (Mathf.Abs(angle) > 0.0001f)

@@ -175,7 +175,8 @@ public class DesktopInteraction : MonoBehaviour
             if (!rewardBlocked && mouse != null && mouse.leftButton.isPressed)
             {
                 Vector2 delta = mouse.delta.ReadValue();
-                float baseSpeed = orbitSpeed * focusedOrbitMultiplier;
+                float baseSpeed = orbitSpeed * focusedOrbitMultiplier * SettingsManager.OrbitSensitivity;
+                float invertY = SettingsManager.InvertY ? 1f : -1f;
 
                 // how far we currently are from region center
                 float dYaw = Mathf.DeltaAngle(yaw, focusCenterYaw);
@@ -184,7 +185,7 @@ public class DesktopInteraction : MonoBehaviour
 
                 // apply the drag at full speed first
                 float newYaw = yaw + delta.x * baseSpeed * 0.1f;
-                float newPitch = pitch - delta.y * baseSpeed * 0.1f;
+                float newPitch = pitch + delta.y * baseSpeed * 0.1f * invertY;
                 newPitch = Mathf.Clamp(newPitch, -89f, 89f);
 
                 // check if this move goes further from center or closer
@@ -197,7 +198,7 @@ public class DesktopInteraction : MonoBehaviour
                     // moving away from center and past halfway — slow down
                     float edgeFactor = 1f - Mathf.Clamp01((angleDist - focusDeadzoneAngle * 0.5f) / (focusDeadzoneAngle * 0.5f));
                     newYaw = yaw + delta.x * baseSpeed * edgeFactor * 0.1f;
-                    newPitch = pitch - delta.y * baseSpeed * edgeFactor * 0.1f;
+                    newPitch = pitch + delta.y * baseSpeed * edgeFactor * 0.1f * invertY;
                     newPitch = Mathf.Clamp(newPitch, -89f, 89f);
 
                     newDYaw = Mathf.DeltaAngle(newYaw, focusCenterYaw);
@@ -230,8 +231,10 @@ public class DesktopInteraction : MonoBehaviour
                 if (mouse != null && mouse.leftButton.isPressed)
                 {
                     Vector2 delta = mouse.delta.ReadValue();
-                    yaw += delta.x * orbitSpeed * 0.1f;
-                    pitch -= delta.y * orbitSpeed * 0.1f;
+                    float sens = orbitSpeed * SettingsManager.OrbitSensitivity;
+                    float invertY = SettingsManager.InvertY ? 1f : -1f;
+                    yaw += delta.x * sens * 0.1f;
+                    pitch += delta.y * sens * 0.1f * invertY;
                     pitch = Mathf.Clamp(pitch, -89f, 89f);
                 }
 
@@ -275,8 +278,10 @@ public class DesktopInteraction : MonoBehaviour
             return;
 
         Vector2 delta = mouse.delta.ReadValue();
-        yaw += delta.x * orbitSpeed * 0.1f;
-        pitch -= delta.y * orbitSpeed * 0.1f;
+        float sens = orbitSpeed * SettingsManager.OrbitSensitivity;
+        float invertY = SettingsManager.InvertY ? 1f : -1f;
+        yaw += delta.x * sens * 0.1f;
+        pitch += delta.y * sens * 0.1f * invertY;
         pitch = Mathf.Clamp(pitch, -89f, 89f);
 
         targetYaw = yaw;
@@ -293,7 +298,8 @@ public class DesktopInteraction : MonoBehaviour
         float scroll = mouse.scroll.ReadValue().y;
         if (Mathf.Abs(scroll) > 0.01f)
         {
-            currentDistance -= scroll * zoomSpeed * 0.01f;
+            float sens = zoomSpeed * SettingsManager.ZoomSensitivity;
+            currentDistance -= scroll * sens * 0.01f;
             currentDistance = Mathf.Clamp(currentDistance, minDistance, maxDistance);
             targetDistance = currentDistance;
         }

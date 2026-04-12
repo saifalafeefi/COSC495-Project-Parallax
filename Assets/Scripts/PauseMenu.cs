@@ -49,7 +49,6 @@ public class PauseMenu : MonoBehaviour
             gameOverRestartButton.onClick.AddListener(DoRestart);
         if (gameOverMainMenuButton != null)
             gameOverMainMenuButton.onClick.AddListener(GoToMainMenu);
-
         // make sure everything starts hidden
         if (pauseOverlay != null)
             pauseOverlay.SetActive(false);

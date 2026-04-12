@@ -70,7 +70,7 @@ public class DesktopPlacement : MonoBehaviour
 
         // gradually ramp up to full speed (instant when focused)
         float rampProgress = focused ? 1f : Mathf.Clamp01((timeSinceRelease - resumeDelay) / resumeRampTime);
-        float currentSpeed = autoRotateSpeed * rampProgress;
+        float currentSpeed = autoRotateSpeed * rampProgress * SettingsManager.SpinSpeed;
 
         float angle = currentSpeed * Time.deltaTime;
         if (Mathf.Abs(angle) > 0.0001f)

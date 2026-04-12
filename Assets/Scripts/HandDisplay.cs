@@ -337,13 +337,14 @@ public class HandDisplay : MonoBehaviour
 
             // deal animation: ease-out from off-screen to hand
             float dealT = 1f;
+            float adjustedDealDuration = dealDuration / SettingsManager.DealSpeed;
             if (i < cardDealTimes.Count)
             {
                 float elapsed = Time.time - cardDealTimes[i];
-                if (elapsed < dealDuration)
+                if (elapsed < adjustedDealDuration)
                 {
                     // ease-out: fast start, slow finish (1 - (1-t)^3)
-                    float raw = elapsed / dealDuration;
+                    float raw = elapsed / adjustedDealDuration;
                     dealT = 1f - (1f - raw) * (1f - raw) * (1f - raw);
                 }
             }
