@@ -164,6 +164,9 @@ public class PauseMenu : MonoBehaviour
         IsPaused = true;
         Time.timeScale = 0f;
 
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.panelOpen);
+
         if (pauseOverlay != null)
             pauseOverlay.SetActive(true);
     }
@@ -173,12 +176,17 @@ public class PauseMenu : MonoBehaviour
         IsPaused = false;
         Time.timeScale = 1f;
 
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.panelClose);
+
         if (pauseOverlay != null)
             pauseOverlay.SetActive(false);
     }
 
     public void DoRestart()
     {
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.buttonClick);
         IsPaused = false;
         Time.timeScale = 1f;
         wasGameOver = false;
@@ -196,6 +204,8 @@ public class PauseMenu : MonoBehaviour
 
     public void GoToMainMenu()
     {
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.buttonClick);
         IsPaused = false;
         Time.timeScale = 1f;
         SceneManager.LoadScene(mainMenuSceneName);

@@ -124,6 +124,9 @@ public class SettingsDisplay : MonoBehaviour
         if (isShowing) return;
         isShowing = true;
 
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.panelOpen);
+
         if (root == null) BuildUI();
 
         SyncUIToSettings();
@@ -138,6 +141,9 @@ public class SettingsDisplay : MonoBehaviour
     {
         if (!isShowing) return;
         isShowing = false;
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.panelClose);
 
         if (root != null) root.SetActive(false);
 

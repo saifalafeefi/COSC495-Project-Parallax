@@ -248,11 +248,17 @@ public class ARPlacement : MonoBehaviour
         isFocused = true;
         focusedRegion = region;
         focusedRegionManager = rm;
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.regionFocus);
     }
 
     public void Unfocus()
     {
         if (!isFocused) return;
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.regionUnfocus);
 
         isFocused = false;
         focusedRegion = null;

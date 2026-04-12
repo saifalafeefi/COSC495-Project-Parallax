@@ -56,6 +56,9 @@ public class SkipConfirmPopup : MonoBehaviour
         if (showing) return;
         showing = true;
 
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.panelOpen);
+
         BuildUI(isWasteful, cardsLeft, penaltyAmount, stabPenalty, streak);
     }
 
@@ -63,6 +66,10 @@ public class SkipConfirmPopup : MonoBehaviour
     {
         if (!showing) return;
         showing = false;
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.panelClose);
+
         if (root != null) Destroy(root);
         root = null;
     }

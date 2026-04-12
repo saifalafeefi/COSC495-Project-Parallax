@@ -359,6 +359,9 @@ public class DashboardDisplay : MonoBehaviour
 
     void OnSortClicked(SortMode mode)
     {
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.dashboardSort);
+
         if (currentSort == mode)
             sortDescending = !sortDescending;
         else

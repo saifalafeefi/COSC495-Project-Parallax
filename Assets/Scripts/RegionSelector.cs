@@ -66,6 +66,8 @@ public class RegionSelector : MonoBehaviour
             UpdateMouse();
     }
 
+    private Region lastHoveredRegion;
+
     void UpdateMouse()
     {
         if (Mouse.current == null) return;
@@ -77,11 +79,19 @@ public class RegionSelector : MonoBehaviour
             if (hit.collider.GetComponentInParent<RegionManager>() == regionManager)
             {
                 Region region = regionManager.GetRegionAtHit(hit.triangleIndex);
+
+                // play hover sound when entering a new region
+                if (region != lastHoveredRegion && region != null && AudioManager.Instance != null)
+                    AudioManager.Instance.PlaySFX(AudioManager.Instance.regionHover);
+                lastHoveredRegion = region;
+
                 regionManager.HoveredRegion = region;
                 regionManager.SetHighlight(region);
 
                 if (Mouse.current.rightButton.wasPressedThisFrame)
                 {
+                    if (AudioManager.Instance != null)
+                        AudioManager.Instance.PlaySFX(AudioManager.Instance.regionSelect);
                     regionManager.SelectedRegion = region;
                     if (region != null && desktopInteraction != null)
                         desktopInteraction.FocusOnRegion(region, regionManager);
@@ -91,11 +101,14 @@ public class RegionSelector : MonoBehaviour
             }
         }
 
+        lastHoveredRegion = null;
         regionManager.HoveredRegion = null;
         regionManager.SetHighlight(null);
 
         if (Mouse.current.rightButton.wasPressedThisFrame)
         {
+            if (regionManager.SelectedRegion != null && AudioManager.Instance != null)
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.regionDeselect);
             regionManager.SelectedRegion = null;
             if (desktopInteraction != null)
                 desktopInteraction.Unfocus();
@@ -139,11 +152,15 @@ public class RegionSelector : MonoBehaviour
                     if (regionManager.SelectedRegion == region)
                     {
                         // tap same region again to deselect and unfocus
+                        if (AudioManager.Instance != null)
+                            AudioManager.Instance.PlaySFX(AudioManager.Instance.regionDeselect);
                         regionManager.SelectedRegion = null;
                         if (arPlacement != null) arPlacement.Unfocus();
                     }
                     else
                     {
+                        if (AudioManager.Instance != null)
+                            AudioManager.Instance.PlaySFX(AudioManager.Instance.regionSelect);
                         regionManager.SelectedRegion = region;
                         if (region != null && arPlacement != null)
                             arPlacement.FocusOnRegion(region, regionManager);
@@ -160,6 +177,8 @@ public class RegionSelector : MonoBehaviour
         // tap empty space to deselect and unfocus
         if (touch.phase == UnityEngine.InputSystem.TouchPhase.Ended)
         {
+            if (regionManager.SelectedRegion != null && AudioManager.Instance != null)
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.regionDeselect);
             regionManager.SelectedRegion = null;
             if (arPlacement != null) arPlacement.Unfocus();
         }

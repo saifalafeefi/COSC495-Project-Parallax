@@ -341,6 +341,9 @@ public class DesktopInteraction : MonoBehaviour
         focusedRegion = region;
         focusedRegionManager = rm;
 
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.regionFocus);
+
         // compute initial target from the region's current world position
         Vector3 earthPos = rm.transform.position;
         Vector3 regionCenter = rm.GetRegionWorldCenter(region);
@@ -356,6 +359,9 @@ public class DesktopInteraction : MonoBehaviour
     public void Unfocus()
     {
         if (!isFocused) return;
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.regionUnfocus);
 
         isFocused = false;
         isReturning = true;

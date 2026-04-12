@@ -199,11 +199,15 @@ public class MainMenu : MonoBehaviour
     // main panel
     public void OnStartGame()
     {
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.buttonClick);
         state = MenuState.FadeToDifficulty;
     }
 
     public void QuitGame()
     {
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.buttonClick);
         Debug.Log("[MainMenu] quit");
         Application.Quit();
 
@@ -213,9 +217,9 @@ public class MainMenu : MonoBehaviour
     }
 
     // difficulty panel — click to preview
-    public void SelectEasy() { ShowPreview(Difficulty.Easy); }
-    public void SelectNormal() { ShowPreview(Difficulty.Normal); }
-    public void SelectHard() { ShowPreview(Difficulty.Hard); }
+    public void SelectEasy() { if (AudioManager.Instance != null) AudioManager.Instance.PlaySFX(AudioManager.Instance.buttonClick); ShowPreview(Difficulty.Easy); }
+    public void SelectNormal() { if (AudioManager.Instance != null) AudioManager.Instance.PlaySFX(AudioManager.Instance.buttonClick); ShowPreview(Difficulty.Normal); }
+    public void SelectHard() { if (AudioManager.Instance != null) AudioManager.Instance.PlaySFX(AudioManager.Instance.buttonClick); ShowPreview(Difficulty.Hard); }
 
     void ShowPreview(Difficulty diff)
     {
@@ -240,6 +244,12 @@ public class MainMenu : MonoBehaviour
     // preview panel
     public void OnConfirm()
     {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.buttonClick);
+            // fade out menu music during the panel fade so it's silent by scene load
+            AudioManager.Instance.FadeOutMusic();
+        }
         DifficultySettings.Current = selectedDifficulty;
         if (previewPanel != null) previewPanel.interactable = false;
         state = MenuState.FadeToGame;
@@ -247,12 +257,16 @@ public class MainMenu : MonoBehaviour
 
     public void OnPreviewBack()
     {
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.buttonClick);
         state = MenuState.FadeBackToDifficulty;
     }
 
     // difficulty panel back to main
     public void OnBack()
     {
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.buttonClick);
         state = MenuState.FadeToMain;
     }
 
@@ -260,6 +274,8 @@ public class MainMenu : MonoBehaviour
 
     public void OnSettings()
     {
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.buttonClick);
         if (settingsDisplay != null)
         {
             // runtime overlay renders on top — no state change needed
@@ -287,11 +303,15 @@ public class MainMenu : MonoBehaviour
     // codex
     public void OnCodex()
     {
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.buttonClick);
         state = MenuState.FadeToCodex;
     }
 
     public void OnCodexBack()
     {
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.buttonClick);
         if (codexDisplay != null) codexDisplay.Hide();
         state = MenuState.FadeCodexBack;
     }

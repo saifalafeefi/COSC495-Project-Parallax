@@ -9,7 +9,11 @@ public class CardInteraction : MonoBehaviour, IPointerEnterHandler, IPointerExit
     public void OnPointerEnter(PointerEventData eventData)
     {
         if (handDisplay != null)
+        {
             handDisplay.OnCardHover(cardIndex);
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.cardHover);
+        }
     }
 
     public void OnPointerExit(PointerEventData eventData)

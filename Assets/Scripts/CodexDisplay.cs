@@ -117,6 +117,10 @@ public class CodexDisplay : MonoBehaviour
         if (showing) return;
         showing = true;
         closing = false;
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.panelOpen);
+
         LoadData();
         BuildUI();
         fadeTarget = 1f;
@@ -126,6 +130,10 @@ public class CodexDisplay : MonoBehaviour
     public void Hide()
     {
         if (!showing) return;
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.panelClose);
+
         // start fade out instead of instant destroy
         closing = true;
         fadeTarget = 0f;

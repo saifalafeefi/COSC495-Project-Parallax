@@ -2026,6 +2026,99 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1019880004}
   m_CullTransparentMesh: 1
+--- !u!1 &1025703932
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1025703934}
+  - component: {fileID: 1025703933}
+  m_Layer: 0
+  m_Name: audio manager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1025703933
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1025703932}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d114c50175d4f2148a1fc4d7ed8b36cc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioManager
+  buttonClick: {fileID: 0}
+  buttonHover: {fileID: 0}
+  panelOpen: {fileID: 0}
+  panelClose: {fileID: 0}
+  sliderTick: {fileID: 0}
+  cardDeal: {fileID: 0}
+  cardHover: {fileID: 0}
+  cardSelect: {fileID: 0}
+  cardDeselect: {fileID: 0}
+  cardPlay: {fileID: 0}
+  cardReject: {fileID: 0}
+  regionHover: {fileID: 0}
+  regionSelect: {fileID: 0}
+  regionDeselect: {fileID: 0}
+  regionFocus: {fileID: 0}
+  regionUnfocus: {fileID: 0}
+  shopOpen: {fileID: 0}
+  shopClose: {fileID: 0}
+  shopPurchase: {fileID: 0}
+  shopPurchaseFail: {fileID: 0}
+  shopkeeperGreet: {fileID: 0}
+  rewardPopup: {fileID: 0}
+  rewardClaim: {fileID: 0}
+  rewardSkip: {fileID: 0}
+  dashboardOpen: {fileID: 0}
+  dashboardClose: {fileID: 0}
+  dashboardSort: {fileID: 0}
+  bannerSlideIn: {fileID: 0}
+  bannerSlideOut: {fileID: 0}
+  eventPositive: {fileID: 0}
+  eventNegative: {fileID: 0}
+  roundStart: {fileID: 0}
+  roundEnd: {fileID: 0}
+  gameOverLoss: {fileID: 0}
+  gameOverVictory: {fileID: 0}
+  skipRound: {fileID: 0}
+  skipPenalty: {fileID: 0}
+  regionStressed: {fileID: 0}
+  regionCrisis: {fileID: 0}
+  focusWarning: {fileID: 0}
+  focusPunishment: {fileID: 0}
+  neglectPenalty: {fileID: 0}
+  capitalGain: {fileID: 0}
+  fundsGain: {fileID: 0}
+  scoreReveal: {fileID: 0}
+  menuMusic: {fileID: 8300000, guid: de06b27fee94e4743bc6e437f954d055, type: 3}
+  gameplayMusic: {fileID: 8300000, guid: 02477674cd4bc6f4897af82844d4b4a0, type: 3}
+  gameOverMusic: {fileID: 0}
+  crossfadeDuration: 1
+--- !u!4 &1025703934
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1025703932}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 309.25195, y: 0.00001, z: 829.43555}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1047721673
 GameObject:
   m_ObjectHideFlags: 0
@@ -4177,3 +4270,4 @@ SceneRoots:
   - {fileID: 1903682611}
   - {fileID: 1198154070}
   - {fileID: 1725846851}
+  - {fileID: 1025703934}

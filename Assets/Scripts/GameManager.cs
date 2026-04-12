@@ -301,6 +301,8 @@ public class GameManager : MonoBehaviour
 
     void DoSkipRound(bool couldPlay)
     {
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(couldPlay ? AudioManager.Instance.skipPenalty : AudioManager.Instance.skipRound);
         capitalWhenSkipped = couldPlay ? PoliticalCapital : 0;
 
         var kept = new List<PolicyData>();
@@ -464,6 +466,9 @@ public class GameManager : MonoBehaviour
         CurrentRound++;
         cardsPlayedThisRound = 0;
 
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.roundStart);
+
         // snapshot region status before player acts so the summary captures everything
         SnapshotStatus();
 
@@ -480,10 +485,16 @@ public class GameManager : MonoBehaviour
         PoliticalCapital = MaxCapital;
         bankedCapitalBonus = 0;
 
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.capitalGain);
+
         // economy generates funds income each round
         float avgEconomy = GetAverageEconomy();
         LastIncome = Mathf.RoundToInt(avgEconomy * fundsIncomeMultiplier);
         Funds += LastIncome;
+
+        if (LastIncome > 0 && AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.fundsGain);
 
         // preserve shop-bought cards, discard the rest
         var shopKept = new List<PolicyData>();
@@ -524,6 +535,8 @@ public class GameManager : MonoBehaviour
             rewardPending = false;
             GenerateRewardChoices();
             RewardActive = true;
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.rewardPopup);
             Debug.Log("[GameManager] reward popup triggered — pick 1 of 3");
         }
     }
@@ -628,6 +641,9 @@ public class GameManager : MonoBehaviour
         var regions = regionManager.Regions;
         if (regions == null) return;
 
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.roundEnd);
+
         // wasteful skip penalty: player had capital to spare but chose to skip
         if (capitalWhenSkipped > 0)
         {
@@ -649,6 +665,9 @@ public class GameManager : MonoBehaviour
                 desc += $" | +{bankedCapitalBonus} bonus capital next round";
             if (consecutiveWastefulSkips >= 2)
                 desc += $" [x{consecutiveWastefulSkips} consecutive]";
+
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.neglectPenalty);
 
             // show as banner alongside normal events
             pendingBannerEvents.Add(("Neglect Penalty", desc));
@@ -751,6 +770,11 @@ public class GameManager : MonoBehaviour
             CalculateScore(regions);
             GameOver = true;
             GameOverReason = "You survived all 10 rounds.";
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.gameOverVictory);
+                AudioManager.Instance.PlayMusic(AudioManager.Instance.gameOverMusic);
+            }
             BuildRoundSummary(regions, snapshotGlobalCarbon, snapshotStatus);
             Debug.Log($"[GameManager] game complete! score: {FinalScore:F0} — {FinalRating}");
             return;
@@ -903,6 +927,9 @@ public class GameManager : MonoBehaviour
             RecordRegionEvent(target, matchedEvent.eventName,
                 matchedEvent.carbonDelta * multiplier, matchedEvent.economyDelta * multiplier, matchedEvent.stabilityDelta * multiplier);
 
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.focusPunishment);
+
             string severity = multiplier > 1f ? $" (x{multiplier:F0})" : "";
             string punishText = $"{matchedEvent.eventName}!{severity} {matchedEvent.description}";
             LastWarningText = punishText;
@@ -920,6 +947,8 @@ public class GameManager : MonoBehaviour
         {
             // first trigger — warn (shown persistently on region panel, not as timed popup)
             focusWarnedRegions[target] = 0;
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.focusWarning);
             Debug.LogWarning($"[GameManager] focus warning on {target.RegionName} (rolled {roll:F0} < {chance:F0}%)");
             return null;
         }
@@ -951,6 +980,13 @@ public class GameManager : MonoBehaviour
             RecordRegionEvent(r, evt.eventName, evt.carbonDelta, evt.economyDelta, evt.stabilityDelta);
         }
 
+        // play positive or negative event sound based on net impact
+        if (AudioManager.Instance != null)
+        {
+            float netImpact = -evt.carbonDelta + evt.economyDelta + evt.stabilityDelta;
+            AudioManager.Instance.PlaySFX(netImpact >= 0 ? AudioManager.Instance.eventPositive : AudioManager.Instance.eventNegative);
+        }
+
         // queue for the breaking news banner
         pendingBannerEvents.Add((evt.eventName, $"{evt.description} ({affected.Count} region{(affected.Count != 1 ? "s" : "")} affected)"));
 
@@ -970,6 +1006,11 @@ public class GameManager : MonoBehaviour
         {
             GameOver = true;
             GameOverReason = $"Tipping Point — global carbon exceeded {tippingPointCarbon:F0}.";
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.gameOverLoss);
+                AudioManager.Instance.PlayMusic(AudioManager.Instance.gameOverMusic);
+            }
             Debug.Log($"[GameManager] GAME OVER: {GameOverReason}");
             return true;
         }
@@ -989,6 +1030,11 @@ public class GameManager : MonoBehaviour
                 string names = string.Join(", ", crisisRegionNames);
                 GameOver = true;
                 GameOverReason = $"Chain Collapse — {crisisRegionNames.Count} regions in crisis for consecutive rounds:\n{names}";
+                if (AudioManager.Instance != null)
+                {
+                    AudioManager.Instance.PlaySFX(AudioManager.Instance.gameOverLoss);
+                    AudioManager.Instance.PlayMusic(AudioManager.Instance.gameOverMusic);
+                }
                 Debug.Log($"[GameManager] GAME OVER: {GameOverReason}");
                 return true;
             }
@@ -1047,6 +1093,9 @@ public class GameManager : MonoBehaviour
         else if (FinalScore >= 75f) FinalRating = "Stable Transition (Silver)";
         else if (FinalScore >= 50f) FinalRating = "Fragile Balance (Bronze)";
         else FinalRating = "Environmental Failure";
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.scoreReveal);
     }
 
     // called by PauseMenu to start a completely fresh game
@@ -1076,6 +1125,8 @@ public class GameManager : MonoBehaviour
         freeCard.policyName = original.policyName + " (Reward)";
 
         CurrentHand.Add(freeCard);
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.rewardClaim);
         Debug.Log($"[GameManager] reward claimed: {freeCard.policyName} (hand now {CurrentHand.Count})");
         RewardActive = false;
         RewardChoices.Clear();
@@ -1085,6 +1136,8 @@ public class GameManager : MonoBehaviour
     public void SkipReward()
     {
         if (!RewardActive) return;
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.rewardSkip);
         Debug.Log("[GameManager] reward skipped");
         RewardActive = false;
         RewardChoices.Clear();
@@ -1111,6 +1164,8 @@ public class GameManager : MonoBehaviour
             shopStockedRound = CurrentRound;
         }
         ShopActive = true;
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.shopOpen);
         Debug.Log("[GameManager] shop opened");
     }
 
@@ -1118,6 +1173,8 @@ public class GameManager : MonoBehaviour
     {
         if (!ShopActive) return;
         ShopActive = false;
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.shopClose);
         Debug.Log("[GameManager] shop closed");
     }
 
@@ -1143,9 +1200,15 @@ public class GameManager : MonoBehaviour
 
         int price = GetShopPrice(card.rarity);
         if (Funds < price)
+        {
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.shopPurchaseFail);
             return $"NOT_ENOUGH_FUNDS|{price}|{Funds}";
+        }
 
         Funds -= price;
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.shopPurchase);
 
         // clone as free card so it stays free forever in the deck
         var freeCard = Instantiate(card);
@@ -1282,6 +1345,8 @@ public class GameManager : MonoBehaviour
     {
         if (GameOver || RewardActive || ShopActive || DashboardActive) return;
         DashboardActive = true;
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.dashboardOpen);
         Debug.Log("[GameManager] dashboard opened");
     }
 
@@ -1289,6 +1354,8 @@ public class GameManager : MonoBehaviour
     {
         if (!DashboardActive) return;
         DashboardActive = false;
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.dashboardClose);
         Debug.Log("[GameManager] dashboard closed");
     }
 

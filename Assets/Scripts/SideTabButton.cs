@@ -99,6 +99,8 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     public void OnPointerEnter(PointerEventData eventData)
     {
         hovering = true;
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.buttonHover);
     }
 
     public void OnPointerExit(PointerEventData eventData)
@@ -135,6 +137,9 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
             OnClicked.Invoke();
             return;
         }
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.buttonClick);
 
         if (gameManager == null) return;
 

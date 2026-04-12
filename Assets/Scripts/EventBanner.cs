@@ -113,6 +113,10 @@ public class EventBanner : MonoBehaviour
         // tracks total time for the pulse sine wave
         float totalTime = 0f;
 
+        // play slide-in sound
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.bannerSlideIn);
+
         // phase 1: slide in (ease-out — fast then slow)
         float elapsed = 0f;
         while (elapsed < slideInDuration)
@@ -142,6 +146,10 @@ public class EventBanner : MonoBehaviour
             PulseBorder(borderImg, totalTime);
             yield return null;
         }
+
+        // play slide-out sound
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.bannerSlideOut);
 
         // phase 3: slide out (ease-in — slow then fast)
         elapsed = 0f;

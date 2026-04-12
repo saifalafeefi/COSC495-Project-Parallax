@@ -217,6 +217,10 @@ public class HandDisplay : MonoBehaviour
 
         if (gameManager.CurrentHand == null) return;
 
+        // play deal sound once for the whole hand
+        if (AudioManager.Instance != null && gameManager.CurrentHand.Count > 0)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.cardDeal);
+
         for (int i = 0; i < gameManager.CurrentHand.Count; i++)
         {
             var card = gameManager.CurrentHand[i];
@@ -419,6 +423,8 @@ public class HandDisplay : MonoBehaviour
     {
         if (PauseMenu.IsPaused) return;
         if (gameManager != null && (gameManager.RewardActive || gameManager.ShopActive || gameManager.DashboardActive || gameManager.BannerActive)) return;
+        if (selectedIndex >= 0 && AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.cardDeselect);
         selectedIndex = -1;
     }
 
@@ -436,6 +442,8 @@ public class HandDisplay : MonoBehaviour
         {
             // first click: select this card
             selectedIndex = index;
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.cardSelect);
         }
     }
 
@@ -455,6 +463,9 @@ public class HandDisplay : MonoBehaviour
             rejectFlashIndex = index;
             selectedIndex = -1;
 
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.PlaySFX(AudioManager.Instance.cardReject);
+
             if (selector != null)
             {
                 selector.LastPlayResult = $"Not enough Political Capital!";
@@ -469,6 +480,9 @@ public class HandDisplay : MonoBehaviour
             selector.LastPlayResult = result;
             selector.LastPlayTime = Time.time;
         }
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.cardPlay);
 
         selectedIndex = -1;
         hoveredIndex = -1;
