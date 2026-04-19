@@ -294,8 +294,8 @@ public class DesktopInteraction : MonoBehaviour
         targetPitch = pitch;
         targetDistance = currentDistance;
 
-        // tell the tutorial the player actually dragged, not just clicked (needs real motion, not jitter)
-        if (delta.sqrMagnitude > 1600f)
+        // tell the tutorial the player actually dragged, not just clicked — threshold is inspector-driven on TutorialManager
+        if (delta.sqrMagnitude > TutorialManager.OrbitDragThresholdSqr)
             TutorialManager.NotifyAction(TutorialAction.OrbitEarth);
     }
 

@@ -84,6 +84,10 @@ public class TutorialManager : MonoBehaviour
     [Tooltip("the full ordered list of tutorial steps — edit in Inspector")]
     [SerializeField] private List<TutorialStep> steps = new List<TutorialStep>();
 
+    [Header("Input Thresholds")]
+    [Tooltip("how far the mouse must move in a single frame (squared pixels) before an orbit counts as a real drag. higher = more forgiving, ignores clicks and tiny jitter. 1600 = 40px")]
+    [SerializeField] private float orbitDragThresholdSqr = 1600f;
+
     [Header("End of Tutorial")]
     [TextArea(2, 4)]
     [SerializeField] private string farewellMessage = "Good luck!";
@@ -376,10 +380,25 @@ public class TutorialManager : MonoBehaviour
         return instance.CurrentStepAllows(action);
     }
 
+    // gameplay scripts read this to know how hard the player must drag before it counts as an orbit
+    // returns a safe default when the tutorial isn't loaded, so normal play is unaffected
+    public static float OrbitDragThresholdSqr
+    {
+        get
+        {
+            if (instance == null) return 1600f;
+            return instance.orbitDragThresholdSqr;
+        }
+    }
+
     bool CurrentStepAllows(TutorialAction action)
     {
         if (ending) return false;
         if (steps == null || currentStep < 0 || currentStep >= steps.Count) return false;
+
+        // camera framing is always allowed — orbit and zoom don't affect gameplay decisions,
+        // so the player can freely reposition the view during any action-gated step
+        if (action == TutorialAction.OrbitEarth || action == TutorialAction.ZoomEarth) return true;
 
         var step = steps[currentStep];
         if (step.allowFreeInteraction) return true;

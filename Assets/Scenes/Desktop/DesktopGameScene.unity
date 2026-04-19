@@ -1248,14 +1248,55 @@ MonoBehaviour:
   nextButtonSize: {x: 140, y: 40}
   nextButtonLabel: NEXT
   steps:
-  - mascotText: orbit the earth nigger
-    requiredAction: 1
+  - mascotText: Hello there! Welcome to Carbon Conquest.
+    requiredAction: 0
     allowFreeInteraction: 0
     showNextButton: 0
-  - mascotText: select region
+  - mascotText: Our goal here is to minimize the carbon levels on earth while increasing
+      the economy and stability of regions.
+    requiredAction: 0
+    allowFreeInteraction: 0
+    showNextButton: 0
+  - mascotText: Try orbiting the earth! (hold LMB)
+    requiredAction: 1
+    allowFreeInteraction: 0
+    showNextButton: 1
+  - mascotText: You can also zoom in/out of the earth (Scroll wheel).
+    requiredAction: 2
+    allowFreeInteraction: 0
+    showNextButton: 1
+  - mascotText: On the top bar, you will have the number of rounds, capital, and
+      funds. As well as the global stats (Carbon, Economy, and Stability).
+    requiredAction: 0
+    allowFreeInteraction: 0
+    showNextButton: 0
+  - mascotText: Now, select the highlighted region to inspect it (RMB).
     requiredAction: 3
     allowFreeInteraction: 0
     showNextButton: 0
+  - mascotText: Here you can see general information about the selected region.
+    requiredAction: 0
+    allowFreeInteraction: 0
+    showNextButton: 0
+  - mascotText: You will have policy actions card that improve certain stats on the
+      region.
+    requiredAction: 0
+    allowFreeInteraction: 0
+    showNextButton: 0
+  - mascotText: Select the highlighted card.
+    requiredAction: 4
+    allowFreeInteraction: 0
+    showNextButton: 0
+  - mascotText: Great! Now, cards can have certain trait bonuses that could either
+      positively or negatively affect a region.
+    requiredAction: 0
+    allowFreeInteraction: 0
+    showNextButton: 0
+  - mascotText: The card you have selected
+    requiredAction: 0
+    allowFreeInteraction: 0
+    showNextButton: 0
+  orbitDragThresholdSqr: 5000
   farewellMessage: Good luck!
   farewellDuration: 2.5
   mainMenuSceneName: MainMenuScene
