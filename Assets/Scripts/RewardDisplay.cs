@@ -267,7 +267,11 @@ public class RewardDisplay : MonoBehaviour
         if (selectedIndex == index)
         {
             // second click: confirm pick
+            // tutorial blocks reward pick unless the current step asks for it
+            if (!TutorialManager.CanPerformAction(TutorialAction.PickReward)) return;
+
             gameManager.ClaimReward(index);
+            TutorialManager.NotifyAction(TutorialAction.PickReward);
         }
         else
         {

@@ -90,11 +90,16 @@ public class RegionSelector : MonoBehaviour
 
                 if (Mouse.current.rightButton.wasPressedThisFrame)
                 {
+                    // tutorial blocks region selection unless the current step asks for it
+                    if (!TutorialManager.CanPerformAction(TutorialAction.SelectRegion)) return;
+
                     if (AudioManager.Instance != null)
                         AudioManager.Instance.PlaySFX(AudioManager.Instance.regionSelect);
                     regionManager.SelectedRegion = region;
                     if (region != null && desktopInteraction != null)
                         desktopInteraction.FocusOnRegion(region, regionManager);
+
+                    TutorialManager.NotifyAction(TutorialAction.SelectRegion);
                 }
 
                 return;
@@ -159,11 +164,16 @@ public class RegionSelector : MonoBehaviour
                     }
                     else
                     {
+                        // tutorial blocks region selection unless the current step asks for it
+                        if (!TutorialManager.CanPerformAction(TutorialAction.SelectRegion)) return;
+
                         if (AudioManager.Instance != null)
                             AudioManager.Instance.PlaySFX(AudioManager.Instance.regionSelect);
                         regionManager.SelectedRegion = region;
                         if (region != null && arPlacement != null)
                             arPlacement.FocusOnRegion(region, regionManager);
+
+                        TutorialManager.NotifyAction(TutorialAction.SelectRegion);
                     }
                 }
 

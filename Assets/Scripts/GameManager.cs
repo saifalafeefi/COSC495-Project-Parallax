@@ -245,9 +245,11 @@ public class GameManager : MonoBehaviour
         var skipPopup = FindFirstObjectByType<SkipConfirmPopup>();
         bool skipPopupActive = skipPopup != null && skipPopup.IsShowing;
 
-        if (kb.spaceKey.wasPressedThisFrame && !GameOver && !PauseMenu.IsPaused && !RewardActive && !ShopActive && !DashboardActive && !BannerActive && !skipPopupActive && hasNonShopCards)
+        if (kb.spaceKey.wasPressedThisFrame && !GameOver && !PauseMenu.IsPaused && !RewardActive && !ShopActive && !DashboardActive && !BannerActive && !skipPopupActive && hasNonShopCards
+            && TutorialManager.CanPerformAction(TutorialAction.SkipRound))
         {
             SkipRound();
+            TutorialManager.NotifyAction(TutorialAction.SkipRound);
         }
     }
 
@@ -631,7 +633,11 @@ public class GameManager : MonoBehaviour
             if (!shopBoughtCards.Contains(c)) { onlyShopCards = false; break; }
         }
         if (CurrentHand.Count == 0 || onlyShopCards)
+        {
             EndRound();
+            // tell the tutorial a round ended naturally from running out of cards
+            TutorialManager.NotifyAction(TutorialAction.EndRoundNaturally);
+        }
 
         return result;
     }

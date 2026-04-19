@@ -146,25 +146,42 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
         switch (action)
         {
             case TabAction.Shop:
+                // close is always allowed; open is gated by the tutorial
                 if (gameManager.ShopActive)
+                {
                     gameManager.CloseShop();
+                }
                 else
+                {
+                    if (!TutorialManager.CanPerformAction(TutorialAction.OpenShop)) return;
                     gameManager.OpenShop();
+                    TutorialManager.NotifyAction(TutorialAction.OpenShop);
+                }
                 break;
             case TabAction.Dashboard:
+                // close is always allowed; open is gated by the tutorial
                 if (gameManager.DashboardActive)
+                {
                     gameManager.CloseDashboard();
+                }
                 else
+                {
+                    if (!TutorialManager.CanPerformAction(TutorialAction.OpenDashboard)) return;
                     gameManager.OpenDashboard();
+                    TutorialManager.NotifyAction(TutorialAction.OpenDashboard);
+                }
                 break;
             case TabAction.Pause:
+                // pause stays available at any time so the player can bail out of the tutorial
                 var pauseMenu = FindFirstObjectByType<PauseMenu>();
                 if (pauseMenu != null)
                     pauseMenu.TogglePause();
                 break;
             case TabAction.SkipRound:
+                if (!TutorialManager.CanPerformAction(TutorialAction.SkipRound)) return;
                 if (!gameManager.GameOver)
                     gameManager.SkipRound();
+                TutorialManager.NotifyAction(TutorialAction.SkipRound);
                 break;
         }
     }

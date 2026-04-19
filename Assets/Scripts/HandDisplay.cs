@@ -436,14 +436,21 @@ public class HandDisplay : MonoBehaviour
         if (selectedIndex == index)
         {
             // second click on same card: confirm play
+            // tutorial blocks card play unless the current step asks for it
+            if (!TutorialManager.CanPerformAction(TutorialAction.PlayCard)) return;
             TryPlayCard(index);
         }
         else
         {
             // first click: select this card
+            // tutorial blocks card selection unless the current step asks for it
+            if (!TutorialManager.CanPerformAction(TutorialAction.SelectCard)) return;
+
             selectedIndex = index;
             if (AudioManager.Instance != null)
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.cardSelect);
+
+            TutorialManager.NotifyAction(TutorialAction.SelectCard);
         }
     }
 
@@ -486,6 +493,9 @@ public class HandDisplay : MonoBehaviour
 
         selectedIndex = -1;
         hoveredIndex = -1;
+
+        // tell the tutorial a card was played successfully
+        TutorialManager.NotifyAction(TutorialAction.PlayCard);
     }
 
     GameObject BuildCard(PolicyData policy, int index)

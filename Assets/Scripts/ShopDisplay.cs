@@ -704,6 +704,9 @@ public class ShopDisplay : MonoBehaviour
         if (selectedIndex == index)
         {
             // second click: confirm purchase
+            // tutorial blocks purchase unless the current step asks for it
+            if (!TutorialManager.CanPerformAction(TutorialAction.BuyCard)) return;
+
             string result = gameManager.BuyShopCard(index);
             if (result != null && result.StartsWith("NOT_ENOUGH_FUNDS"))
             {
@@ -715,6 +718,9 @@ public class ShopDisplay : MonoBehaviour
                 ShowFeedback(result, new Color(0.4f, 1f, 0.5f));
                 SetShopkeeperReaction(true);
                 selectedIndex = -1;
+
+                // tell the tutorial the purchase succeeded
+                TutorialManager.NotifyAction(TutorialAction.BuyCard);
 
                 // dim the sold card
                 if (index < cardObjects.Count)

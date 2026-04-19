@@ -172,7 +172,8 @@ public class DesktopInteraction : MonoBehaviour
 
             // let the player orbit slowly while focused, with deadzone limit
             var mouse = Mouse.current;
-            if (!rewardBlocked && mouse != null && mouse.leftButton.isPressed)
+            if (!rewardBlocked && mouse != null && mouse.leftButton.isPressed
+                && TutorialManager.CanPerformAction(TutorialAction.OrbitEarth))
             {
                 Vector2 delta = mouse.delta.ReadValue();
                 float baseSpeed = orbitSpeed * focusedOrbitMultiplier * SettingsManager.OrbitSensitivity;
@@ -228,7 +229,8 @@ public class DesktopInteraction : MonoBehaviour
             {
                 // let the player orbit while zooming out
                 var mouse = Mouse.current;
-                if (mouse != null && mouse.leftButton.isPressed)
+                if (mouse != null && mouse.leftButton.isPressed
+                    && TutorialManager.CanPerformAction(TutorialAction.OrbitEarth))
                 {
                     Vector2 delta = mouse.delta.ReadValue();
                     float sens = orbitSpeed * SettingsManager.OrbitSensitivity;
@@ -277,6 +279,10 @@ public class DesktopInteraction : MonoBehaviour
         if (mouse == null || !mouse.leftButton.isPressed)
             return;
 
+        // tutorial blocks orbit unless the current step asks for it
+        if (!TutorialManager.CanPerformAction(TutorialAction.OrbitEarth))
+            return;
+
         Vector2 delta = mouse.delta.ReadValue();
         float sens = orbitSpeed * SettingsManager.OrbitSensitivity;
         float invertY = SettingsManager.InvertY ? 1f : -1f;
@@ -287,6 +293,10 @@ public class DesktopInteraction : MonoBehaviour
         targetYaw = yaw;
         targetPitch = pitch;
         targetDistance = currentDistance;
+
+        // tell the tutorial the player actually dragged, not just clicked (needs real motion, not jitter)
+        if (delta.sqrMagnitude > 1600f)
+            TutorialManager.NotifyAction(TutorialAction.OrbitEarth);
     }
 
     void HandleZoom()
@@ -298,10 +308,16 @@ public class DesktopInteraction : MonoBehaviour
         float scroll = mouse.scroll.ReadValue().y;
         if (Mathf.Abs(scroll) > 0.01f)
         {
+            // tutorial blocks zoom unless the current step asks for it
+            if (!TutorialManager.CanPerformAction(TutorialAction.ZoomEarth))
+                return;
+
             float sens = zoomSpeed * SettingsManager.ZoomSensitivity;
             currentDistance -= scroll * sens * 0.01f;
             currentDistance = Mathf.Clamp(currentDistance, minDistance, maxDistance);
             targetDistance = currentDistance;
+
+            TutorialManager.NotifyAction(TutorialAction.ZoomEarth);
         }
     }
 

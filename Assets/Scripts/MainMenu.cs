@@ -48,7 +48,7 @@ public class MainMenu : MonoBehaviour
     [Header("Fade Settings")]
     [SerializeField] private float fadeSpeed = 4f;
 
-    private enum MenuState { Main, FadeToDifficulty, Difficulty, FadeToPreview, Preview, FadeBackToDifficulty, FadeToGame, FadeToMain, FadeToSettings, Settings, FadeSettingsBack, FadeToCodex, Codex, FadeCodexBack }
+    private enum MenuState { Main, FadeToDifficulty, Difficulty, FadeToPreview, Preview, FadeBackToDifficulty, FadeToGame, FadeToMain, FadeToSettings, Settings, FadeSettingsBack, FadeToCodex, Codex, FadeCodexBack, FadeToTutorial }
     private MenuState state = MenuState.Main;
     private Difficulty selectedDifficulty;
 
@@ -58,6 +58,9 @@ public class MainMenu : MonoBehaviour
         if (difficultyPanel != null) SetGroup(difficultyPanel, false);
         if (previewPanel != null) SetGroup(previewPanel, false);
         if (settingsPanel != null) SetGroup(settingsPanel, false);
+
+        // always clear the tutorial flag on menu load so normal play starts fresh next time
+        TutorialSettings.IsTutorial = false;
 
         // apply all saved settings on menu load
         SettingsManager.ApplyAll();
@@ -147,6 +150,13 @@ public class MainMenu : MonoBehaviour
                     SceneManager.LoadScene(IsMobilePlatform() ? arSceneName : desktopSceneName);
                 break;
 
+            case MenuState.FadeToTutorial:
+                // tutorial skips difficulty select — fade the main panel straight out into the game scene
+                mainPanel.alpha = Mathf.MoveTowards(mainPanel.alpha, 0f, t);
+                if (mainPanel.alpha <= 0.01f)
+                    SceneManager.LoadScene(IsMobilePlatform() ? arSceneName : desktopSceneName);
+                break;
+
             case MenuState.FadeToSettings:
                 mainPanel.alpha = Mathf.MoveTowards(mainPanel.alpha, 0f, t);
                 if (mainPanel.alpha <= 0.01f)
@@ -202,6 +212,24 @@ public class MainMenu : MonoBehaviour
         if (AudioManager.Instance != null)
             AudioManager.Instance.PlaySFX(AudioManager.Instance.buttonClick);
         state = MenuState.FadeToDifficulty;
+    }
+
+    // starts the scripted tutorial — skips difficulty select and loads straight into the game scene
+    // tutorial runs on a fixed difficulty regardless of menu selection; TutorialManager overrides deck, events, and state
+    public void OnTutorial()
+    {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.buttonClick);
+            // fade menu music out during the panel fade so it's silent by scene load
+            AudioManager.Instance.FadeOutMusic();
+        }
+
+        // force a known baseline so the tutorial runs predictably
+        DifficultySettings.Current = Difficulty.Normal;
+        TutorialSettings.IsTutorial = true;
+
+        state = MenuState.FadeToTutorial;
     }
 
     public void QuitGame()
