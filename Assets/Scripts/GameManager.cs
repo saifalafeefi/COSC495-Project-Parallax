@@ -276,6 +276,10 @@ public class GameManager : MonoBehaviour
             if (!shopBoughtCards.Contains(c) && c.politicalCapitalCost <= PoliticalCapital) { couldPlay = true; playableCount++; }
         }
 
+        // tutorial's skip-round step is a scripted demo — treat it as a clean skip regardless
+        // of spare capital so the player doesn't eat the neglect penalty while learning
+        if (TutorialManager.CurrentStepAction == TutorialAction.SkipRound) couldPlay = false;
+
         // show confirmation popup instead of skipping immediately
         var popup = FindFirstObjectByType<SkipConfirmPopup>();
         if (popup != null)
@@ -298,6 +302,10 @@ public class GameManager : MonoBehaviour
         {
             if (!shopBoughtCards.Contains(c) && c.politicalCapitalCost <= PoliticalCapital) { couldPlay = true; break; }
         }
+
+        // same override as SkipRound() — the tutorial's skip step must never apply the penalty
+        if (TutorialManager.CurrentStepAction == TutorialAction.SkipRound) couldPlay = false;
+
         DoSkipRound(couldPlay);
     }
 
@@ -510,21 +518,33 @@ public class GameManager : MonoBehaviour
         CurrentHand.Clear();
         CurrentHand.AddRange(shopKept);
 
-        for (int i = 0; i < HandSize; i++)
+        // tutorial override: if the tutorial configured a scripted starting hand, use it for round 1 instead of drawing random
+        var scriptedHand = CurrentRound == 1 ? TutorialManager.GetScriptedStartingHand() : null;
+        if (scriptedHand != null)
         {
-            if (deck.Count == 0)
+            foreach (var policy in scriptedHand)
             {
-                // reshuffle discard into deck
-                deck.AddRange(discardPile);
-                discardPile.Clear();
-                ShuffleDeck();
-                Debug.Log("[GameManager] reshuffled discard pile into deck");
+                if (policy != null) CurrentHand.Add(policy);
             }
-
-            if (deck.Count > 0)
+        }
+        else
+        {
+            for (int i = 0; i < HandSize; i++)
             {
-                CurrentHand.Add(deck[0]);
-                deck.RemoveAt(0);
+                if (deck.Count == 0)
+                {
+                    // reshuffle discard into deck
+                    deck.AddRange(discardPile);
+                    discardPile.Clear();
+                    ShuffleDeck();
+                    Debug.Log("[GameManager] reshuffled discard pile into deck");
+                }
+
+                if (deck.Count > 0)
+                {
+                    CurrentHand.Add(deck[0]);
+                    deck.RemoveAt(0);
+                }
             }
         }
 
@@ -541,6 +561,9 @@ public class GameManager : MonoBehaviour
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.rewardPopup);
             Debug.Log("[GameManager] reward popup triggered — pick 1 of 3");
         }
+
+        // let the tutorial know a new round has started so its SkipRound-deferred advance can fire
+        TutorialManager.NotifyRoundStarted();
     }
 
     // called when the player presses 1, 2, or 3 with a region selected

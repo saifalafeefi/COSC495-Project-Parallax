@@ -42,6 +42,18 @@ public class HandDisplay : MonoBehaviour
     [SerializeField] private float shopSlideDistance = 400f;
     [SerializeField] private float shopSlideSpeed = 6f;
 
+    [Header("Tutorial Card Glow")]
+    [Tooltip("color of the pulsing glow around a card the tutorial is pointing at")]
+    [SerializeField] private Color tutorialGlowColor = new Color(1f, 0.95f, 0.3f, 1f);
+    [Tooltip("how far the glow extends outside the card edges in pixels")]
+    [SerializeField] private float tutorialGlowPadding = 18f;
+    [Tooltip("minimum alpha of the glow pulse")]
+    [SerializeField, Range(0f, 1f)] private float tutorialGlowMinAlpha = 0.25f;
+    [Tooltip("maximum alpha of the glow pulse")]
+    [SerializeField, Range(0f, 1f)] private float tutorialGlowMaxAlpha = 0.9f;
+    [Tooltip("how fast the glow breathes")]
+    [SerializeField] private float tutorialGlowPulseSpeed = 4f;
+
     private GameManager gameManager;
     private RegionManager regionManager;
     private Canvas canvas;
@@ -50,6 +62,8 @@ public class HandDisplay : MonoBehaviour
     private List<GameObject> cardObjects = new List<GameObject>();
     private List<RectTransform> cardRects = new List<RectTransform>();
     private List<TraitBorder> cardTraitBorders = new List<TraitBorder>();
+    // per-card tutorial glow image, kept so Update() can pulse it without rebuilding
+    private List<Image> cardTutorialGlows = new List<Image>();
     // per-card deal animation: time when deal started
     private List<float> cardDealTimes = new List<float>();
     // track which PolicyData each card slot holds so we can match across rebuilds
@@ -169,6 +183,24 @@ public class HandDisplay : MonoBehaviour
         }
 
         AnimateCards();
+        UpdateTutorialGlows();
+    }
+
+    // animates the per-card tutorial glow — pulsing when the card index matches the tutorial's target slot, transparent otherwise
+    void UpdateTutorialGlows()
+    {
+        int target = TutorialManager.HighlightedCardIndex;
+        float pulse = (Mathf.Sin(Time.time * tutorialGlowPulseSpeed) + 1f) / 2f;
+        float alpha = Mathf.Lerp(tutorialGlowMinAlpha, tutorialGlowMaxAlpha, pulse);
+
+        for (int i = 0; i < cardTutorialGlows.Count; i++)
+        {
+            var img = cardTutorialGlows[i];
+            if (img == null) continue;
+
+            float a = (i == target) ? alpha : 0f;
+            img.color = new Color(tutorialGlowColor.r, tutorialGlowColor.g, tutorialGlowColor.b, a);
+        }
     }
 
     void BuildCanvas()
@@ -212,6 +244,7 @@ public class HandDisplay : MonoBehaviour
         cardObjects.Clear();
         cardRects.Clear();
         cardTraitBorders.Clear();
+        cardTutorialGlows.Clear();
         cardDealTimes.Clear();
         cardPolicies.Clear();
 
@@ -264,6 +297,7 @@ public class HandDisplay : MonoBehaviour
         cardObjects.Clear();
         cardRects.Clear();
         cardTraitBorders.Clear();
+        cardTutorialGlows.Clear();
         cardDealTimes.Clear();
         cardPolicies.Clear();
 
@@ -423,6 +457,12 @@ public class HandDisplay : MonoBehaviour
     {
         if (PauseMenu.IsPaused) return;
         if (gameManager != null && (gameManager.RewardActive || gameManager.ShopActive || gameManager.DashboardActive || gameManager.BannerActive)) return;
+
+        // during the tutorial, never let the player deselect — HighlightedCardIndex clears the
+        // moment the step advances off SelectCard, but the card is still sitting selected, so
+        // a tutorial-wide lock is the only thing that actually holds
+        if (TutorialManager.IsActive) return;
+
         if (selectedIndex >= 0 && AudioManager.Instance != null)
             AudioManager.Instance.PlaySFX(AudioManager.Instance.cardDeselect);
         selectedIndex = -1;
@@ -432,6 +472,11 @@ public class HandDisplay : MonoBehaviour
     {
         if (PauseMenu.IsPaused) return;
         if (gameManager != null && (gameManager.RewardActive || gameManager.ShopActive || gameManager.DashboardActive || gameManager.BannerActive)) return;
+
+        // during tutorial card steps, lock clicks to the highlighted card so the player can't
+        // derail the script by picking a different card than the mascot is talking about
+        if (TutorialManager.IsActive && TutorialManager.HighlightedCardIndex >= 0 && index != TutorialManager.HighlightedCardIndex)
+            return;
 
         if (selectedIndex == index)
         {
@@ -520,6 +565,21 @@ public class HandDisplay : MonoBehaviour
         // transparent root image for raycast target
         var borderImg = card.AddComponent<Image>();
         borderImg.color = Color.clear;
+
+        // tutorial glow sits behind everything, extends past the card edges by tutorialGlowPadding
+        // disabled by default — Update() enables and pulses it when this card is the tutorial target
+        var glowObj = new GameObject("TutorialGlow");
+        glowObj.transform.SetParent(card.transform, false);
+        var glowRect = glowObj.AddComponent<RectTransform>();
+        glowRect.anchorMin = Vector2.zero;
+        glowRect.anchorMax = Vector2.one;
+        glowRect.offsetMin = new Vector2(-tutorialGlowPadding, -tutorialGlowPadding);
+        glowRect.offsetMax = new Vector2(tutorialGlowPadding, tutorialGlowPadding);
+        var glowImg = glowObj.AddComponent<Image>();
+        glowImg.color = new Color(tutorialGlowColor.r, tutorialGlowColor.g, tutorialGlowColor.b, 0f);
+        glowImg.raycastTarget = false;
+        glowObj.transform.SetAsFirstSibling();
+        cardTutorialGlows.Add(glowImg);
 
         // trait-colored border
         float thickness = TraitColorConfig.Instance != null ? TraitColorConfig.Instance.borderThickness : 4f;

@@ -93,6 +93,10 @@ public class RegionSelector : MonoBehaviour
                     // tutorial blocks region selection unless the current step asks for it
                     if (!TutorialManager.CanPerformAction(TutorialAction.SelectRegion)) return;
 
+                    // during tutorial region steps, lock selection to the highlighted region so
+                    // the player can't pick a different one than the mascot is pointing at
+                    if (TutorialManager.IsActive && regionManager.TutorialTargetRegion != null && region != regionManager.TutorialTargetRegion) return;
+
                     if (AudioManager.Instance != null)
                         AudioManager.Instance.PlaySFX(AudioManager.Instance.regionSelect);
                     regionManager.SelectedRegion = region;
@@ -112,6 +116,10 @@ public class RegionSelector : MonoBehaviour
 
         if (Mouse.current.rightButton.wasPressedThisFrame)
         {
+            // during tutorial card steps, don't let an accidental right-click in empty space
+            // deselect the region — the tutorial expects the card+region combo to stay committed
+            if (TutorialManager.IsActive && TutorialManager.HighlightedCardIndex >= 0) return;
+
             if (regionManager.SelectedRegion != null && AudioManager.Instance != null)
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.regionDeselect);
             regionManager.SelectedRegion = null;
@@ -167,6 +175,10 @@ public class RegionSelector : MonoBehaviour
                         // tutorial blocks region selection unless the current step asks for it
                         if (!TutorialManager.CanPerformAction(TutorialAction.SelectRegion)) return;
 
+                        // during tutorial region steps, lock selection to the highlighted region so
+                        // the player can't pick a different one than the mascot is pointing at
+                        if (TutorialManager.IsActive && regionManager.TutorialTargetRegion != null && region != regionManager.TutorialTargetRegion) return;
+
                         if (AudioManager.Instance != null)
                             AudioManager.Instance.PlaySFX(AudioManager.Instance.regionSelect);
                         regionManager.SelectedRegion = region;
@@ -187,6 +199,10 @@ public class RegionSelector : MonoBehaviour
         // tap empty space to deselect and unfocus
         if (touch.phase == UnityEngine.InputSystem.TouchPhase.Ended)
         {
+            // during tutorial card steps, lock the region so an accidental tap in empty space
+            // doesn't break the card+region combo the tutorial expects
+            if (TutorialManager.IsActive && TutorialManager.HighlightedCardIndex >= 0) return;
+
             if (regionManager.SelectedRegion != null && AudioManager.Instance != null)
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.regionDeselect);
             regionManager.SelectedRegion = null;

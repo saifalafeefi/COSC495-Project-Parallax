@@ -1227,9 +1227,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TutorialManager
   mascotSprite: {fileID: 21300000, guid: 013fcca8a89abb646b6cd644f21639c3, type: 3}
-  mascotSize: 400
+  mascotSize: 500
   mascotOffsetX: -741.2
-  mascotOffsetY: -60
+  mascotOffsetY: -36.5
   mascotSlideSpeed: 4
   mascotBobSpeed: 1.5
   mascotBobAmount: 8
@@ -1243,6 +1243,7 @@ MonoBehaviour:
   textboxWidth: 680
   textboxHeight: 172
   textboxPosition: {x: -546.7, y: -282.3}
+  textboxSlideSpeed: 6
   messageFontSize: 24
   nextButtonFontSize: 20
   nextButtonSize: {x: 140, y: 40}
@@ -1252,50 +1253,178 @@ MonoBehaviour:
     requiredAction: 0
     allowFreeInteraction: 0
     showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: -330, y: 17}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: 200, y: 15}
   - mascotText: Our goal here is to minimize the carbon levels on earth while increasing
       the economy and stability of regions.
     requiredAction: 0
     allowFreeInteraction: 0
     showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: -330, y: 17}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: 200, y: 15}
   - mascotText: Try orbiting the earth! (hold LMB)
     requiredAction: 1
     allowFreeInteraction: 0
     showNextButton: 1
+    overrideMascotPosition: 0
+    mascotPosition: {x: -640, y: -60}
+    overrideTextboxPosition: 0
+    textboxPositionStep: {x: -150, y: -80}
   - mascotText: You can also zoom in/out of the earth (Scroll wheel).
     requiredAction: 2
     allowFreeInteraction: 0
     showNextButton: 1
+    overrideMascotPosition: 0
+    mascotPosition: {x: -640, y: -60}
+    overrideTextboxPosition: 0
+    textboxPositionStep: {x: -150, y: -80}
   - mascotText: On the top bar, you will have the number of rounds, capital, and
       funds. As well as the global stats (Carbon, Economy, and Stability).
     requiredAction: 0
     allowFreeInteraction: 0
     showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: -750, y: 240}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: -200, y: 320}
   - mascotText: Now, select the highlighted region to inspect it (RMB).
     requiredAction: 3
     allowFreeInteraction: 0
     showNextButton: 0
+    overrideMascotPosition: 0
+    mascotPosition: {x: -640, y: -60}
+    overrideTextboxPosition: 0
+    textboxPositionStep: {x: -150, y: -80}
   - mascotText: Here you can see general information about the selected region.
     requiredAction: 0
     allowFreeInteraction: 0
     showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: -406, y: -60}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: -570, y: -328}
   - mascotText: You will have policy actions card that improve certain stats on the
       region.
     requiredAction: 0
     allowFreeInteraction: 0
     showNextButton: 0
-  - mascotText: Select the highlighted card.
+    overrideMascotPosition: 1
+    mascotPosition: {x: -600, y: -370}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: 10, y: -66}
+  - mascotText: Select the highlighted card (LMB).
     requiredAction: 4
     allowFreeInteraction: 0
     showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: -600, y: -370}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: 10, y: -66}
   - mascotText: Great! Now, cards can have certain trait bonuses that could either
       positively or negatively affect a region.
     requiredAction: 0
     allowFreeInteraction: 0
     showNextButton: 0
-  - mascotText: The card you have selected
+    overrideMascotPosition: 1
+    mascotPosition: {x: 732.51, y: -347.1}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: 211.8, y: -251.1}
+  - mascotText: The color borders around the card indicate which region its best
+      for (solid black if it has no trait effects)
     requiredAction: 0
     allowFreeInteraction: 0
     showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: 732.51, y: -347.1}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: 211.8, y: -251.1}
+  - mascotText: Play the card you have selected (LMB)
+    requiredAction: 5
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: 732.51, y: -347.1}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: 211.8, y: -251.1}
+  - mascotText: Global Reforestation Pact is one of the rare cards, as it improves
+      all stats!
+    requiredAction: 0
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: 732.51, y: -347.1}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: 211.8, y: -251.1}
+  - mascotText: But rare cards use more capital. And in our case, we've spent 4 capital
+      points.
+    requiredAction: 0
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: 732.51, y: -347.1}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: 211.8, y: -251.1}
+  - mascotText: You can skip rounds if there's insufficient capital. But skipping
+      otherwise would give a penalty but give a random capital bonus.
+    requiredAction: 0
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: 732.51, y: -347.1}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: 211.8, y: -251.1}
+  - mascotText: For this tutorial, you wont be penalized. So go ahead an skip the
+      round by clicking on the red skip button here.
+    requiredAction: 6
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: -304.6, y: 241.7}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: 211.8, y: 317.4}
+  - mascotText: Oh! An event occured!
+    requiredAction: 0
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: 732.51, y: -347.1}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: 211.8, y: -251.1}
+  - mascotText: You can check the event details and affected regions in the DASHBOARD.
+    requiredAction: 8
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: 732.51, y: -347.1}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: 211.8, y: -251.1}
+  - mascotText: Open the moon shop
+    requiredAction: 7
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: 732.51, y: -347.1}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: 211.8, y: -251.1}
+  - mascotText: 'Buy a card with the funds '
+    requiredAction: 9
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: 732.51, y: -347.1}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: 211.8, y: -251.1}
+  regionHighlightTrait: 0
+  scriptedStartingHand:
+  - {fileID: 11400000, guid: 24dcb5e0147b1df4e96be66fb7f8b447, type: 2}
+  - {fileID: 11400000, guid: f2b854584edfc6b498c8a3708883b175, type: 2}
+  - {fileID: 11400000, guid: 7cf207b5858e32d44b0a2047b2890c01, type: 2}
+  - {fileID: 11400000, guid: 0d16b948c2de36d4c97a19c49738c2e0, type: 2}
+  - {fileID: 11400000, guid: 1194cf6c46bea2647980aedb80ee98da, type: 2}
   orbitDragThresholdSqr: 5000
   farewellMessage: Good luck!
   farewellDuration: 2.5

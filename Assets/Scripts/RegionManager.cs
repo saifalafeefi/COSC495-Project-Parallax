@@ -107,6 +107,12 @@ public class RegionManager : MonoBehaviour
         new StatusBorderConfig { width = 20f, height = 60f, color = new Color(1f, 0.1f, 0.05f, 0.25f) }
     };
 
+    [Header("Tutorial Highlight")]
+    [Tooltip("speed of the tutorial highlight pulse")]
+    [SerializeField] private float tutorialPulseSpeed = 4f;
+    [Tooltip("add one entry per ring. each entry has its own width (thickness), height (float above surface), and color. empty array = no highlight drawn")]
+    [SerializeField] private StatusBorderConfig[] tutorialBorders = new StatusBorderConfig[0];
+
     private GameObject highlightObject;
     private MeshFilter highlightMeshFilter;
     private Material highlightMat;
@@ -122,6 +128,9 @@ public class RegionManager : MonoBehaviour
     // one overlay object per border ring per status level
     private List<PulseLayer> stressedLayers = new List<PulseLayer>();
     private List<PulseLayer> crisisLayers = new List<PulseLayer>();
+    // pulse layers for the single region the tutorial is pointing at (null = no target)
+    private List<PulseLayer> tutorialLayers = new List<PulseLayer>();
+    private Region tutorialTargetRegion;
 
     private GameManager gameManager;
 
@@ -220,6 +229,35 @@ public class RegionManager : MonoBehaviour
 
         UpdatePulseLayers(stressedLayers, stressedBorders, stressedRegions, pulse);
         UpdatePulseLayers(crisisLayers, crisisBorders, crisisRegions, fastPulse);
+
+        // tutorial target: single region, independent pulse speed so it reads separately from status
+        var tutorialRegions = new List<Region>();
+        if (tutorialTargetRegion != null) tutorialRegions.Add(tutorialTargetRegion);
+        float tutorialPulse = (Mathf.Sin(Time.time * tutorialPulseSpeed) + 1f) / 2f;
+        UpdatePulseLayers(tutorialLayers, tutorialBorders, tutorialRegions, tutorialPulse);
+    }
+
+    // tutorial calls these to aim the highlight at a specific region, or clear it
+    public void SetTutorialTargetRegion(Region region)
+    {
+        tutorialTargetRegion = region;
+    }
+
+    public void ClearTutorialTargetRegion()
+    {
+        tutorialTargetRegion = null;
+    }
+
+    // RegionSelector reads this to lock selection to the highlighted region during tutorial steps
+    public Region TutorialTargetRegion => tutorialTargetRegion;
+
+    // find the first region matching a trait — tutorial uses this to pick a target by trait name
+    public Region FindFirstRegionByTrait(RegionTrait trait)
+    {
+        if (Regions == null) return null;
+        foreach (var r in Regions)
+            if (r.Trait == trait) return r;
+        return null;
     }
 
     void UpdatePulseLayers(List<PulseLayer> layers, StatusBorderConfig[] configs, List<Region> regions, float pulse)
@@ -1100,6 +1138,9 @@ public class RegionManager : MonoBehaviour
             stressedLayers.Add(CreatePulseLayer($"StressedBorder_{stressedLayers.Count}", config.color, queue++));
         foreach (var config in crisisBorders)
             crisisLayers.Add(CreatePulseLayer($"CrisisBorder_{crisisLayers.Count}", config.color, queue++));
+        // tutorial layers render on top of status pulses so they read clearly during the tutorial
+        foreach (var config in tutorialBorders)
+            tutorialLayers.Add(CreatePulseLayer($"TutorialBorder_{tutorialLayers.Count}", config.color, queue++));
     }
 
     void SetupTraitDividerOverlay(Transform overlayParent)

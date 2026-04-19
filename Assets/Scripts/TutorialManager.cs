@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using TMPro;
@@ -49,7 +50,19 @@ public class TutorialManager : MonoBehaviour
 
         [Tooltip("show the Next button even when this step has a required action, so the player can skip ahead without performing it. None steps always show the Next button regardless")]
         public bool showNextButton = false;
+
+        [Header("Per-Step Position Override (optional)")]
+        [Tooltip("when true, mascotPosition below overrides the default mascot position for this step")]
+        public bool overrideMascotPosition = false;
+        [Tooltip("mascot offset from screen center (only applied when overrideMascotPosition is true)")]
+        public Vector2 mascotPosition = new Vector2(-640f, -60f);
+
+        [Tooltip("when true, textboxPosition below overrides the default textbox position for this step")]
+        public bool overrideTextboxPosition = false;
+        [Tooltip("textbox offset from screen center (only applied when overrideTextboxPosition is true)")]
+        public Vector2 textboxPositionStep = new Vector2(-150f, -80f);
     }
+
 
     [Header("Mascot Sprite")]
     [Tooltip("drag the same shopkeeper idle sprite used by ShopDisplay")]
@@ -75,6 +88,8 @@ public class TutorialManager : MonoBehaviour
     [SerializeField] private float textboxHeight = 220f;
     [Tooltip("textbox anchored position relative to screen center")]
     [SerializeField] private Vector2 textboxPosition = new Vector2(-150f, -80f);
+    [Tooltip("how fast the textbox glides between per-step positions. higher = snappier")]
+    [SerializeField] private float textboxSlideSpeed = 6f;
     [SerializeField] private float messageFontSize = 24f;
     [SerializeField] private float nextButtonFontSize = 20f;
     [SerializeField] private Vector2 nextButtonSize = new Vector2(140f, 40f);
@@ -83,6 +98,14 @@ public class TutorialManager : MonoBehaviour
     [Header("Steps")]
     [Tooltip("the full ordered list of tutorial steps — edit in Inspector")]
     [SerializeField] private List<TutorialStep> steps = new List<TutorialStep>();
+
+    [Header("Highlight")]
+    [Tooltip("trait of the region to pulse whenever the current step is waiting on SelectRegion. first region with this trait is the target")]
+    [SerializeField] private RegionTrait regionHighlightTrait = RegionTrait.Temperate;
+
+    [Header("Scripted Hand")]
+    [Tooltip("drag in the exact policy cards (in order) the player should see at the start of the tutorial. index 0 is the leftmost card. leave empty for a normal random draw")]
+    [SerializeField] private List<PolicyData> scriptedStartingHand = new List<PolicyData>();
 
     [Header("Input Thresholds")]
     [Tooltip("how far the mouse must move in a single frame (squared pixels) before an orbit counts as a real drag. higher = more forgiving, ignores clicks and tiny jitter. 1600 = 40px")]
@@ -108,9 +131,21 @@ public class TutorialManager : MonoBehaviour
     TMP_Text nextButtonLabelText;
 
     float mascotSlideT;
+    float mascotFadeT;
+    Vector2 mascotSlideFrom;
+    Vector2 mascotSlideTo;
+    Vector2 textboxSlideFrom;
+    Vector2 textboxSlideTo;
+    float textboxSlideT;
+    bool mascotSlideInitialized;
+    bool textboxSlideInitialized;
     int currentStep;
     bool ending;
     float endTime;
+    // set when the current step is waiting on the skip flow to finish (popup -> event banner -> next round)
+    // during this window the mascot + textbox are hidden and the step advance is deferred until
+    // GameManager calls NotifyRoundStarted
+    bool waitingForRoundStart;
 
     void Start()
     {
@@ -131,6 +166,11 @@ public class TutorialManager : MonoBehaviour
     {
         if (instance == this) instance = null;
         IsActive = false;
+        HighlightedCardIndex = -1;
+
+        // make sure the region pulse doesn't hang around into the main menu
+        var rm = FindFirstObjectByType<RegionManager>();
+        if (rm != null) rm.ClearTutorialTargetRegion();
     }
 
     void Update()
@@ -139,6 +179,14 @@ public class TutorialManager : MonoBehaviour
         ApplyLiveSettings();
 
         UpdateMascot();
+
+        // spacebar shortcut for Next — only when the Next button is actually showing, so it
+        // can't be used to bypass action-gated steps that hide Next
+        if (!ending && !PauseMenu.IsPaused && nextButton != null && nextButton.gameObject.activeSelf
+            && Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
+        {
+            OnNext();
+        }
 
         // after the farewell has been on screen long enough, go back to main menu
         if (ending && Time.unscaledTime - endTime >= farewellDuration)
@@ -158,10 +206,17 @@ public class TutorialManager : MonoBehaviour
         if (mascotImage != null && mascotImage.sprite != mascotSprite)
             mascotImage.sprite = mascotSprite;
 
-        // textbox panel
+        // textbox panel — same slide pattern as the mascot so live inspector tweaks snap instantly
+        // once the transition finishes (EaseOutCubic at t=1 returns the target exactly)
         if (textboxRect != null)
         {
-            textboxRect.anchoredPosition = textboxPosition;
+            textboxSlideTo = ResolveTextboxTarget(CurrentStepData());
+            if (textboxSlideT < 1f)
+            {
+                textboxSlideT += Time.unscaledDeltaTime * textboxSlideSpeed;
+                if (textboxSlideT > 1f) textboxSlideT = 1f;
+            }
+            textboxRect.anchoredPosition = Vector2.Lerp(textboxSlideFrom, textboxSlideTo, EaseOutCubic(textboxSlideT));
             textboxRect.sizeDelta = new Vector2(textboxWidth, textboxHeight);
         }
         if (textboxBg != null)
@@ -241,20 +296,27 @@ public class TutorialManager : MonoBehaviour
     {
         if (mascotRect == null) return;
 
-        // slide in from the left with ease-out cubic
+        // re-read the step's target every frame so inspector tuning and per-step overrides both apply live
+        mascotSlideTo = ResolveMascotTarget(CurrentStepData());
+
+        // slide from the current "from" toward the latest target with ease-out cubic
         if (mascotSlideT < 1f)
         {
             mascotSlideT += Time.unscaledDeltaTime * mascotSlideSpeed;
             if (mascotSlideT > 1f) mascotSlideT = 1f;
         }
-        float eased = 1f - (1f - mascotSlideT) * (1f - mascotSlideT) * (1f - mascotSlideT);
-        float slideX = Mathf.Lerp(mascotOffsetX - 600f, mascotOffsetX, eased);
+        Vector2 settled = Vector2.Lerp(mascotSlideFrom, mascotSlideTo, EaseOutCubic(mascotSlideT));
 
-        // fade opacity in step with the slide
+        // fade runs on its own clock so step transitions don't re-trigger it
+        if (mascotFadeT < 1f)
+        {
+            mascotFadeT += Time.unscaledDeltaTime * mascotSlideSpeed;
+            if (mascotFadeT > 1f) mascotFadeT = 1f;
+        }
         if (mascotImage != null)
         {
             Color c = mascotImage.color;
-            c.a = eased;
+            c.a = EaseOutCubic(mascotFadeT);
             mascotImage.color = c;
         }
 
@@ -263,7 +325,7 @@ public class TutorialManager : MonoBehaviour
         // sway tilt with a slightly different frequency so it doesn't sync with the bob
         float sway = Mathf.Sin(Time.unscaledTime * mascotSwaySpeed * 0.7f) * mascotSwayAngle;
 
-        mascotRect.anchoredPosition = new Vector2(slideX, mascotOffsetY + bob);
+        mascotRect.anchoredPosition = new Vector2(settled.x, settled.y + bob);
         mascotRect.localRotation = Quaternion.Euler(0f, 0f, sway);
     }
 
@@ -357,6 +419,60 @@ public class TutorialManager : MonoBehaviour
         // via showNextButton so the player can advance past open-ended prompts (like orbit)
         if (nextButton != null)
             nextButton.gameObject.SetActive(step.requiredAction == TutorialAction.None || step.showNextButton);
+
+        // glide mascot and textbox to this step's target positions
+        Vector2 mascotTarget = ResolveMascotTarget(step);
+        if (!mascotSlideInitialized)
+        {
+            // first step — start offscreen so the mascot slides in with the fade
+            mascotSlideFrom = new Vector2(mascotTarget.x - 600f, mascotTarget.y);
+            mascotSlideInitialized = true;
+        }
+        else
+        {
+            // snapshot wherever the mascot currently sits so the new slide starts from there
+            mascotSlideFrom = Vector2.Lerp(mascotSlideFrom, mascotSlideTo, EaseOutCubic(mascotSlideT));
+        }
+        mascotSlideTo = mascotTarget;
+        mascotSlideT = 0f;
+
+        Vector2 textboxTarget = ResolveTextboxTarget(step);
+        if (!textboxSlideInitialized)
+        {
+            // first step — textbox simply appears at the target, no slide-in
+            textboxSlideFrom = textboxTarget;
+            textboxSlideInitialized = true;
+        }
+        else
+        {
+            // snapshot current textbox position so the new slide starts from there
+            textboxSlideFrom = Vector2.Lerp(textboxSlideFrom, textboxSlideTo, EaseOutCubic(textboxSlideT));
+        }
+        textboxSlideTo = textboxTarget;
+        textboxSlideT = 0f;
+
+        ApplyScriptedHighlight(index);
+    }
+
+    // highlights are driven by the current step's requiredAction:
+    //   SelectRegion -> pulse the region matching regionHighlightTrait
+    //   SelectCard / PlayCard -> glow the first card in hand (the textbox always describes that card)
+    // anything else clears both highlights
+    void ApplyScriptedHighlight(int stepIdx)
+    {
+        if (steps == null || stepIdx < 0 || stepIdx >= steps.Count) return;
+        var action = steps[stepIdx].requiredAction;
+
+        var rm = FindFirstObjectByType<RegionManager>();
+        if (rm != null)
+        {
+            if (action == TutorialAction.SelectRegion)
+                rm.SetTutorialTargetRegion(rm.FindFirstRegionByTrait(regionHighlightTrait));
+            else
+                rm.ClearTutorialTargetRegion();
+        }
+
+        HighlightedCardIndex = (action == TutorialAction.SelectCard || action == TutorialAction.PlayCard) ? 0 : -1;
     }
 
     void OnNext()
@@ -389,6 +505,30 @@ public class TutorialManager : MonoBehaviour
             if (instance == null) return 1600f;
             return instance.orbitDragThresholdSqr;
         }
+    }
+
+    // HandDisplay reads this every frame to know which card slot in the hand to glow
+    // -1 = no card highlighted
+    public static int HighlightedCardIndex { get; private set; } = -1;
+
+    // gameplay scripts read this to branch behavior by the current step's required action
+    // (e.g. skipping a round during the SkipRound tutorial step shouldn't trigger the wasteful penalty)
+    public static TutorialAction CurrentStepAction
+    {
+        get
+        {
+            if (!IsActive || instance == null) return TutorialAction.None;
+            var step = instance.CurrentStepData();
+            return step != null ? step.requiredAction : TutorialAction.None;
+        }
+    }
+
+    // GameManager calls this when building round 1's hand. returns null when the tutorial isn't active or no hand was configured
+    public static List<PolicyData> GetScriptedStartingHand()
+    {
+        if (!IsActive || instance == null) return null;
+        if (instance.scriptedStartingHand == null || instance.scriptedStartingHand.Count == 0) return null;
+        return instance.scriptedStartingHand;
     }
 
     bool CurrentStepAllows(TutorialAction action)
@@ -425,12 +565,60 @@ public class TutorialManager : MonoBehaviour
         // this prevents accidental skips on open-ended prompts like "orbit the earth"
         if (step.showNextButton) return;
 
+        // SkipRound triggers a multi-stage sequence (confirm popup -> event banner -> EndRound -> StartRound).
+        // hide the tutorial UI and wait for GameManager to tell us the next round has actually started,
+        // so the mascot doesn't float on top of the event banner or show the next step's text prematurely
+        if (action == TutorialAction.SkipRound)
+        {
+            waitingForRoundStart = true;
+            if (root != null) root.SetActive(false);
+            return;
+        }
+
         // action matched — advance to the next step, or end if we're at the last one
         int next = currentStep + 1;
         if (next >= steps.Count)
             EndTutorial();
         else
             ShowStep(next);
+    }
+
+    // GameManager calls this at the end of StartRound. if the tutorial is waiting after a scripted
+    // SkipRound, this is the signal to unhide the mascot and advance to the next step
+    public static void NotifyRoundStarted()
+    {
+        if (!IsActive || instance == null) return;
+        if (!instance.waitingForRoundStart) return;
+        instance.waitingForRoundStart = false;
+        if (instance.root != null) instance.root.SetActive(true);
+        int next = instance.currentStep + 1;
+        if (next >= instance.steps.Count)
+            instance.EndTutorial();
+        else
+            instance.ShowStep(next);
+    }
+
+    TutorialStep CurrentStepData()
+    {
+        if (steps == null || currentStep < 0 || currentStep >= steps.Count) return null;
+        return steps[currentStep];
+    }
+
+    Vector2 ResolveMascotTarget(TutorialStep step)
+    {
+        if (step != null && step.overrideMascotPosition) return step.mascotPosition;
+        return new Vector2(mascotOffsetX, mascotOffsetY);
+    }
+
+    Vector2 ResolveTextboxTarget(TutorialStep step)
+    {
+        if (step != null && step.overrideTextboxPosition) return step.textboxPositionStep;
+        return textboxPosition;
+    }
+
+    static float EaseOutCubic(float t)
+    {
+        return 1f - (1f - t) * (1f - t) * (1f - t);
     }
 
     void EndTutorial()
@@ -441,6 +629,11 @@ public class TutorialManager : MonoBehaviour
         // hide the Next button during the farewell
         if (nextButton != null)
             nextButton.gameObject.SetActive(false);
+
+        // drop any active highlight so the farewell moment reads cleanly
+        var rm = FindFirstObjectByType<RegionManager>();
+        if (rm != null) rm.ClearTutorialTargetRegion();
+        HighlightedCardIndex = -1;
 
         ending = true;
         endTime = Time.unscaledTime;

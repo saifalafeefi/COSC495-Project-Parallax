@@ -98,6 +98,11 @@ MonoBehaviour:
   - width: 25
     height: 40
     color: {r: 1, g: 0.1, b: 0.05, a: 0.25}
+  tutorialPulseSpeed: 10
+  tutorialBorders:
+  - width: 28
+    height: 70
+    color: {r: 0, g: 1, b: 0.14361954, a: 0.35}
 --- !u!1001 &220294732692016478
 PrefabInstance:
   m_ObjectHideFlags: 0
