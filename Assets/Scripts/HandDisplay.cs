@@ -42,17 +42,8 @@ public class HandDisplay : MonoBehaviour
     [SerializeField] private float shopSlideDistance = 400f;
     [SerializeField] private float shopSlideSpeed = 6f;
 
-    [Header("Tutorial Card Glow")]
-    [Tooltip("color of the pulsing glow around a card the tutorial is pointing at")]
-    [SerializeField] private Color tutorialGlowColor = new Color(1f, 0.95f, 0.3f, 1f);
-    [Tooltip("how far the glow extends outside the card edges in pixels")]
-    [SerializeField] private float tutorialGlowPadding = 18f;
-    [Tooltip("minimum alpha of the glow pulse")]
-    [SerializeField, Range(0f, 1f)] private float tutorialGlowMinAlpha = 0.25f;
-    [Tooltip("maximum alpha of the glow pulse")]
-    [SerializeField, Range(0f, 1f)] private float tutorialGlowMaxAlpha = 0.9f;
-    [Tooltip("how fast the glow breathes")]
-    [SerializeField] private float tutorialGlowPulseSpeed = 4f;
+    // tutorial card glow color, padding, pulse speed, and alpha range are all driven by
+    // TutorialManager's Global Highlight Style — edit them in one place on the tutorial object
 
     private GameManager gameManager;
     private RegionManager regionManager;
@@ -187,19 +178,27 @@ public class HandDisplay : MonoBehaviour
     }
 
     // animates the per-card tutorial glow — pulsing when the card index matches the tutorial's target slot, transparent otherwise
+    // style (color / alpha pulse / speed) is read from TutorialManager's Global Highlight Style every frame
+    // so live inspector tweaks on the tutorial object apply immediately
     void UpdateTutorialGlows()
     {
         int target = TutorialManager.HighlightedCardIndex;
-        float pulse = (Mathf.Sin(Time.time * tutorialGlowPulseSpeed) + 1f) / 2f;
-        float alpha = Mathf.Lerp(tutorialGlowMinAlpha, tutorialGlowMaxAlpha, pulse);
+        Color glowColor = TutorialManager.GlobalHighlightColor;
+        float pulse = (Mathf.Sin(Time.time * TutorialManager.GlobalHighlightPulseSpeed) + 1f) / 2f;
+        float alpha = Mathf.Lerp(TutorialManager.GlobalHighlightMinAlpha, TutorialManager.GlobalHighlightMaxAlpha, pulse);
+        float pad = TutorialManager.GlobalHighlightPadding;
 
         for (int i = 0; i < cardTutorialGlows.Count; i++)
         {
             var img = cardTutorialGlows[i];
             if (img == null) continue;
 
+            // live padding so the glow reflects Global Highlight Padding tweaks instantly
+            img.rectTransform.offsetMin = new Vector2(-pad, -pad);
+            img.rectTransform.offsetMax = new Vector2(pad, pad);
+
             float a = (i == target) ? alpha : 0f;
-            img.color = new Color(tutorialGlowColor.r, tutorialGlowColor.g, tutorialGlowColor.b, a);
+            img.color = new Color(glowColor.r, glowColor.g, glowColor.b, a);
         }
     }
 
@@ -566,17 +565,19 @@ public class HandDisplay : MonoBehaviour
         var borderImg = card.AddComponent<Image>();
         borderImg.color = Color.clear;
 
-        // tutorial glow sits behind everything, extends past the card edges by tutorialGlowPadding
-        // disabled by default — Update() enables and pulses it when this card is the tutorial target
+        // tutorial glow sits behind everything, extends past the card edges by TutorialManager's global padding
+        // disabled by default — UpdateTutorialGlows() pulses it live and keeps the padding in sync
+        float glowPad = TutorialManager.GlobalHighlightPadding;
+        Color glowCol = TutorialManager.GlobalHighlightColor;
         var glowObj = new GameObject("TutorialGlow");
         glowObj.transform.SetParent(card.transform, false);
         var glowRect = glowObj.AddComponent<RectTransform>();
         glowRect.anchorMin = Vector2.zero;
         glowRect.anchorMax = Vector2.one;
-        glowRect.offsetMin = new Vector2(-tutorialGlowPadding, -tutorialGlowPadding);
-        glowRect.offsetMax = new Vector2(tutorialGlowPadding, tutorialGlowPadding);
+        glowRect.offsetMin = new Vector2(-glowPad, -glowPad);
+        glowRect.offsetMax = new Vector2(glowPad, glowPad);
         var glowImg = glowObj.AddComponent<Image>();
-        glowImg.color = new Color(tutorialGlowColor.r, tutorialGlowColor.g, tutorialGlowColor.b, 0f);
+        glowImg.color = new Color(glowCol.r, glowCol.g, glowCol.b, 0f);
         glowImg.raycastTarget = false;
         glowObj.transform.SetAsFirstSibling();
         cardTutorialGlows.Add(glowImg);

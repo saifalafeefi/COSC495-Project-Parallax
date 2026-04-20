@@ -22,6 +22,9 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     [Tooltip("what this tab button does when clicked")]
     [SerializeField] private TabAction action = TabAction.None;
 
+    // the tutorial reads this to find and highlight specific tab buttons by action
+    public TabAction Action => action;
+
     [Header("Hover")]
     [Tooltip("disable hover slide-in/out (for buttons that should always be fully visible)")]
     [SerializeField] private bool disableHover = false;
@@ -159,10 +162,12 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
                 }
                 break;
             case TabAction.Dashboard:
-                // close is always allowed; open is gated by the tutorial
+                // both open and close are gated by the tutorial so the mascot can script each step
                 if (gameManager.DashboardActive)
                 {
+                    if (!TutorialManager.CanPerformAction(TutorialAction.CloseDashboard)) return;
                     gameManager.CloseDashboard();
+                    TutorialManager.NotifyAction(TutorialAction.CloseDashboard);
                 }
                 else
                 {

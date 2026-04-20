@@ -312,7 +312,11 @@ public class DashboardDisplay : MonoBehaviour
         closeBg.color = new Color(0.4f, 0.2f, 0.2f, 0.9f);
         var btn = closeBtn.AddComponent<Button>();
         btn.targetGraphic = closeBg;
-        btn.onClick.AddListener(() => gameManager.CloseDashboard());
+        btn.onClick.AddListener(() => {
+            if (!TutorialManager.CanPerformAction(TutorialAction.CloseDashboard)) return;
+            gameManager.CloseDashboard();
+            TutorialManager.NotifyAction(TutorialAction.CloseDashboard);
+        });
         var closeText = CreateText(closeBtn, "X", 18, TextAlignmentOptions.Center, Color.white);
         closeText.fontStyle = FontStyles.Bold;
         StretchFill(closeText.gameObject);

@@ -824,6 +824,15 @@ public class GameManager : MonoBehaviour
             Debug.Log($"[GameManager] net-positive round! carbon {snapshotGlobalCarbon:F1} → {endCarbon:F1} (drop: {carbonDrop:F1}, threshold: {rewardCarbonThreshold})");
         }
 
+        // tutorial override: the scripted skip-round step needs a guaranteed reward popup so the
+        // next step (PickReward) always has something to point at, regardless of what the random
+        // event did to global carbon
+        if (TutorialManager.CurrentStepAction == TutorialAction.SkipRound && TutorialManager.ForceRewardAfterSkipRound)
+        {
+            rewardPending = true;
+            Debug.Log("[GameManager] tutorial: forcing reward popup after scripted skip-round");
+        }
+
         // show event banners before starting the next round
         if (pendingBannerEvents.Count > 0)
         {
@@ -1175,6 +1184,18 @@ public class GameManager : MonoBehaviour
     void GenerateRewardChoices()
     {
         RewardChoices.Clear();
+
+        // tutorial override: use the exact reward cards the designer configured, in order
+        var scripted = TutorialManager.GetScriptedRewardChoices();
+        if (scripted != null && scripted.Count > 0)
+        {
+            foreach (var p in scripted)
+            {
+                if (p != null) RewardChoices.Add(p);
+            }
+            return;
+        }
+
         if (allPolicies == null || allPolicies.Length == 0) return;
 
         for (int i = 0; i < 3; i++)

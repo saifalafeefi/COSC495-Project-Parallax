@@ -561,6 +561,7 @@ MonoBehaviour:
   buttonWidth: 160
   buttonHeight: 50
   buttonSpacing: 30
+  tutorialDisabledAlpha: 0.35
 --- !u!1 &207634236
 GameObject:
   m_ObjectHideFlags: 0
@@ -1257,6 +1258,8 @@ MonoBehaviour:
     mascotPosition: {x: -330, y: 17}
     overrideTextboxPosition: 1
     textboxPositionStep: {x: 200, y: 15}
+    showCustomHighlights: 0
+    customHighlights: []
   - mascotText: Our goal here is to minimize the carbon levels on earth while increasing
       the economy and stability of regions.
     requiredAction: 0
@@ -1266,6 +1269,8 @@ MonoBehaviour:
     mascotPosition: {x: -330, y: 17}
     overrideTextboxPosition: 1
     textboxPositionStep: {x: 200, y: 15}
+    showCustomHighlights: 0
+    customHighlights: []
   - mascotText: Try orbiting the earth! (hold LMB)
     requiredAction: 1
     allowFreeInteraction: 0
@@ -1274,6 +1279,8 @@ MonoBehaviour:
     mascotPosition: {x: -640, y: -60}
     overrideTextboxPosition: 0
     textboxPositionStep: {x: -150, y: -80}
+    showCustomHighlights: 0
+    customHighlights: []
   - mascotText: You can also zoom in/out of the earth (Scroll wheel).
     requiredAction: 2
     allowFreeInteraction: 0
@@ -1282,6 +1289,8 @@ MonoBehaviour:
     mascotPosition: {x: -640, y: -60}
     overrideTextboxPosition: 0
     textboxPositionStep: {x: -150, y: -80}
+    showCustomHighlights: 0
+    customHighlights: []
   - mascotText: On the top bar, you will have the number of rounds, capital, and
       funds. As well as the global stats (Carbon, Economy, and Stability).
     requiredAction: 0
@@ -1291,6 +1300,12 @@ MonoBehaviour:
     mascotPosition: {x: -750, y: 240}
     overrideTextboxPosition: 1
     textboxPositionStep: {x: -200, y: 320}
+    showCustomHighlights: 1
+    customHighlights:
+    - position: {x: -613.8, y: 464.7}
+      size: {x: 600, y: 75}
+    - position: {x: 735.1, y: 464.7}
+      size: {x: 350, y: 75}
   - mascotText: Now, select the highlighted region to inspect it (RMB).
     requiredAction: 3
     allowFreeInteraction: 0
@@ -1299,6 +1314,8 @@ MonoBehaviour:
     mascotPosition: {x: -640, y: -60}
     overrideTextboxPosition: 0
     textboxPositionStep: {x: -150, y: -80}
+    showCustomHighlights: 0
+    customHighlights: []
   - mascotText: Here you can see general information about the selected region.
     requiredAction: 0
     allowFreeInteraction: 0
@@ -1307,6 +1324,10 @@ MonoBehaviour:
     mascotPosition: {x: -406, y: -60}
     overrideTextboxPosition: 1
     textboxPositionStep: {x: -570, y: -328}
+    showCustomHighlights: 1
+    customHighlights:
+    - position: {x: -752.3, y: -72.8}
+      size: {x: 350, y: 250}
   - mascotText: You will have policy actions card that improve certain stats on the
       region.
     requiredAction: 0
@@ -1316,6 +1337,10 @@ MonoBehaviour:
     mascotPosition: {x: -600, y: -370}
     overrideTextboxPosition: 1
     textboxPositionStep: {x: 10, y: -66}
+    showCustomHighlights: 1
+    customHighlights:
+    - position: {x: 0, y: -431}
+      size: {x: 657.1, y: 208.2}
   - mascotText: Select the highlighted card (LMB).
     requiredAction: 4
     allowFreeInteraction: 0
@@ -1324,6 +1349,8 @@ MonoBehaviour:
     mascotPosition: {x: -600, y: -370}
     overrideTextboxPosition: 1
     textboxPositionStep: {x: 10, y: -66}
+    showCustomHighlights: 0
+    customHighlights: []
   - mascotText: Great! Now, cards can have certain trait bonuses that could either
       positively or negatively affect a region.
     requiredAction: 0
@@ -1333,6 +1360,10 @@ MonoBehaviour:
     mascotPosition: {x: 732.51, y: -347.1}
     overrideTextboxPosition: 1
     textboxPositionStep: {x: 211.8, y: -251.1}
+    showCustomHighlights: 1
+    customHighlights:
+    - position: {x: -339.9, y: -156.1}
+      size: {x: 197.6, y: 78.03}
   - mascotText: The color borders around the card indicate which region its best
       for (solid black if it has no trait effects)
     requiredAction: 0
@@ -1342,6 +1373,10 @@ MonoBehaviour:
     mascotPosition: {x: 732.51, y: -347.1}
     overrideTextboxPosition: 1
     textboxPositionStep: {x: 211.8, y: -251.1}
+    showCustomHighlights: 1
+    customHighlights:
+    - position: {x: -311.4, y: -297.3}
+      size: {x: 308.7, y: 435.7}
   - mascotText: Play the card you have selected (LMB)
     requiredAction: 5
     allowFreeInteraction: 0
@@ -1350,6 +1385,8 @@ MonoBehaviour:
     mascotPosition: {x: 732.51, y: -347.1}
     overrideTextboxPosition: 1
     textboxPositionStep: {x: 211.8, y: -251.1}
+    showCustomHighlights: 0
+    customHighlights: []
   - mascotText: Global Reforestation Pact is one of the rare cards, as it improves
       all stats!
     requiredAction: 0
@@ -1359,6 +1396,8 @@ MonoBehaviour:
     mascotPosition: {x: 732.51, y: -347.1}
     overrideTextboxPosition: 1
     textboxPositionStep: {x: 211.8, y: -251.1}
+    showCustomHighlights: 0
+    customHighlights: []
   - mascotText: But rare cards use more capital. And in our case, we've spent 4 capital
       points.
     requiredAction: 0
@@ -1368,6 +1407,8 @@ MonoBehaviour:
     mascotPosition: {x: 732.51, y: -347.1}
     overrideTextboxPosition: 1
     textboxPositionStep: {x: 211.8, y: -251.1}
+    showCustomHighlights: 0
+    customHighlights: []
   - mascotText: You can skip rounds if there's insufficient capital. But skipping
       otherwise would give a penalty but give a random capital bonus.
     requiredAction: 0
@@ -1377,6 +1418,8 @@ MonoBehaviour:
     mascotPosition: {x: 732.51, y: -347.1}
     overrideTextboxPosition: 1
     textboxPositionStep: {x: 211.8, y: -251.1}
+    showCustomHighlights: 0
+    customHighlights: []
   - mascotText: For this tutorial, you wont be penalized. So go ahead an skip the
       round by clicking on the red skip button here.
     requiredAction: 6
@@ -1386,6 +1429,8 @@ MonoBehaviour:
     mascotPosition: {x: -304.6, y: 241.7}
     overrideTextboxPosition: 1
     textboxPositionStep: {x: 211.8, y: 317.4}
+    showCustomHighlights: 0
+    customHighlights: []
   - mascotText: Oh! An event occured!
     requiredAction: 0
     allowFreeInteraction: 0
@@ -1394,30 +1439,108 @@ MonoBehaviour:
     mascotPosition: {x: 732.51, y: -347.1}
     overrideTextboxPosition: 1
     textboxPositionStep: {x: 211.8, y: -251.1}
+    showCustomHighlights: 0
+    customHighlights: []
+  - mascotText: We'll check it later. For now, you have the reward screen!
+    requiredAction: 0
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: 732.51, y: -347.1}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: 211.8, y: -251.1}
+    showCustomHighlights: 0
+    customHighlights: []
+  - mascotText: The reward screen occurs when the overall carbon levels have been
+      reduced below a threshold depending on difficulty
+    requiredAction: 0
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: 732.51, y: -347.1}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: 211.8, y: -251.1}
+    showCustomHighlights: 0
+    customHighlights: []
+  - mascotText: 'Pick the "Wind Farms" card '
+    requiredAction: 11
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: 732.51, y: -347.1}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: 211.8, y: -251.1}
+    showCustomHighlights: 0
+    customHighlights: []
   - mascotText: You can check the event details and affected regions in the DASHBOARD.
     requiredAction: 8
     allowFreeInteraction: 0
     showNextButton: 0
     overrideMascotPosition: 1
-    mascotPosition: {x: 732.51, y: -347.1}
+    mascotPosition: {x: 395.1, y: 351.4}
     overrideTextboxPosition: 1
-    textboxPositionStep: {x: 211.8, y: -251.1}
-  - mascotText: Open the moon shop
-    requiredAction: 7
+    textboxPositionStep: {x: 593.8, y: 111.5}
+    showCustomHighlights: 1
+    customHighlights:
+    - position: {x: 818, y: 346.2}
+      size: {x: 300, y: 83.24}
+  - mascotText: On the left side are the list of regions, and selecting each would
+      present their details and events they faced.
+    requiredAction: 0
     allowFreeInteraction: 0
     showNextButton: 0
     overrideMascotPosition: 1
-    mascotPosition: {x: 732.51, y: -347.1}
+    mascotPosition: {x: 755.9, y: -112.7}
     overrideTextboxPosition: 1
-    textboxPositionStep: {x: 211.8, y: -251.1}
-  - mascotText: 'Buy a card with the funds '
+    textboxPositionStep: {x: 243.7, y: -251.1}
+    showCustomHighlights: 1
+    customHighlights:
+    - position: {x: -421, y: 0}
+      size: {x: 550, y: 871.2}
+    - position: {x: 258.6, y: -123.66}
+      size: {x: 748.1, y: 511}
+  - mascotText: Close the DASHBOARD.
     requiredAction: 9
     allowFreeInteraction: 0
     showNextButton: 0
     overrideMascotPosition: 1
-    mascotPosition: {x: 732.51, y: -347.1}
+    mascotPosition: {x: 755.9, y: -112.7}
     overrideTextboxPosition: 1
-    textboxPositionStep: {x: 211.8, y: -251.1}
+    textboxPositionStep: {x: 243.7, y: -251.1}
+    showCustomHighlights: 0
+    customHighlights: []
+  - mascotText: 'Now, Funds are based on the economy of the regions. '
+    requiredAction: 0
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: -767.3, y: 241}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: -229.4, y: 315.6}
+    showCustomHighlights: 0
+    customHighlights: []
+  - mascotText: The higher the avg economy, the more Funds we receive at the start
+      of each round
+    requiredAction: 0
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: -767.3, y: 241}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: -229.4, y: 315.6}
+    showCustomHighlights: 0
+    customHighlights: []
+  - mascotText: With enough Funds, we can purchase cards from THE MOON shop (where
+      I reside!)
+    requiredAction: 7
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: 429.7, y: 367.6}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: 604.2, y: 126.4}
+    showCustomHighlights: 0
+    customHighlights: []
   regionHighlightTrait: 0
   scriptedStartingHand:
   - {fileID: 11400000, guid: 24dcb5e0147b1df4e96be66fb7f8b447, type: 2}
@@ -1425,6 +1548,18 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 7cf207b5858e32d44b0a2047b2890c01, type: 2}
   - {fileID: 11400000, guid: 0d16b948c2de36d4c97a19c49738c2e0, type: 2}
   - {fileID: 11400000, guid: 1194cf6c46bea2647980aedb80ee98da, type: 2}
+  forceRewardAfterSkipRound: 1
+  scriptedRewardChoices:
+  - {fileID: 11400000, guid: bf987123a88e6a14d8acd0289794b8ed, type: 2}
+  - {fileID: 11400000, guid: 63d275d83564fe443b4e4e13d8b7171a, type: 2}
+  - {fileID: 11400000, guid: 1194cf6c46bea2647980aedb80ee98da, type: 2}
+  scriptedRewardHighlightIndex: 1
+  globalHighlightColor: {r: 1, g: 0.95, b: 0.3, a: 1}
+  globalHighlightMinAlpha: 0.3
+  globalHighlightMaxAlpha: 1
+  globalHighlightPulseSpeed: 4
+  globalHighlightPadding: 14
+  globalHighlightBorderThickness: 4
   orbitDragThresholdSqr: 5000
   farewellMessage: Good luck!
   farewellDuration: 2.5

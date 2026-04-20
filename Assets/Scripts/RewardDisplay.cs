@@ -29,12 +29,16 @@ public class RewardDisplay : MonoBehaviour
     [SerializeField] private float dealDuration = 0.4f;
     [SerializeField] private float dealStagger = 0.1f;
 
+    // tutorial reward glow color, padding, pulse speed, and alpha range are all driven by
+    // TutorialManager's Global Highlight Style — edit them in one place on the tutorial object
+
     private GameManager gameManager;
     private GameObject root;
 
     private List<GameObject> cardObjects = new List<GameObject>();
     private List<RectTransform> cardRects = new List<RectTransform>();
     private List<TraitBorder> cardTraitBorders = new List<TraitBorder>();
+    private List<Image> cardTutorialGlows = new List<Image>();
 
     private int hoveredIndex = -1;
     private int selectedIndex = -1;
@@ -55,7 +59,36 @@ public class RewardDisplay : MonoBehaviour
             HideReward();
 
         if (showing)
+        {
             AnimateCards();
+            UpdateTutorialGlows();
+        }
+    }
+
+    void UpdateTutorialGlows()
+    {
+        int highlighted = TutorialManager.HighlightedRewardIndex;
+        Color glowColor = TutorialManager.GlobalHighlightColor;
+        float pulse = (Mathf.Sin(Time.time * TutorialManager.GlobalHighlightPulseSpeed) + 1f) * 0.5f;
+        float alpha = Mathf.Lerp(TutorialManager.GlobalHighlightMinAlpha, TutorialManager.GlobalHighlightMaxAlpha, pulse);
+        float pad = TutorialManager.GlobalHighlightPadding;
+
+        for (int i = 0; i < cardTutorialGlows.Count; i++)
+        {
+            var glow = cardTutorialGlows[i];
+            if (glow == null) continue;
+
+            // keep padding live so Global Highlight Padding tweaks apply instantly
+            glow.rectTransform.offsetMin = new Vector2(-pad, -pad);
+            glow.rectTransform.offsetMax = new Vector2(pad, pad);
+
+            var c = glow.color;
+            c.r = glowColor.r;
+            c.g = glowColor.g;
+            c.b = glowColor.b;
+            c.a = (TutorialManager.IsActive && i == highlighted) ? alpha : 0f;
+            glow.color = c;
+        }
     }
 
     void ShowReward()
@@ -136,6 +169,7 @@ public class RewardDisplay : MonoBehaviour
         cardObjects.Clear();
         cardRects.Clear();
         cardTraitBorders.Clear();
+        cardTutorialGlows.Clear();
 
         for (int i = 0; i < gameManager.RewardChoices.Count; i++)
         {
@@ -160,6 +194,7 @@ public class RewardDisplay : MonoBehaviour
         cardObjects.Clear();
         cardRects.Clear();
         cardTraitBorders.Clear();
+        cardTutorialGlows.Clear();
         hoveredIndex = -1;
         selectedIndex = -1;
 
@@ -264,6 +299,10 @@ public class RewardDisplay : MonoBehaviour
 
     public void OnCardClick(int index)
     {
+        // during tutorial, only allow clicking the scripted highlighted card
+        if (TutorialManager.IsActive && TutorialManager.HighlightedRewardIndex >= 0
+            && index != TutorialManager.HighlightedRewardIndex) return;
+
         if (selectedIndex == index)
         {
             // second click: confirm pick
@@ -343,6 +382,23 @@ public class RewardDisplay : MonoBehaviour
         // transparent root for raycast
         var borderImg = card.AddComponent<Image>();
         borderImg.color = Color.clear;
+
+        // tutorial glow — rendered behind everything else, extends past the card edges
+        // padding / color / pulse live on TutorialManager's Global Highlight Style
+        float gPad = TutorialManager.GlobalHighlightPadding;
+        Color gCol = TutorialManager.GlobalHighlightColor;
+        var glow = new GameObject("TutorialGlow");
+        glow.transform.SetParent(card.transform, false);
+        var glowRect = glow.AddComponent<RectTransform>();
+        glowRect.anchorMin = Vector2.zero;
+        glowRect.anchorMax = Vector2.one;
+        glowRect.offsetMin = new Vector2(-gPad, -gPad);
+        glowRect.offsetMax = new Vector2(gPad, gPad);
+        var glowImg = glow.AddComponent<Image>();
+        glowImg.color = new Color(gCol.r, gCol.g, gCol.b, 0f);
+        glowImg.raycastTarget = false;
+        glow.transform.SetAsFirstSibling();
+        cardTutorialGlows.Add(glowImg);
 
         // trait-colored border
         float thickness = TraitColorConfig.Instance != null ? TraitColorConfig.Instance.borderThickness : 4f;

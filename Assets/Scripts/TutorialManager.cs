@@ -18,9 +18,22 @@ public enum TutorialAction
     SkipRound,
     OpenShop,
     OpenDashboard,
+    CloseDashboard,
     BuyCard,
     PickReward,
     EndRoundNaturally
+}
+
+// a configurable rectangle drawn on top of the UI during a tutorial step,
+// used to point at buttons or UI elements the tutorial can't auto-highlight.
+// color / pulse / border thickness all come from TutorialManager's Global Highlight Style
+[System.Serializable]
+public class TutorialHighlightBox
+{
+    [Tooltip("anchored position relative to the screen center (1920x1080 reference)")]
+    public Vector2 position = Vector2.zero;
+    [Tooltip("size of the highlight box in pixels")]
+    public Vector2 size = new Vector2(120f, 60f);
 }
 
 // runtime-built scripted tutorial overlay
@@ -61,6 +74,12 @@ public class TutorialManager : MonoBehaviour
         public bool overrideTextboxPosition = false;
         [Tooltip("textbox offset from screen center (only applied when overrideTextboxPosition is true)")]
         public Vector2 textboxPositionStep = new Vector2(-150f, -80f);
+
+        [Header("Custom Highlight Boxes (optional)")]
+        [Tooltip("when true, the highlight boxes below are drawn on top of the UI for this step. works even for steps with no required action (e.g. just pointing at UI the player should look at)")]
+        public bool showCustomHighlights = false;
+        [Tooltip("one or more pulsing boxes pointing at buttons / UI elements the tutorial text describes")]
+        public List<TutorialHighlightBox> customHighlights = new List<TutorialHighlightBox>();
     }
 
 
@@ -107,6 +126,28 @@ public class TutorialManager : MonoBehaviour
     [Tooltip("drag in the exact policy cards (in order) the player should see at the start of the tutorial. index 0 is the leftmost card. leave empty for a normal random draw")]
     [SerializeField] private List<PolicyData> scriptedStartingHand = new List<PolicyData>();
 
+    [Header("Scripted Reward")]
+    [Tooltip("when true, the reward popup opens automatically after the tutorial's skip-round step regardless of whether the round was carbon-positive")]
+    [SerializeField] private bool forceRewardAfterSkipRound = true;
+    [Tooltip("exact reward cards to show when the reward popup opens during the tutorial. leave empty for a normal random reward draw")]
+    [SerializeField] private List<PolicyData> scriptedRewardChoices = new List<PolicyData>();
+    [Tooltip("which reward card index to glow during a PickReward step. -1 = no highlight. matches scriptedRewardChoices ordering")]
+    [SerializeField] private int scriptedRewardHighlightIndex = 0;
+
+    [Header("Global Highlight Style")]
+    [Tooltip("ONE place to tune every tutorial highlight — drives the hand card glow, reward card glow, Skip button glow, custom highlight boxes, and the region tutorial border rings. per-box and per-ring size stays local to each script, but color / alpha pulse / pulse speed / padding / border thickness all read from here")]
+    [SerializeField] private Color globalHighlightColor = new Color(1f, 0.95f, 0.3f, 1f);
+    [Tooltip("minimum alpha during the highlight pulse")]
+    [SerializeField, Range(0f, 1f)] private float globalHighlightMinAlpha = 0.3f;
+    [Tooltip("maximum alpha during the highlight pulse")]
+    [SerializeField, Range(0f, 1f)] private float globalHighlightMaxAlpha = 1f;
+    [Tooltip("how fast the highlight breathes (higher = faster pulse)")]
+    [SerializeField] private float globalHighlightPulseSpeed = 4f;
+    [Tooltip("padding in pixels that card / button glows extend past the element's edges")]
+    [SerializeField] private float globalHighlightPadding = 14f;
+    [Tooltip("border thickness in pixels for custom highlight boxes")]
+    [SerializeField] private float globalHighlightBorderThickness = 4f;
+
     [Header("Input Thresholds")]
     [Tooltip("how far the mouse must move in a single frame (squared pixels) before an orbit counts as a real drag. higher = more forgiving, ignores clicks and tiny jitter. 1600 = 40px")]
     [SerializeField] private float orbitDragThresholdSqr = 1600f;
@@ -129,6 +170,15 @@ public class TutorialManager : MonoBehaviour
     RectTransform nextButtonRect;
     Image nextButtonImage;
     TMP_Text nextButtonLabelText;
+
+    GameObject customHighlightContainer;
+    List<RectTransform> customHighlightBoxRects = new List<RectTransform>();
+    // 4 edges per box: [0]=top, [1]=bottom, [2]=left, [3]=right
+    List<Image[]> customHighlightBoxEdges = new List<Image[]>();
+
+    // glow attached as a child of a specific side-tab button (currently the Skip tab during the SkipRound step)
+    GameObject sideTabGlow;
+    Image sideTabGlowImage;
 
     float mascotSlideT;
     float mascotFadeT;
@@ -167,10 +217,15 @@ public class TutorialManager : MonoBehaviour
         if (instance == this) instance = null;
         IsActive = false;
         HighlightedCardIndex = -1;
+        HighlightedRewardIndex = -1;
 
         // make sure the region pulse doesn't hang around into the main menu
         var rm = FindFirstObjectByType<RegionManager>();
         if (rm != null) rm.ClearTutorialTargetRegion();
+
+        // the side-tab glow is parented under a button outside the tutorial canvas —
+        // it won't get destroyed with root, so tear it down explicitly
+        DetachSideTabGlow();
     }
 
     void Update()
@@ -179,6 +234,8 @@ public class TutorialManager : MonoBehaviour
         ApplyLiveSettings();
 
         UpdateMascot();
+        UpdateCustomHighlights();
+        UpdateSideTabGlow();
 
         // spacebar shortcut for Next — only when the Next button is actually showing, so it
         // can't be used to bypass action-gated steps that hide Next
@@ -452,6 +509,128 @@ public class TutorialManager : MonoBehaviour
         textboxSlideT = 0f;
 
         ApplyScriptedHighlight(index);
+        RebuildCustomHighlights(step);
+    }
+
+    // tears down any existing highlight boxes and rebuilds container + 4 edges per box.
+    // position / size / color / thickness are reapplied live every frame by UpdateCustomHighlights,
+    // so this only needs to run when the step's highlight list count changes (or on step change)
+    void RebuildCustomHighlights(TutorialStep step)
+    {
+        if (customHighlightContainer != null)
+        {
+            Destroy(customHighlightContainer);
+            customHighlightContainer = null;
+        }
+        customHighlightBoxRects.Clear();
+        customHighlightBoxEdges.Clear();
+
+        if (step == null || !step.showCustomHighlights || step.customHighlights == null || step.customHighlights.Count == 0) return;
+        if (root == null) return;
+
+        customHighlightContainer = new GameObject("CustomHighlights");
+        customHighlightContainer.transform.SetParent(root.transform, false);
+        var contRect = customHighlightContainer.AddComponent<RectTransform>();
+        contRect.anchorMin = Vector2.zero;
+        contRect.anchorMax = Vector2.one;
+        contRect.offsetMin = Vector2.zero;
+        contRect.offsetMax = Vector2.zero;
+
+        for (int i = 0; i < step.customHighlights.Count; i++)
+        {
+            var boxObj = new GameObject("HighlightBox");
+            boxObj.transform.SetParent(customHighlightContainer.transform, false);
+            var boxRect = boxObj.AddComponent<RectTransform>();
+            boxRect.anchorMin = new Vector2(0.5f, 0.5f);
+            boxRect.anchorMax = new Vector2(0.5f, 0.5f);
+            boxRect.pivot = new Vector2(0.5f, 0.5f);
+            customHighlightBoxRects.Add(boxRect);
+
+            // four hollow-border edges — just build the objects; offsets/colors get set in UpdateCustomHighlights
+            var edges = new Image[4];
+            edges[0] = BuildHighlightEdge(boxObj.transform, new Vector2(0f, 1f), new Vector2(1f, 1f)); // top
+            edges[1] = BuildHighlightEdge(boxObj.transform, new Vector2(0f, 0f), new Vector2(1f, 0f)); // bottom
+            edges[2] = BuildHighlightEdge(boxObj.transform, new Vector2(0f, 0f), new Vector2(0f, 1f)); // left
+            edges[3] = BuildHighlightEdge(boxObj.transform, new Vector2(1f, 0f), new Vector2(1f, 1f)); // right
+            customHighlightBoxEdges.Add(edges);
+        }
+    }
+
+    Image BuildHighlightEdge(Transform parent, Vector2 anchorMin, Vector2 anchorMax)
+    {
+        var obj = new GameObject("Edge");
+        obj.transform.SetParent(parent, false);
+        var rect = obj.AddComponent<RectTransform>();
+        rect.anchorMin = anchorMin;
+        rect.anchorMax = anchorMax;
+        var img = obj.AddComponent<Image>();
+        img.raycastTarget = false;
+        return img;
+    }
+
+    // runs every frame — reads the current step's highlight boxes and pushes position, size,
+    // border thickness, color, and pulsing alpha onto the existing edge images. rebuilds only
+    // when the list count changes (e.g. inspector add/remove). this is what makes tuning live
+    void UpdateCustomHighlights()
+    {
+        var step = CurrentStepData();
+        bool wantActive = step != null && step.showCustomHighlights && step.customHighlights != null && step.customHighlights.Count > 0;
+
+        if (!wantActive)
+        {
+            if (customHighlightContainer != null)
+            {
+                Destroy(customHighlightContainer);
+                customHighlightContainer = null;
+                customHighlightBoxRects.Clear();
+                customHighlightBoxEdges.Clear();
+            }
+            return;
+        }
+
+        // list count changed in the inspector — rebuild the edge objects once, then fall through
+        if (customHighlightBoxRects.Count != step.customHighlights.Count)
+        {
+            RebuildCustomHighlights(step);
+        }
+
+        float pulse = (Mathf.Sin(Time.unscaledTime * globalHighlightPulseSpeed) + 1f) * 0.5f;
+        float alpha = Mathf.Lerp(globalHighlightMinAlpha, globalHighlightMaxAlpha, pulse);
+        Color col = new Color(globalHighlightColor.r, globalHighlightColor.g, globalHighlightColor.b, alpha);
+        float t = globalHighlightBorderThickness;
+
+        Vector2 hOffMin = new Vector2(0f, -t);
+        Vector2 hOffMax = new Vector2(0f, t);
+        Vector2 vOffMin = new Vector2(-t, 0f);
+        Vector2 vOffMax = new Vector2(t, 0f);
+
+        for (int i = 0; i < step.customHighlights.Count && i < customHighlightBoxRects.Count; i++)
+        {
+            var h = step.customHighlights[i];
+            var boxRect = customHighlightBoxRects[i];
+            if (h == null || boxRect == null) continue;
+
+            // live position + size from the inspector
+            boxRect.anchoredPosition = h.position;
+            boxRect.sizeDelta = h.size;
+
+            var edges = customHighlightBoxEdges[i];
+            if (edges == null) continue;
+
+            // top + bottom use horizontal anchors, left + right use vertical anchors
+            ApplyEdge(edges[0], hOffMin, hOffMax, col);
+            ApplyEdge(edges[1], hOffMin, hOffMax, col);
+            ApplyEdge(edges[2], vOffMin, vOffMax, col);
+            ApplyEdge(edges[3], vOffMin, vOffMax, col);
+        }
+    }
+
+    void ApplyEdge(Image edge, Vector2 offsetMin, Vector2 offsetMax, Color color)
+    {
+        if (edge == null) return;
+        edge.rectTransform.offsetMin = offsetMin;
+        edge.rectTransform.offsetMax = offsetMax;
+        edge.color = color;
     }
 
     // highlights are driven by the current step's requiredAction:
@@ -473,6 +652,76 @@ public class TutorialManager : MonoBehaviour
         }
 
         HighlightedCardIndex = (action == TutorialAction.SelectCard || action == TutorialAction.PlayCard) ? 0 : -1;
+        HighlightedRewardIndex = (action == TutorialAction.PickReward) ? scriptedRewardHighlightIndex : -1;
+
+        // auto-glow the matching side-tab button for step actions that happen via the side tabs
+        TabAction tabTarget = SideTabForAction(action);
+        if (tabTarget != TabAction.None)
+            AttachSideTabGlow(tabTarget);
+        else
+            DetachSideTabGlow();
+    }
+
+    // maps a tutorial action to the side-tab button that triggers it, so the tutorial can
+    // auto-highlight the right tab without each step needing a manual custom highlight box
+    static TabAction SideTabForAction(TutorialAction action)
+    {
+        switch (action)
+        {
+            case TutorialAction.SkipRound: return TabAction.SkipRound;
+            // extend this with Shop / Dashboard if we want those tabs auto-highlighted too
+            default: return TabAction.None;
+        }
+    }
+
+    void AttachSideTabGlow(TabAction target)
+    {
+        // already attached to the right tab? nothing to do — the update loop keeps it live
+        if (sideTabGlow != null && sideTabGlowImage != null && sideTabGlow.transform.parent != null)
+        {
+            var existing = sideTabGlow.transform.parent.GetComponent<SideTabButton>();
+            if (existing != null && existing.Action == target) return;
+        }
+
+        DetachSideTabGlow();
+
+        SideTabButton match = null;
+        var tabs = FindObjectsByType<SideTabButton>(FindObjectsSortMode.None);
+        foreach (var tab in tabs)
+        {
+            if (tab != null && tab.Action == target) { match = tab; break; }
+        }
+        if (match == null) return;
+
+        sideTabGlow = new GameObject("TutorialGlow");
+        sideTabGlow.transform.SetParent(match.transform, false);
+        sideTabGlow.transform.SetAsFirstSibling();
+        var rect = sideTabGlow.AddComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        sideTabGlowImage = sideTabGlow.AddComponent<Image>();
+        sideTabGlowImage.raycastTarget = false;
+    }
+
+    void DetachSideTabGlow()
+    {
+        if (sideTabGlow != null) Destroy(sideTabGlow);
+        sideTabGlow = null;
+        sideTabGlowImage = null;
+    }
+
+    // keeps the side-tab glow in sync with Global Highlight Style every frame (padding, color, pulse)
+    void UpdateSideTabGlow()
+    {
+        if (sideTabGlowImage == null) return;
+
+        float pad = globalHighlightPadding;
+        sideTabGlowImage.rectTransform.offsetMin = new Vector2(-pad, -pad);
+        sideTabGlowImage.rectTransform.offsetMax = new Vector2(pad, pad);
+
+        float pulse = (Mathf.Sin(Time.unscaledTime * globalHighlightPulseSpeed) + 1f) * 0.5f;
+        float alpha = Mathf.Lerp(globalHighlightMinAlpha, globalHighlightMaxAlpha, pulse);
+        sideTabGlowImage.color = new Color(globalHighlightColor.r, globalHighlightColor.g, globalHighlightColor.b, alpha);
     }
 
     void OnNext()
@@ -510,6 +759,37 @@ public class TutorialManager : MonoBehaviour
     // HandDisplay reads this every frame to know which card slot in the hand to glow
     // -1 = no card highlighted
     public static int HighlightedCardIndex { get; private set; } = -1;
+
+    // RewardDisplay reads this to glow the reward card the tutorial is pointing at. -1 = none
+    public static int HighlightedRewardIndex { get; private set; } = -1;
+
+    // single source of truth for every tutorial highlight style — read by HandDisplay, RewardDisplay,
+    // SkipConfirmPopup, RegionManager and the custom highlight boxes. defaults kick in when the
+    // tutorial isn't loaded (normal play), so the consuming scripts still have safe values to use
+    public static Color GlobalHighlightColor => instance != null ? instance.globalHighlightColor : new Color(1f, 0.95f, 0.3f, 1f);
+    public static float GlobalHighlightMinAlpha => instance != null ? instance.globalHighlightMinAlpha : 0.3f;
+    public static float GlobalHighlightMaxAlpha => instance != null ? instance.globalHighlightMaxAlpha : 1f;
+    public static float GlobalHighlightPulseSpeed => instance != null ? instance.globalHighlightPulseSpeed : 4f;
+    public static float GlobalHighlightPadding => instance != null ? instance.globalHighlightPadding : 14f;
+    public static float GlobalHighlightBorderThickness => instance != null ? instance.globalHighlightBorderThickness : 4f;
+
+    // GameManager reads this to decide whether to force a reward popup after the skip-round step
+    public static bool ForceRewardAfterSkipRound
+    {
+        get
+        {
+            if (!IsActive || instance == null) return false;
+            return instance.forceRewardAfterSkipRound;
+        }
+    }
+
+    // GameManager calls this when building the reward popup. returns null when the tutorial isn't active or no cards were configured
+    public static List<PolicyData> GetScriptedRewardChoices()
+    {
+        if (!IsActive || instance == null) return null;
+        if (instance.scriptedRewardChoices == null || instance.scriptedRewardChoices.Count == 0) return null;
+        return instance.scriptedRewardChoices;
+    }
 
     // gameplay scripts read this to branch behavior by the current step's required action
     // (e.g. skipping a round during the SkipRound tutorial step shouldn't trigger the wasteful penalty)
@@ -572,6 +852,9 @@ public class TutorialManager : MonoBehaviour
         {
             waitingForRoundStart = true;
             if (root != null) root.SetActive(false);
+            // the side-tab glow is parented under the Skip button (outside root), so hiding root
+            // doesn't hide it. drop the glow the moment the player clicks so it doesn't linger through the popup
+            DetachSideTabGlow();
             return;
         }
 
@@ -634,6 +917,8 @@ public class TutorialManager : MonoBehaviour
         var rm = FindFirstObjectByType<RegionManager>();
         if (rm != null) rm.ClearTutorialTargetRegion();
         HighlightedCardIndex = -1;
+        HighlightedRewardIndex = -1;
+        DetachSideTabGlow();
 
         ending = true;
         endTime = Time.unscaledTime;

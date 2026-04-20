@@ -27,11 +27,16 @@ public class SkipConfirmPopup : MonoBehaviour
     [SerializeField] private float buttonHeight = 50f;
     [SerializeField] private float buttonSpacing = 30f;
 
+    [Header("Tutorial Highlight")]
+    [Tooltip("alpha of the Cancel button when the tutorial blocks it. glow color / padding / pulse live on TutorialManager's Global Highlight Style")]
+    [SerializeField, Range(0f, 1f)] private float tutorialDisabledAlpha = 0.35f;
+
     private GameManager gameManager;
     private GameObject root;
     private TMP_Text titleText;
     private TMP_Text bodyText;
     private bool showing;
+    private Image tutorialGlow;
 
     public bool IsShowing => showing;
 
@@ -43,11 +48,25 @@ public class SkipConfirmPopup : MonoBehaviour
             if (gameManager == null) return;
         }
 
-        // close on ESC
+        // close on ESC (blocked during the tutorial's skip-round step — the tutorial forces a confirm)
         if (showing && UnityEngine.InputSystem.Keyboard.current != null &&
-            UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame)
+            UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame &&
+            !(TutorialManager.IsActive && TutorialManager.CurrentStepAction == TutorialAction.SkipRound))
         {
             Hide();
+        }
+
+        // pulse the tutorial glow around the confirm button — live from TutorialManager's Global Highlight Style
+        if (tutorialGlow != null)
+        {
+            Color baseCol = TutorialManager.GlobalHighlightColor;
+            float pulse = (Mathf.Sin(Time.unscaledTime * TutorialManager.GlobalHighlightPulseSpeed) + 1f) * 0.5f;
+            float a = Mathf.Lerp(TutorialManager.GlobalHighlightMinAlpha, TutorialManager.GlobalHighlightMaxAlpha, pulse);
+            tutorialGlow.color = new Color(baseCol.r, baseCol.g, baseCol.b, a);
+
+            float pad = TutorialManager.GlobalHighlightPadding;
+            tutorialGlow.rectTransform.offsetMin = new Vector2(-pad, -pad);
+            tutorialGlow.rectTransform.offsetMax = new Vector2(pad, pad);
         }
     }
 
@@ -72,6 +91,7 @@ public class SkipConfirmPopup : MonoBehaviour
 
         if (root != null) Destroy(root);
         root = null;
+        tutorialGlow = null;
     }
 
     void BuildUI(bool isWasteful, int cardsLeft, float penaltyAmount, float stabPenalty, int streak)
@@ -168,15 +188,50 @@ public class SkipConfirmPopup : MonoBehaviour
         float startX = -totalWidth / 2f + buttonWidth / 2f;
 
         // cancel button (go back)
-        CreateButton(panel.transform, "Cancel", "Go Back", cancelColor, startX,
+        var cancelBtn = CreateButton(panel.transform, "Cancel", "Go Back", cancelColor, startX,
             () => Hide());
 
         // confirm button (skip)
-        CreateButton(panel.transform, "Confirm", isWasteful ? "Skip Anyway" : "Skip Round", confirmColor, startX + buttonWidth + buttonSpacing,
+        var confirmBtn = CreateButton(panel.transform, "Confirm", isWasteful ? "Skip Anyway" : "Skip Round", confirmColor, startX + buttonWidth + buttonSpacing,
             () => { Hide(); if (gameManager != null) gameManager.DoSkipRound(); });
+
+        // during the tutorial's skip-round step, force the player through the confirm path:
+        // disable + dim the cancel button and pulse a glow around the confirm button
+        tutorialGlow = null;
+        if (TutorialManager.IsActive && TutorialManager.CurrentStepAction == TutorialAction.SkipRound)
+        {
+            if (cancelBtn != null)
+            {
+                cancelBtn.interactable = false;
+                var cg = cancelBtn.GetComponent<Image>();
+                if (cg != null)
+                {
+                    var col = cg.color;
+                    col.a = tutorialDisabledAlpha;
+                    cg.color = col;
+                }
+            }
+
+            if (confirmBtn != null)
+            {
+                float pad = TutorialManager.GlobalHighlightPadding;
+                Color gCol = TutorialManager.GlobalHighlightColor;
+                var glowObj = new GameObject("TutorialGlow");
+                glowObj.transform.SetParent(confirmBtn.transform, false);
+                glowObj.transform.SetAsFirstSibling();
+                var glowRect = glowObj.AddComponent<RectTransform>();
+                glowRect.anchorMin = Vector2.zero;
+                glowRect.anchorMax = Vector2.one;
+                glowRect.offsetMin = new Vector2(-pad, -pad);
+                glowRect.offsetMax = new Vector2(pad, pad);
+                tutorialGlow = glowObj.AddComponent<Image>();
+                tutorialGlow.color = new Color(gCol.r, gCol.g, gCol.b, TutorialManager.GlobalHighlightMinAlpha);
+                tutorialGlow.raycastTarget = false;
+            }
+        }
     }
 
-    void CreateButton(Transform parent, string name, string label, Color color, float xPos, System.Action onClick)
+    Button CreateButton(Transform parent, string name, string label, Color color, float xPos, System.Action onClick)
     {
         var btnObj = new GameObject(name);
         btnObj.transform.SetParent(parent, false);
@@ -206,5 +261,7 @@ public class SkipConfirmPopup : MonoBehaviour
         tmp.color = Color.white;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.fontStyle = FontStyles.Bold;
+
+        return btn;
     }
 }

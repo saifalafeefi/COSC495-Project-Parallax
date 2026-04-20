@@ -108,9 +108,9 @@ public class RegionManager : MonoBehaviour
     };
 
     [Header("Tutorial Highlight")]
-    [Tooltip("speed of the tutorial highlight pulse")]
+    [Tooltip("fallback pulse speed when the tutorial isn't loaded — during tutorial, TutorialManager.GlobalHighlightPulseSpeed overrides this")]
     [SerializeField] private float tutorialPulseSpeed = 4f;
-    [Tooltip("add one entry per ring. each entry has its own width (thickness), height (float above surface), and color. empty array = no highlight drawn")]
+    [Tooltip("add one entry per ring for the tutorial region outline. width (thickness) and height (float above surface) stay local because they're structural. color is overridden live by TutorialManager.GlobalHighlightColor while the tutorial runs. empty array = no highlight drawn")]
     [SerializeField] private StatusBorderConfig[] tutorialBorders = new StatusBorderConfig[0];
 
     private GameObject highlightObject;
@@ -230,11 +230,15 @@ public class RegionManager : MonoBehaviour
         UpdatePulseLayers(stressedLayers, stressedBorders, stressedRegions, pulse);
         UpdatePulseLayers(crisisLayers, crisisBorders, crisisRegions, fastPulse);
 
-        // tutorial target: single region, independent pulse speed so it reads separately from status
+        // tutorial target: single region. color + pulse speed + alpha range are pulled from
+        // TutorialManager's Global Highlight Style so the tutorial has one place to tune every highlight.
+        // ring sizing (width/height per entry in tutorialBorders) stays local since that's structural, not style
         var tutorialRegions = new List<Region>();
         if (tutorialTargetRegion != null) tutorialRegions.Add(tutorialTargetRegion);
-        float tutorialPulse = (Mathf.Sin(Time.time * tutorialPulseSpeed) + 1f) / 2f;
-        UpdatePulseLayers(tutorialLayers, tutorialBorders, tutorialRegions, tutorialPulse);
+        float tutorialRate = TutorialManager.IsActive ? TutorialManager.GlobalHighlightPulseSpeed : tutorialPulseSpeed;
+        float tutorialPulse = (Mathf.Sin(Time.time * tutorialRate) + 1f) / 2f;
+        UpdatePulseLayers(tutorialLayers, tutorialBorders, tutorialRegions, tutorialPulse,
+            TutorialManager.GlobalHighlightColor, TutorialManager.GlobalHighlightMinAlpha, TutorialManager.GlobalHighlightMaxAlpha);
     }
 
     // tutorial calls these to aim the highlight at a specific region, or clear it
@@ -260,7 +264,11 @@ public class RegionManager : MonoBehaviour
         return null;
     }
 
-    void UpdatePulseLayers(List<PulseLayer> layers, StatusBorderConfig[] configs, List<Region> regions, float pulse)
+    // colorOverride is used by the tutorial path so every ring picks up TutorialManager's global color / alpha range.
+    // pass a non-negative minAlpha / maxAlpha to also override the alpha pulse range (e.g. tutorial globals).
+    // status borders (stressed/crisis) pass nulls and keep the per-config color and default 0.05 -> config.a pulse
+    void UpdatePulseLayers(List<PulseLayer> layers, StatusBorderConfig[] configs, List<Region> regions, float pulse,
+        Color? colorOverride = null, float minAlpha = -1f, float maxAlpha = -1f)
     {
         for (int i = 0; i < layers.Count; i++)
         {
@@ -276,9 +284,14 @@ public class RegionManager : MonoBehaviour
                 var combined = GetCombinedOutlineMesh(key, regions);
 
                 layer.meshFilter.mesh = combined;
-                float alpha = Mathf.Lerp(0.05f, config.color.a, pulse);
+
+                Color baseCol = colorOverride ?? config.color;
+                float lo = minAlpha >= 0f ? minAlpha : 0.05f;
+                float hi = maxAlpha >= 0f ? maxAlpha : config.color.a;
+                float alpha = Mathf.Lerp(lo, hi, pulse);
+
                 layer.meshRenderer.material.SetColor("_BaseColor",
-                    new Color(config.color.r, config.color.g, config.color.b, alpha));
+                    new Color(baseCol.r, baseCol.g, baseCol.b, alpha));
                 layer.obj.SetActive(true);
             }
             else
