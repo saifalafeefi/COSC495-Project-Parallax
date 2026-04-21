@@ -17,6 +17,7 @@ public enum TutorialAction
     PlayCard,
     SkipRound,
     OpenShop,
+    CloseShop,
     OpenDashboard,
     CloseDashboard,
     BuyCard,
@@ -655,43 +656,45 @@ public class TutorialManager : MonoBehaviour
         HighlightedRewardIndex = (action == TutorialAction.PickReward) ? scriptedRewardHighlightIndex : -1;
 
         // auto-glow the matching side-tab button for step actions that happen via the side tabs
-        TabAction tabTarget = SideTabForAction(action);
-        if (tabTarget != TabAction.None)
-            AttachSideTabGlow(tabTarget);
-        else
-            DetachSideTabGlow();
+        AttachSideTabGlowForAction(action);
     }
 
-    // maps a tutorial action to the side-tab button that triggers it, so the tutorial can
-    // auto-highlight the right tab without each step needing a manual custom highlight box
-    static TabAction SideTabForAction(TutorialAction action)
+    // locates the side-tab button that fires the given tutorial action. OpenShop / CloseShop both
+    // use TabAction.Shop but resolve to different physical buttons (the outside Shop tab vs. the
+    // in-shop Close tab) — OnlyVisibleDuringShop disambiguates them. returns null when no side tab
+    // matches (e.g. BuyCard, CloseDashboard) and the step should point at an in-panel button instead
+    static SideTabButton FindSideTabForAction(TutorialAction action)
     {
+        TabAction target;
+        bool requireInShop;
         switch (action)
         {
-            case TutorialAction.SkipRound: return TabAction.SkipRound;
-            // extend this with Shop / Dashboard if we want those tabs auto-highlighted too
-            default: return TabAction.None;
-        }
-    }
-
-    void AttachSideTabGlow(TabAction target)
-    {
-        // already attached to the right tab? nothing to do — the update loop keeps it live
-        if (sideTabGlow != null && sideTabGlowImage != null && sideTabGlow.transform.parent != null)
-        {
-            var existing = sideTabGlow.transform.parent.GetComponent<SideTabButton>();
-            if (existing != null && existing.Action == target) return;
+            case TutorialAction.SkipRound:      target = TabAction.SkipRound; requireInShop = false; break;
+            case TutorialAction.OpenShop:       target = TabAction.Shop;      requireInShop = false; break;
+            case TutorialAction.CloseShop:      target = TabAction.Shop;      requireInShop = true;  break;
+            case TutorialAction.OpenDashboard:  target = TabAction.Dashboard; requireInShop = false; break;
+            default: return null;
         }
 
-        DetachSideTabGlow();
-
-        SideTabButton match = null;
         var tabs = FindObjectsByType<SideTabButton>(FindObjectsSortMode.None);
         foreach (var tab in tabs)
         {
-            if (tab != null && tab.Action == target) { match = tab; break; }
+            if (tab == null || tab.Action != target) continue;
+            if (tab.OnlyVisibleDuringShop != requireInShop) continue;
+            return tab;
         }
-        if (match == null) return;
+        return null;
+    }
+
+    void AttachSideTabGlowForAction(TutorialAction action)
+    {
+        var match = FindSideTabForAction(action);
+        if (match == null) { DetachSideTabGlow(); return; }
+
+        // already attached to the right tab? nothing to do — the update loop keeps it live
+        if (sideTabGlow != null && sideTabGlow.transform.parent == match.transform) return;
+
+        DetachSideTabGlow();
 
         sideTabGlow = new GameObject("TutorialGlow");
         sideTabGlow.transform.SetParent(match.transform, false);

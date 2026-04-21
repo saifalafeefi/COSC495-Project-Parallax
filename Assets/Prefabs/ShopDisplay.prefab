@@ -45,10 +45,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ShopDisplay
   cardBackground: {r: 0.12, g: 0.12, b: 0.16, a: 0.95}
-  commonColor: {r: 0.6, g: 0.6, b: 0.6, a: 1}
-  uncommonColor: {r: 0.2, g: 0.8, b: 0.2, a: 1}
-  rareColor: {r: 0.9, g: 0.7, b: 0.1, a: 1}
-  selectedGlow: {r: 1, g: 0.9, b: 0.4, a: 1}
   soldOutColor: {r: 0.3, g: 0.3, b: 0.3, a: 0.5}
   carbonColor: {r: 0.75, g: 0.45, b: 0.3, a: 1}
   economyColor: {r: 0.85, g: 0.75, b: 0.3, a: 1}
@@ -85,12 +81,15 @@ MonoBehaviour:
   titleOffset: {x: -0.84, y: 54.3}
   fundsFontSize: 27.4
   fundsOffset: {x: 1.46, y: 19.55}
+  feedbackTextboxColor: {r: 0.08, g: 0.1, b: 0.14, a: 0.95}
+  feedbackTextboxBorderColor: {r: 0.9, g: 0.85, b: 0.5, a: 1}
+  feedbackSuccessColor: {r: 0.6, g: 1, b: 0.7, a: 1}
+  feedbackFailColor: {r: 1, g: 0.55, b: 0.55, a: 1}
   feedbackFontSize: 40
-  feedbackOffset: {x: 0, y: 0}
-  closeButtonSize: {x: 190.2, y: 54.2}
-  closeButtonFontSize: 31.6
-  closeButtonText: Close
-  closeButtonOffset: {x: -851.62, y: 81.68}
+  feedbackTextboxSize: {x: 680, y: 175}
+  feedbackTextboxOffset: {x: -8.4, y: -267.3}
+  feedbackHoldDuration: 2
+  feedbackFadeSpeed: 4
   cardTitleFontSize: 16
   cardStatsFontSize: 16
   cardDescFontSize: 18
@@ -103,6 +102,5 @@ MonoBehaviour:
   tweenSpeed: 10
   bounceSpeed: 3
   bounceAmount: 6
-  selectedColorSpeed: 2.5
   dealDuration: 0.35
   dealStagger: 0.08

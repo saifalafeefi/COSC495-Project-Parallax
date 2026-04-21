@@ -451,6 +451,7 @@ MonoBehaviour:
   disableHover: 0
   shopHideOffset: {x: 0, y: 200}
   shopSlideSpeed: 6
+  onlyVisibleDuringShop: 0
 --- !u!114 &147288076
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -905,6 +906,7 @@ MonoBehaviour:
   disableHover: 0
   shopHideOffset: {x: 200, y: 0}
   shopSlideSpeed: 6
+  onlyVisibleDuringShop: 0
 --- !u!114 &698503715
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1409,15 +1411,49 @@ MonoBehaviour:
     textboxPositionStep: {x: 211.8, y: -251.1}
     showCustomHighlights: 0
     customHighlights: []
-  - mascotText: You can skip rounds if there's insufficient capital. But skipping
+  - mascotText: There's also the focus %, which increases after playing cards on
+      the selected region.
+    requiredAction: 0
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: -418, y: -52.1}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: -542.7, y: -319}
+    showCustomHighlights: 1
+    customHighlights:
+    - position: {x: -799.9, y: -90.51}
+      size: {x: 258.4, y: 34.7}
+  - mascotText: There's a chance that, if the region is focused too much, it will
+      have opposite effects and cause penalty events to occur.
+    requiredAction: 0
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: -418, y: -52.1}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: -542.7, y: -319}
+    showCustomHighlights: 0
+    customHighlights: []
+  - mascotText: Don't worry! you will be warned prior to that.
+    requiredAction: 0
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: -418, y: -52.1}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: -542.7, y: -319}
+    showCustomHighlights: 0
+    customHighlights: []
+  - mascotText: You can skip rounds if there's insufficient capital. However, skipping
       otherwise would give a penalty but give a random capital bonus.
     requiredAction: 0
     allowFreeInteraction: 0
     showNextButton: 0
     overrideMascotPosition: 1
-    mascotPosition: {x: 732.51, y: -347.1}
+    mascotPosition: {x: -407, y: 111.2}
     overrideTextboxPosition: 1
-    textboxPositionStep: {x: 211.8, y: -251.1}
+    textboxPositionStep: {x: 116.4, y: 144.9}
     showCustomHighlights: 0
     customHighlights: []
   - mascotText: For this tutorial, you wont be penalized. So go ahead an skip the
@@ -1462,8 +1498,19 @@ MonoBehaviour:
     textboxPositionStep: {x: 211.8, y: -251.1}
     showCustomHighlights: 0
     customHighlights: []
+  - mascotText: Reward cards cost no Capital, and stay in your hand permanentally
+      until used.
+    requiredAction: 0
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: 732.51, y: -347.1}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: 211.8, y: -251.1}
+    showCustomHighlights: 0
+    customHighlights: []
   - mascotText: 'Pick the "Wind Farms" card '
-    requiredAction: 11
+    requiredAction: 12
     allowFreeInteraction: 0
     showNextButton: 0
     overrideMascotPosition: 1
@@ -1473,14 +1520,14 @@ MonoBehaviour:
     showCustomHighlights: 0
     customHighlights: []
   - mascotText: You can check the event details and affected regions in the DASHBOARD.
-    requiredAction: 8
+    requiredAction: 9
     allowFreeInteraction: 0
     showNextButton: 0
     overrideMascotPosition: 1
     mascotPosition: {x: 395.1, y: 351.4}
     overrideTextboxPosition: 1
     textboxPositionStep: {x: 593.8, y: 111.5}
-    showCustomHighlights: 1
+    showCustomHighlights: 0
     customHighlights:
     - position: {x: 818, y: 346.2}
       size: {x: 300, y: 83.24}
@@ -1500,7 +1547,7 @@ MonoBehaviour:
     - position: {x: 258.6, y: -123.66}
       size: {x: 748.1, y: 511}
   - mascotText: Close the DASHBOARD.
-    requiredAction: 9
+    requiredAction: 10
     allowFreeInteraction: 0
     showNextButton: 0
     overrideMascotPosition: 1
@@ -1517,8 +1564,10 @@ MonoBehaviour:
     mascotPosition: {x: -767.3, y: 241}
     overrideTextboxPosition: 1
     textboxPositionStep: {x: -229.4, y: 315.6}
-    showCustomHighlights: 0
-    customHighlights: []
+    showCustomHighlights: 1
+    customHighlights:
+    - position: {x: -390.1, y: 470.35}
+      size: {x: 164.5, y: 58.49}
   - mascotText: The higher the avg economy, the more Funds we receive at the start
       of each round
     requiredAction: 0
@@ -1528,8 +1577,10 @@ MonoBehaviour:
     mascotPosition: {x: -767.3, y: 241}
     overrideTextboxPosition: 1
     textboxPositionStep: {x: -229.4, y: 315.6}
-    showCustomHighlights: 0
-    customHighlights: []
+    showCustomHighlights: 1
+    customHighlights:
+    - position: {x: -390.1, y: 470.35}
+      size: {x: 164.5, y: 58.49}
   - mascotText: With enough Funds, we can purchase cards from THE MOON shop (where
       I reside!)
     requiredAction: 7
@@ -1539,6 +1590,71 @@ MonoBehaviour:
     mascotPosition: {x: 429.7, y: 367.6}
     overrideTextboxPosition: 1
     textboxPositionStep: {x: 604.2, y: 126.4}
+    showCustomHighlights: 0
+    customHighlights:
+    - position: {x: 818, y: 269.3}
+      size: {x: 300, y: 83.24}
+  - mascotText: THE MOON shop would display 6 different policy cards that shuffle
+      each round, each can only be bought ONCE
+    requiredAction: 0
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: 429.7, y: 693.1}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: -444.1, y: -367.1}
+    showCustomHighlights: 0
+    customHighlights: []
+  - mascotText: Pick a card that you'd like to buy with your Funds.
+    requiredAction: 11
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: 429.7, y: 693.1}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: -444.1, y: -367.1}
+    showCustomHighlights: 0
+    customHighlights: []
+  - mascotText: Awesome! Like the reward cards, shop cards also cost no Capital,
+      and stay in your hand permanentally until played
+    requiredAction: 0
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: 429.7, y: 693.1}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: -444.1, y: -367.1}
+    showCustomHighlights: 0
+    customHighlights: []
+  - mascotText: Close the shop
+    requiredAction: 8
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: 429.7, y: 693.1}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: -444.1, y: -367.1}
+    showCustomHighlights: 0
+    customHighlights: []
+  - mascotText: After finishing the last round, you get your score and details about
+      bonuses/penalties that affected the final score
+    requiredAction: 0
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: -12.2, y: 298.81}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: -515.3, y: 329.6}
+    showCustomHighlights: 0
+    customHighlights: []
+  - mascotText: That's it! A basic yet intensive tutorial about the game.
+    requiredAction: 0
+    allowFreeInteraction: 0
+    showNextButton: 0
+    overrideMascotPosition: 1
+    mascotPosition: {x: 0, y: 135.7}
+    overrideTextboxPosition: 1
+    textboxPositionStep: {x: 0, y: -74.7}
     showCustomHighlights: 0
     customHighlights: []
   regionHighlightTrait: 0
@@ -1561,8 +1677,8 @@ MonoBehaviour:
   globalHighlightPadding: 14
   globalHighlightBorderThickness: 4
   orbitDragThresholdSqr: 5000
-  farewellMessage: Good luck!
-  farewellDuration: 2.5
+  farewellMessage: Good luck in your journey!
+  farewellDuration: 3
   mainMenuSceneName: MainMenuScene
 --- !u!4 &737983185
 Transform:
@@ -2093,6 +2209,7 @@ RectTransform:
   - {fileID: 1706874841}
   - {fileID: 1214933428}
   - {fileID: 147288074}
+  - {fileID: 1657959402}
   - {fileID: 698503713}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -2460,6 +2577,7 @@ MonoBehaviour:
   disableHover: 0
   shopHideOffset: {x: 0, y: 200}
   shopSlideSpeed: 6
+  onlyVisibleDuringShop: 0
 --- !u!114 &1214933430
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2768,10 +2886,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: ShopDisplay
       objectReference: {fileID: 0}
-    - target: {fileID: 3759341602718114270, guid: 28736d8d3e0ee9e4087d6967771d9a88, type: 3}
-      propertyPath: traitColorConfig
-      value: 
-      objectReference: {fileID: 11400000, guid: beb34d3e3db705b469838d456eecc732, type: 2}
     - target: {fileID: 8081438395804529510, guid: 28736d8d3e0ee9e4087d6967771d9a88, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0.61655
@@ -3091,6 +3205,188 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1542285251}
   m_CullTransparentMesh: 1
+--- !u!1 &1657959401
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1657959402}
+  - component: {fileID: 1657959406}
+  - component: {fileID: 1657959405}
+  - component: {fileID: 1657959404}
+  - component: {fileID: 1657959403}
+  - component: {fileID: 1657959408}
+  - component: {fileID: 1657959407}
+  m_Layer: 5
+  m_Name: close_shop_button
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1657959402
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1657959401}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1047721677}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 1}
+  m_AnchorMax: {x: 0.5, y: 1}
+  m_AnchoredPosition: {x: 0, y: -90}
+  m_SizeDelta: {x: 125, y: 110}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1657959403
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1657959401}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: df4159e35225bd2409fabae20a45061d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SideTabButton
+  hiddenOffset: {x: 0, y: 80}
+  tweenDuration: 0.25
+  action: 1
+  disableHover: 0
+  shopHideOffset: {x: 0, y: 200}
+  shopSlideSpeed: 6
+  onlyVisibleDuringShop: 1
+--- !u!114 &1657959404
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1657959401}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+  m_Navigation:
+    m_Mode: 3
+    m_WrapAround: 0
+    m_SelectOnUp: {fileID: 0}
+    m_SelectOnDown: {fileID: 0}
+    m_SelectOnLeft: {fileID: 0}
+    m_SelectOnRight: {fileID: 0}
+  m_Transition: 1
+  m_Colors:
+    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
+    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
+    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
+    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
+    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_ColorMultiplier: 1
+    m_FadeDuration: 0.1
+  m_SpriteState:
+    m_HighlightedSprite: {fileID: 0}
+    m_PressedSprite: {fileID: 0}
+    m_SelectedSprite: {fileID: 0}
+    m_DisabledSprite: {fileID: 0}
+  m_AnimationTriggers:
+    m_NormalTrigger: Normal
+    m_HighlightedTrigger: Highlighted
+    m_PressedTrigger: Pressed
+    m_SelectedTrigger: Selected
+    m_DisabledTrigger: Disabled
+  m_Interactable: 1
+  m_TargetGraphic: {fileID: 1657959405}
+  m_OnClick:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &1657959405
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1657959401}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: 7dc4e963da33f1a429a727670eee10af, type: 3}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &1657959406
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1657959401}
+  m_CullTransparentMesh: 1
+--- !u!114 &1657959407
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1657959401}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dc42784cf147c0c48a680349fa168899, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.GraphicRaycaster
+  m_IgnoreReversedGraphics: 1
+  m_BlockingObjects: 0
+  m_BlockingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!223 &1657959408
+Canvas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1657959401}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_RenderMode: 2
+  m_Camera: {fileID: 0}
+  m_PlaneDistance: 100
+  m_PixelPerfect: 0
+  m_ReceivesEvents: 1
+  m_OverrideSorting: 1
+  m_OverridePixelPerfect: 0
+  m_SortingBucketNormalizedSize: 0
+  m_VertexColorAlwaysGammaSpace: 0
+  m_AdditionalShaderChannelsFlag: 0
+  m_UpdateRectTransformForStandalone: 0
+  m_SortingLayerID: 0
+  m_SortingOrder: 20
+  m_TargetDisplay: 0
 --- !u!1 &1659998576
 GameObject:
   m_ObjectHideFlags: 0
@@ -3367,6 +3663,7 @@ MonoBehaviour:
   disableHover: 0
   shopHideOffset: {x: 200, y: 0}
   shopSlideSpeed: 6
+  onlyVisibleDuringShop: 0
 --- !u!1 &1814361857
 GameObject:
   m_ObjectHideFlags: 0

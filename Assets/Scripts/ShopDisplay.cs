@@ -83,20 +83,23 @@ public class ShopDisplay : MonoBehaviour
     [SerializeField] private float fundsFontSize = 18f;
     [Tooltip("offset from default funds position (below title)")]
     [SerializeField] private Vector2 fundsOffset = Vector2.zero;
-    [Tooltip("font size for the feedback text")]
-    [SerializeField] private float feedbackFontSize = 16f;
-    [Tooltip("offset from default feedback position (below card grid)")]
-    [SerializeField] private Vector2 feedbackOffset = Vector2.zero;
 
-    [Header("Close Button")]
-    [Tooltip("size of the close button")]
-    [SerializeField] private Vector2 closeButtonSize = new Vector2(140f, 40f);
-    [Tooltip("font size on the close button")]
-    [SerializeField] private float closeButtonFontSize = 18f;
-    [Tooltip("text shown on the close button")]
-    [SerializeField] private string closeButtonText = "Close";
-    [Tooltip("offset from default close button position (below feedback)")]
-    [SerializeField] private Vector2 closeButtonOffset = Vector2.zero;
+    [Header("Feedback Textbox")]
+    [Tooltip("speech-bubble textbox that shows the shopkeeper's feedback (purchase results / errors). defaults mirror the tutorial mascot's textbox so the two read as the same character")]
+    [SerializeField] private Color feedbackTextboxColor = new Color(0.08f, 0.1f, 0.14f, 0.95f);
+    [SerializeField] private Color feedbackTextboxBorderColor = new Color(0.9f, 0.85f, 0.5f, 1f);
+    [Tooltip("text color when a purchase succeeds")]
+    [SerializeField] private Color feedbackSuccessColor = new Color(0.6f, 1f, 0.7f);
+    [Tooltip("text color when a purchase fails (e.g. not enough funds)")]
+    [SerializeField] private Color feedbackFailColor = new Color(1f, 0.55f, 0.55f);
+    [SerializeField] private float feedbackFontSize = 24f;
+    [SerializeField] private Vector2 feedbackTextboxSize = new Vector2(680f, 220f);
+    [Tooltip("textbox offset from the shopkeeper's anchored position (positive x = right of shopkeeper, positive y = above). the textbox follows the shopkeeper's slide-in automatically")]
+    [SerializeField] private Vector2 feedbackTextboxOffset = new Vector2(500f, 0f);
+    [Tooltip("how long the feedback stays fully visible before fading out")]
+    [SerializeField] private float feedbackHoldDuration = 2f;
+    [Tooltip("how fast the feedback fades in/out (higher = snappier)")]
+    [SerializeField] private float feedbackFadeSpeed = 4f;
 
     [Header("Card Font Sizes")]
     [Tooltip("font size for card title")]
@@ -156,12 +159,14 @@ public class ShopDisplay : MonoBehaviour
     // live-update references
     private TMP_Text titleTextRef;
     private TMP_Text fundsTextRef;
-    private TMP_Text closeTextRef;
-    private RectTransform closeBtnRect;
     private RectTransform titleRect;
     private RectTransform fundsRect;
-    private RectTransform feedbackRect;
-    private RectTransform closeBtnParentRect;
+
+    // feedback textbox — speech bubble anchored to the shopkeeper
+    private RectTransform feedbackTextboxRect;
+    private Image feedbackTextboxBg;
+    private Outline feedbackTextboxOutline;
+    private CanvasGroup feedbackTextboxGroup;
 
     private RectTransform containerRect;
 
@@ -328,17 +333,6 @@ public class ShopDisplay : MonoBehaviour
         fundsTextRef = fundsText;
         fundsRect = fundsObj.GetComponent<RectTransform>();
 
-        // feedback text — below the grid
-        var fbObj = CreateUIObj("Feedback", root.transform,
-            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-            new Vector2(gridOffsetX + feedbackOffset.x, gridOffsetY - gridH / 2f - 30f + feedbackOffset.y), new Vector2(gridW + 100f, 30f));
-        feedbackText = fbObj.AddComponent<TextMeshProUGUI>();
-        feedbackText.text = "";
-        feedbackText.fontSize = feedbackFontSize;
-        feedbackText.alignment = TextAlignmentOptions.Center;
-        feedbackText.color = Color.white;
-        feedbackRect = fbObj.GetComponent<RectTransform>();
-
         // card container — positioned to the right
         var container = new GameObject("CardContainer");
         container.transform.SetParent(root.transform, false);
@@ -432,8 +426,10 @@ public class ShopDisplay : MonoBehaviour
             tableSlideT = 0f;
         }
 
-        // close button
-        BuildCloseButton(root.transform);
+        // feedback textbox — built last so it layers on top of the shopkeeper and table.
+        // suppressed during the tutorial so it can't compete with the tutorial mascot's own textbox
+        if (!TutorialManager.IsActive)
+            BuildFeedbackTextbox(root.transform);
     }
 
     void StartClosing()
@@ -502,11 +498,12 @@ public class ShopDisplay : MonoBehaviour
         feedbackText = null;
         titleTextRef = null;
         fundsTextRef = null;
-        closeTextRef = null;
-        closeBtnRect = null;
         titleRect = null;
         fundsRect = null;
-        feedbackRect = null;
+        feedbackTextboxRect = null;
+        feedbackTextboxBg = null;
+        feedbackTextboxOutline = null;
+        feedbackTextboxGroup = null;
         containerRect = null;
         shopkeeperImage = null;
         shopkeeperRect = null;
@@ -535,14 +532,6 @@ public class ShopDisplay : MonoBehaviour
             fundsTextRef.fontSize = fundsFontSize;
             fundsTextRef.text = $"Funds: {gameManager.Funds}";
         }
-        if (feedbackText != null) feedbackText.fontSize = feedbackFontSize;
-        if (closeTextRef != null)
-        {
-            closeTextRef.fontSize = closeButtonFontSize;
-            closeTextRef.text = closeButtonText;
-        }
-        if (closeBtnRect != null) closeBtnRect.sizeDelta = closeButtonSize;
-
         // live-update element positions
         int layoutRows = Mathf.CeilToInt((float)count / gridColumns);
         float layoutGridW = gridColumns * cardWidth + (gridColumns - 1) * cardSpacingX;
@@ -552,10 +541,6 @@ public class ShopDisplay : MonoBehaviour
             titleRect.anchoredPosition = new Vector2(gridOffsetX + titleOffset.x, gridOffsetY + layoutGridH / 2f + 50f + titleOffset.y);
         if (fundsRect != null)
             fundsRect.anchoredPosition = new Vector2(gridOffsetX + fundsOffset.x, gridOffsetY + layoutGridH / 2f + 20f + fundsOffset.y);
-        if (feedbackRect != null)
-            feedbackRect.anchoredPosition = new Vector2(gridOffsetX + feedbackOffset.x, gridOffsetY - layoutGridH / 2f - 30f + feedbackOffset.y);
-        if (closeBtnRect != null)
-            closeBtnRect.anchoredPosition = new Vector2(gridOffsetX + closeButtonOffset.x, gridOffsetY - layoutGridH / 2f - 65f + closeButtonOffset.y);
         if (containerRect != null)
             containerRect.anchoredPosition = new Vector2(gridOffsetX, gridOffsetY);
 
@@ -665,21 +650,81 @@ public class ShopDisplay : MonoBehaviour
 
     void UpdateFeedback()
     {
-        if (feedbackText == null) return;
+        if (feedbackTextboxRect == null) return;
+
+        // live-apply inspector tweaks so style changes show instantly in play mode
+        feedbackTextboxRect.sizeDelta = feedbackTextboxSize;
+        if (feedbackTextboxBg != null) feedbackTextboxBg.color = feedbackTextboxColor;
+        if (feedbackTextboxOutline != null) feedbackTextboxOutline.effectColor = feedbackTextboxBorderColor;
+        if (feedbackText != null) feedbackText.fontSize = feedbackFontSize;
+
+        // follow the shopkeeper horizontally (so the bubble slides in with the NPC); strip
+        // bob by anchoring vertically off shopkeeperOffsetY rather than the live y
+        float baseX = shopkeeperRect != null ? shopkeeperRect.anchoredPosition.x : shopkeeperOffsetX;
+        feedbackTextboxRect.anchoredPosition = new Vector2(baseX + feedbackTextboxOffset.x, shopkeeperOffsetY + feedbackTextboxOffset.y);
+
+        if (feedbackTextboxGroup == null) return;
+
+        // hold fully visible for feedbackHoldDuration after the last ShowFeedback, then fade out
         float elapsed = Time.time - feedbackTime;
-        if (elapsed > 2f)
-        {
-            feedbackText.color = new Color(feedbackText.color.r, feedbackText.color.g, feedbackText.color.b,
-                Mathf.Max(0f, feedbackText.color.a - Time.deltaTime * 2f));
-        }
+        bool hasMessage = feedbackText != null && !string.IsNullOrEmpty(feedbackText.text);
+        float target = (hasMessage && elapsed < feedbackHoldDuration) ? 1f : 0f;
+        feedbackTextboxGroup.alpha = Mathf.MoveTowards(feedbackTextboxGroup.alpha, target, feedbackFadeSpeed * Time.deltaTime);
+
+        // once the bubble has fully faded, clear the text so the next feedback starts fresh
+        if (feedbackTextboxGroup.alpha <= 0.001f && hasMessage)
+            feedbackText.text = "";
     }
 
-    void ShowFeedback(string message, Color color)
+    void ShowFeedback(string message, bool success)
     {
         if (feedbackText == null) return;
         feedbackText.text = message;
-        feedbackText.color = color;
+        feedbackText.color = success ? feedbackSuccessColor : feedbackFailColor;
         feedbackTime = Time.time;
+        // snap the bubble visible immediately so the fade-in doesn't eat the first beats of the message
+        if (feedbackTextboxGroup != null)
+            feedbackTextboxGroup.alpha = 1f;
+    }
+
+    void BuildFeedbackTextbox(Transform parent)
+    {
+        var panel = new GameObject("FeedbackTextbox");
+        panel.transform.SetParent(parent, false);
+        feedbackTextboxRect = panel.AddComponent<RectTransform>();
+        feedbackTextboxRect.anchorMin = new Vector2(0.5f, 0.5f);
+        feedbackTextboxRect.anchorMax = new Vector2(0.5f, 0.5f);
+        feedbackTextboxRect.pivot = new Vector2(0.5f, 0.5f);
+        feedbackTextboxRect.sizeDelta = feedbackTextboxSize;
+        feedbackTextboxRect.anchoredPosition = new Vector2(shopkeeperOffsetX + feedbackTextboxOffset.x, shopkeeperOffsetY + feedbackTextboxOffset.y);
+
+        feedbackTextboxBg = panel.AddComponent<Image>();
+        feedbackTextboxBg.color = feedbackTextboxColor;
+        feedbackTextboxBg.raycastTarget = false;
+
+        feedbackTextboxOutline = panel.AddComponent<Outline>();
+        feedbackTextboxOutline.effectColor = feedbackTextboxBorderColor;
+        feedbackTextboxOutline.effectDistance = new Vector2(2f, -2f);
+
+        // CanvasGroup drives the fade — starts hidden until ShowFeedback snaps it visible
+        feedbackTextboxGroup = panel.AddComponent<CanvasGroup>();
+        feedbackTextboxGroup.alpha = 0f;
+        feedbackTextboxGroup.blocksRaycasts = false;
+        feedbackTextboxGroup.interactable = false;
+
+        var msgObj = new GameObject("Message");
+        msgObj.transform.SetParent(panel.transform, false);
+        var msgRect = msgObj.AddComponent<RectTransform>();
+        msgRect.anchorMin = Vector2.zero;
+        msgRect.anchorMax = Vector2.one;
+        msgRect.offsetMin = new Vector2(20f, 20f);
+        msgRect.offsetMax = new Vector2(-20f, -20f);
+        feedbackText = msgObj.AddComponent<TextMeshProUGUI>();
+        feedbackText.fontSize = feedbackFontSize;
+        feedbackText.alignment = TextAlignmentOptions.Center;
+        feedbackText.enableWordWrapping = true;
+        feedbackText.raycastTarget = false;
+        feedbackText.text = "";
     }
 
     public void OnCardHover(int index)
@@ -710,12 +755,12 @@ public class ShopDisplay : MonoBehaviour
             string result = gameManager.BuyShopCard(index);
             if (result != null && result.StartsWith("NOT_ENOUGH_FUNDS"))
             {
-                ShowFeedback("Not enough funds!", new Color(1f, 0.4f, 0.4f));
+                ShowFeedback("Not enough funds!", false);
                 SetShopkeeperReaction(false);
             }
             else if (result != null)
             {
-                ShowFeedback(result, new Color(0.4f, 1f, 0.5f));
+                ShowFeedback(result, true);
                 SetShopkeeperReaction(true);
                 selectedIndex = -1;
 
@@ -736,44 +781,6 @@ public class ShopDisplay : MonoBehaviour
         {
             selectedIndex = index;
         }
-    }
-
-    void BuildCloseButton(Transform parent)
-    {
-        // position below feedback text
-        int closeRows = Mathf.CeilToInt((float)gameManager.ShopCards.Count / gridColumns);
-        float closeGridH = closeRows * cardHeight + (closeRows - 1) * cardSpacingY;
-
-        var btnObj = CreateUIObj("CloseButton", parent,
-            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
-            new Vector2(gridOffsetX + closeButtonOffset.x, gridOffsetY - closeGridH / 2f - 65f + closeButtonOffset.y), closeButtonSize);
-
-        var btnImg = btnObj.AddComponent<Image>();
-        btnImg.color = new Color(0.3f, 0.3f, 0.35f, 0.9f);
-
-        var btn = btnObj.AddComponent<Button>();
-        btn.targetGraphic = btnImg;
-        btn.onClick.AddListener(() => gameManager.CloseShop());
-
-        var colors = btn.colors;
-        colors.highlightedColor = new Color(0.45f, 0.45f, 0.5f);
-        colors.pressedColor = new Color(0.25f, 0.25f, 0.3f);
-        btn.colors = colors;
-
-        var textObj = new GameObject("Text");
-        textObj.transform.SetParent(btnObj.transform, false);
-        var textRect = textObj.AddComponent<RectTransform>();
-        textRect.anchorMin = Vector2.zero;
-        textRect.anchorMax = Vector2.one;
-        textRect.offsetMin = Vector2.zero;
-        textRect.offsetMax = Vector2.zero;
-        var text = textObj.AddComponent<TextMeshProUGUI>();
-        text.text = closeButtonText;
-        text.fontSize = closeButtonFontSize;
-        text.alignment = TextAlignmentOptions.Center;
-        text.color = new Color(0.8f, 0.8f, 0.8f);
-        closeTextRef = text;
-        closeBtnRect = btnObj.GetComponent<RectTransform>();
     }
 
     void BuildShopkeeper(Transform parent)

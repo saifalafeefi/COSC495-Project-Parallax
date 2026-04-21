@@ -25,6 +25,11 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     // the tutorial reads this to find and highlight specific tab buttons by action
     public TabAction Action => action;
 
+    // the tutorial reads this to distinguish the regular Shop tab (visible outside the shop)
+    // from the in-shop Close tab when both share Action = Shop — so OpenShop / CloseShop steps
+    // can each point at the right physical button
+    public bool OnlyVisibleDuringShop => onlyVisibleDuringShop;
+
     [Header("Hover")]
     [Tooltip("disable hover slide-in/out (for buttons that should always be fully visible)")]
     [SerializeField] private bool disableHover = false;
@@ -33,6 +38,8 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     [Tooltip("extra offset to push the button offscreen when shop is open (x = horizontal, y = vertical)")]
     [SerializeField] private Vector2 shopHideOffset = new Vector2(200f, 0f);
     [SerializeField] private float shopSlideSpeed = 6f;
+    [Tooltip("invert shop visibility — button is parked by shopHideOffset when shop is CLOSED and slides in when shop opens (use for the in-shop Close tab)")]
+    [SerializeField] private bool onlyVisibleDuringShop = false;
 
     private RectTransform rect;
     private Vector2 shownPos;
@@ -70,6 +77,14 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
             rect.anchoredPosition = hiddenPos;
             tweenProgress = 0f;
         }
+
+        // inverted tabs are parked by shopHideOffset while the shop is closed — apply it from frame 1
+        // (otherwise Update's "both settled" early-return leaves the button at hiddenPos, visible)
+        if (onlyVisibleDuringShop)
+        {
+            shopSlideBlend = 0f;
+            rect.anchoredPosition = rect.anchoredPosition + shopHideOffset;
+        }
     }
 
     void Update()
@@ -81,6 +96,10 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
         float shopTarget = (gameManager != null && gameManager.ShopActive) ? 1f : 0f;
         shopSlideBlend = Mathf.Lerp(shopSlideBlend, shopTarget, shopSlideSpeed * Time.unscaledDeltaTime);
         if (Mathf.Abs(shopSlideBlend - shopTarget) < 0.005f) shopSlideBlend = shopTarget;
+
+        // for the inverted "only visible during shop" tab, hover is meaningless while the shop is closed
+        if (onlyVisibleDuringShop && !(gameManager != null && gameManager.ShopActive))
+            hovering = false;
 
         // hover tween
         float hoverTarget = hovering ? 1f : 0f;
@@ -96,7 +115,9 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
         }
 
         float t = 1f - Mathf.Pow(1f - tweenProgress, 3f);
-        rect.anchoredPosition = Vector2.Lerp(hiddenPos, shownPos, t) + shopHideOffset * shopSlideBlend;
+        // normal tabs hide when shop opens; inverted tabs hide when shop is closed
+        float shopBlend = onlyVisibleDuringShop ? (1f - shopSlideBlend) : shopSlideBlend;
+        rect.anchoredPosition = Vector2.Lerp(hiddenPos, shownPos, t) + shopHideOffset * shopBlend;
     }
 
     public void OnPointerEnter(PointerEventData eventData)
@@ -149,10 +170,12 @@ public class SideTabButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
         switch (action)
         {
             case TabAction.Shop:
-                // close is always allowed; open is gated by the tutorial
+                // both open and close are gated by the tutorial so the mascot can script each step
                 if (gameManager.ShopActive)
                 {
+                    if (!TutorialManager.CanPerformAction(TutorialAction.CloseShop)) return;
                     gameManager.CloseShop();
+                    TutorialManager.NotifyAction(TutorialAction.CloseShop);
                 }
                 else
                 {

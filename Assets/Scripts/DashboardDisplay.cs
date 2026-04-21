@@ -118,6 +118,9 @@ public class DashboardDisplay : MonoBehaviour
     private RectTransform histHeaderRect, histPanelRect;
     private RectTransform[] statBarRects = new RectTransform[3]; // carbon, economy, stability rows
 
+    // pulsing glow child on the X close button — lit only during the CloseDashboard tutorial step
+    private Image closeBtnTutorialGlow;
+
     private enum SortMode { Name, Status, Carbon, Economy, Stability, Trait }
     private SortMode currentSort = SortMode.Name;
     private bool sortDescending;
@@ -168,6 +171,7 @@ public class DashboardDisplay : MonoBehaviour
             UpdateDetailPanel();
             UpdateFadeIn();
             UpdateFontSizes();
+            UpdateCloseButtonGlow();
         }
     }
 
@@ -320,6 +324,39 @@ public class DashboardDisplay : MonoBehaviour
         var closeText = CreateText(closeBtn, "X", 18, TextAlignmentOptions.Center, Color.white);
         closeText.fontStyle = FontStyles.Bold;
         StretchFill(closeText.gameObject);
+
+        // tutorial glow — sits behind the close button, stays invisible until the tutorial
+        // reaches the CloseDashboard step (UpdateCloseButtonGlow drives its alpha + padding)
+        var glowObj = new GameObject("TutorialGlow");
+        glowObj.transform.SetParent(closeBtn.transform, false);
+        glowObj.transform.SetAsFirstSibling();
+        var glowRect = glowObj.AddComponent<RectTransform>();
+        glowRect.anchorMin = Vector2.zero;
+        glowRect.anchorMax = Vector2.one;
+        closeBtnTutorialGlow = glowObj.AddComponent<Image>();
+        closeBtnTutorialGlow.raycastTarget = false;
+        closeBtnTutorialGlow.color = new Color(0f, 0f, 0f, 0f);
+    }
+
+    void UpdateCloseButtonGlow()
+    {
+        if (closeBtnTutorialGlow == null) return;
+
+        bool show = TutorialManager.IsActive && TutorialManager.CurrentStepAction == TutorialAction.CloseDashboard;
+        if (!show)
+        {
+            closeBtnTutorialGlow.color = new Color(0f, 0f, 0f, 0f);
+            return;
+        }
+
+        float pad = TutorialManager.GlobalHighlightPadding;
+        closeBtnTutorialGlow.rectTransform.offsetMin = new Vector2(-pad, -pad);
+        closeBtnTutorialGlow.rectTransform.offsetMax = new Vector2(pad, pad);
+
+        Color gCol = TutorialManager.GlobalHighlightColor;
+        float pulse = (Mathf.Sin(Time.unscaledTime * TutorialManager.GlobalHighlightPulseSpeed) + 1f) * 0.5f;
+        float alpha = Mathf.Lerp(TutorialManager.GlobalHighlightMinAlpha, TutorialManager.GlobalHighlightMaxAlpha, pulse);
+        closeBtnTutorialGlow.color = new Color(gCol.r, gCol.g, gCol.b, alpha);
     }
 
     void BuildSortButtons(Transform parent, float totalWidth, float height)
@@ -951,6 +988,7 @@ public class DashboardDisplay : MonoBehaviour
         historyScroll = null;
         listContentTransform = null;
         sortButtonImages.Clear();
+        closeBtnTutorialGlow = null;
 
         if (root != null)
         {
