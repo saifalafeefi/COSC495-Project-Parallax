@@ -116,9 +116,11 @@ public class RegionSelector : MonoBehaviour
 
         if (Mouse.current.rightButton.wasPressedThisFrame)
         {
-            // during tutorial card steps, don't let an accidental right-click in empty space
-            // deselect the region — the tutorial expects the card+region combo to stay committed
-            if (TutorialManager.IsActive && TutorialManager.HighlightedCardIndex >= 0) return;
+            // while the tutorial is active and a region is already committed, block *all*
+            // user-driven deselect — the tutorial's flow (NotifyAction, panel close, etc)
+            // is the only thing allowed to clear the selection, so a stray right-click in
+            // empty space can't soft-brick a step that expects the region to stay focused
+            if (TutorialManager.IsActive && regionManager.SelectedRegion != null) return;
 
             if (regionManager.SelectedRegion != null && AudioManager.Instance != null)
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.regionDeselect);
@@ -164,11 +166,16 @@ public class RegionSelector : MonoBehaviour
                 {
                     if (regionManager.SelectedRegion == region)
                     {
+                        // tutorial locks selection in place — only NotifyAction/panel flow can clear it
+                        if (TutorialManager.IsActive) return;
+
                         // tap same region again to deselect and unfocus
                         if (AudioManager.Instance != null)
                             AudioManager.Instance.PlaySFX(AudioManager.Instance.regionDeselect);
                         regionManager.SelectedRegion = null;
-                        if (arPlacement != null) arPlacement.Unfocus();
+                        // desktop scene running on a phone has no ARPlacement, so try DesktopInteraction first
+                        if (desktopInteraction != null) desktopInteraction.Unfocus();
+                        else if (arPlacement != null) arPlacement.Unfocus();
                     }
                     else
                     {
@@ -182,8 +189,13 @@ public class RegionSelector : MonoBehaviour
                         if (AudioManager.Instance != null)
                             AudioManager.Instance.PlaySFX(AudioManager.Instance.regionSelect);
                         regionManager.SelectedRegion = region;
-                        if (region != null && arPlacement != null)
-                            arPlacement.FocusOnRegion(region, regionManager);
+                        if (region != null)
+                        {
+                            if (desktopInteraction != null)
+                                desktopInteraction.FocusOnRegion(region, regionManager);
+                            else if (arPlacement != null)
+                                arPlacement.FocusOnRegion(region, regionManager);
+                        }
 
                         TutorialManager.NotifyAction(TutorialAction.SelectRegion);
                     }
@@ -199,14 +211,16 @@ public class RegionSelector : MonoBehaviour
         // tap empty space to deselect and unfocus
         if (touch.phase == UnityEngine.InputSystem.TouchPhase.Ended)
         {
-            // during tutorial card steps, lock the region so an accidental tap in empty space
-            // doesn't break the card+region combo the tutorial expects
-            if (TutorialManager.IsActive && TutorialManager.HighlightedCardIndex >= 0) return;
+            // tutorial locks the region in place once it's selected — any tap in empty space
+            // would otherwise soft-brick a step that waits on the focused region
+            if (TutorialManager.IsActive && regionManager.SelectedRegion != null) return;
 
             if (regionManager.SelectedRegion != null && AudioManager.Instance != null)
                 AudioManager.Instance.PlaySFX(AudioManager.Instance.regionDeselect);
             regionManager.SelectedRegion = null;
-            if (arPlacement != null) arPlacement.Unfocus();
+            // desktop scene running on a phone has no ARPlacement, so try DesktopInteraction first
+            if (desktopInteraction != null) desktopInteraction.Unfocus();
+            else if (arPlacement != null) arPlacement.Unfocus();
         }
     }
 }

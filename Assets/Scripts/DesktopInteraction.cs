@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.EnhancedTouch;
 using UnityEngine.EventSystems;
+using Touch = UnityEngine.InputSystem.EnhancedTouch.Touch;
 
 public class DesktopInteraction : MonoBehaviour
 {
@@ -10,6 +12,12 @@ public class DesktopInteraction : MonoBehaviour
     [SerializeField] private float zoomSpeed = 2f;
     [SerializeField] private float minDistance = 1f;
     [SerializeField] private float maxDistance = 10f;
+
+    [Header("Touch Controls")]
+    [Tooltip("how far a single finger must move before it registers as a drag. lower = snappier orbit, higher = more forgiving for taps")]
+    [SerializeField] private float touchDragThresholdPx = 10f;
+    [Tooltip("converts raw pinch-distance-change (pixels/frame) into the same units the mouse-scroll path consumes. raise for snappier pinch zoom")]
+    [SerializeField] private float pinchZoomMultiplier = 0.2f;
 
     [Header("Region Focus")]
     [Tooltip("how close the camera gets when focusing on a region")]
@@ -70,8 +78,26 @@ public class DesktopInteraction : MonoBehaviour
     private float shopLookBlend; // 0 = normal (look at earth), 1 = full shop offset
     private bool wasShopActive;
 
+    // touch state — mirrors ARPlacement's single-finger-rotate + two-finger-pinch pattern
+    // so the desktop scene can run on phones too (planned desktop/ar toggle on mobile)
+    private bool touchDragging;
+    private bool touchStartedOnUI;
+    private Vector2 touchStartPos;
+    private bool pinchActive;
+    private float previousPinchDistance;
+
     public bool IsFocused => isFocused;
     public bool IsInShopView => isInShopView;
+
+    void OnEnable()
+    {
+        EnhancedTouchSupport.Enable();
+    }
+
+    void OnDisable()
+    {
+        EnhancedTouchSupport.Disable();
+    }
 
     void Start()
     {
@@ -171,11 +197,11 @@ public class DesktopInteraction : MonoBehaviour
             currentDistance = Mathf.Lerp(currentDistance, targetDistance, focusSmoothSpeed * Time.deltaTime);
 
             // let the player orbit slowly while focused, with deadzone limit
-            var mouse = Mouse.current;
-            if (!rewardBlocked && mouse != null && mouse.leftButton.isPressed
+            Vector2 focusedDelta = ReadOrbitDrag(out bool focusedDidDrag);
+            if (!rewardBlocked && focusedDidDrag
                 && TutorialManager.CanPerformAction(TutorialAction.OrbitEarth))
             {
-                Vector2 delta = mouse.delta.ReadValue();
+                Vector2 delta = focusedDelta;
                 float baseSpeed = orbitSpeed * focusedOrbitMultiplier * SettingsManager.OrbitSensitivity;
                 float invertY = SettingsManager.InvertY ? 1f : -1f;
 
@@ -228,15 +254,14 @@ public class DesktopInteraction : MonoBehaviour
             if (!rewardBlocked)
             {
                 // let the player orbit while zooming out
-                var mouse = Mouse.current;
-                if (mouse != null && mouse.leftButton.isPressed
+                Vector2 returningDelta = ReadOrbitDrag(out bool returningDidDrag);
+                if (returningDidDrag
                     && TutorialManager.CanPerformAction(TutorialAction.OrbitEarth))
                 {
-                    Vector2 delta = mouse.delta.ReadValue();
                     float sens = orbitSpeed * SettingsManager.OrbitSensitivity;
                     float invertY = SettingsManager.InvertY ? 1f : -1f;
-                    yaw += delta.x * sens * 0.1f;
-                    pitch += delta.y * sens * 0.1f * invertY;
+                    yaw += returningDelta.x * sens * 0.1f;
+                    pitch += returningDelta.y * sens * 0.1f * invertY;
                     pitch = Mathf.Clamp(pitch, -89f, 89f);
                 }
 
@@ -275,15 +300,13 @@ public class DesktopInteraction : MonoBehaviour
 
     void HandleOrbit()
     {
-        var mouse = Mouse.current;
-        if (mouse == null || !mouse.leftButton.isPressed)
-            return;
+        Vector2 delta = ReadOrbitDrag(out bool didDrag);
+        if (!didDrag) return;
 
         // tutorial blocks orbit unless the current step asks for it
         if (!TutorialManager.CanPerformAction(TutorialAction.OrbitEarth))
             return;
 
-        Vector2 delta = mouse.delta.ReadValue();
         float sens = orbitSpeed * SettingsManager.OrbitSensitivity;
         float invertY = SettingsManager.InvertY ? 1f : -1f;
         yaw += delta.x * sens * 0.1f;
@@ -301,11 +324,7 @@ public class DesktopInteraction : MonoBehaviour
 
     void HandleZoom()
     {
-        var mouse = Mouse.current;
-        if (mouse == null)
-            return;
-
-        float scroll = mouse.scroll.ReadValue().y;
+        float scroll = ReadZoomDelta();
         if (Mathf.Abs(scroll) > 0.01f)
         {
             // tutorial blocks zoom unless the current step asks for it
@@ -319,6 +338,95 @@ public class DesktopInteraction : MonoBehaviour
 
             TutorialManager.NotifyAction(TutorialAction.ZoomEarth);
         }
+    }
+
+    // unified drag reader: one-finger touch first (with UI + threshold gating), mouse-left fallback.
+    // returns delta in screen pixels; didDrag = whether the caller should treat this as an orbit move.
+    Vector2 ReadOrbitDrag(out bool didDrag)
+    {
+        didDrag = false;
+
+        int touchCount = Touch.activeTouches.Count;
+
+        // two or more fingers = pinch mode, don't orbit
+        if (touchCount >= 2)
+            return Vector2.zero;
+
+        if (touchCount == 1)
+        {
+            var t = Touch.activeTouches[0];
+
+            if (t.phase == UnityEngine.InputSystem.TouchPhase.Began)
+            {
+                touchStartPos = t.screenPosition;
+                touchStartedOnUI = EventSystem.current != null
+                    && EventSystem.current.IsPointerOverGameObject(t.touchId);
+                touchDragging = false;
+                return Vector2.zero;
+            }
+
+            if (touchStartedOnUI) return Vector2.zero;
+
+            if (t.phase == UnityEngine.InputSystem.TouchPhase.Moved
+                || t.phase == UnityEngine.InputSystem.TouchPhase.Stationary)
+            {
+                if (!touchDragging)
+                {
+                    // wait until the finger has moved past the threshold so taps don't drift the camera
+                    if (Vector2.SqrMagnitude(t.screenPosition - touchStartPos)
+                        < touchDragThresholdPx * touchDragThresholdPx)
+                        return Vector2.zero;
+                    touchDragging = true;
+                }
+                didDrag = true;
+                return t.delta;
+            }
+
+            if (t.phase == UnityEngine.InputSystem.TouchPhase.Ended
+                || t.phase == UnityEngine.InputSystem.TouchPhase.Canceled)
+            {
+                touchDragging = false;
+                touchStartedOnUI = false;
+            }
+            return Vector2.zero;
+        }
+
+        // no touches — mouse fallback
+        var mouse = Mouse.current;
+        if (mouse == null || !mouse.leftButton.isPressed) return Vector2.zero;
+        Vector2 mouseDelta = mouse.delta.ReadValue();
+        if (mouseDelta.sqrMagnitude <= 0.0001f) return Vector2.zero;
+        didDrag = true;
+        return mouseDelta;
+    }
+
+    // unified zoom reader: two-finger pinch first, scroll-wheel fallback.
+    // returns a signed scalar matching the units HandleZoom's mouse-scroll path consumes.
+    float ReadZoomDelta()
+    {
+        if (Touch.activeTouches.Count >= 2)
+        {
+            var a = Touch.activeTouches[0];
+            var b = Touch.activeTouches[1];
+            float dist = Vector2.Distance(a.screenPosition, b.screenPosition);
+
+            if (!pinchActive)
+            {
+                pinchActive = true;
+                previousPinchDistance = dist;
+                return 0f;
+            }
+
+            float deltaDist = dist - previousPinchDistance;
+            previousPinchDistance = dist;
+            return deltaDist * pinchZoomMultiplier;
+        }
+
+        pinchActive = false;
+
+        var mouse = Mouse.current;
+        if (mouse == null) return 0f;
+        return mouse.scroll.ReadValue().y;
     }
 
     void ApplyOrbit()

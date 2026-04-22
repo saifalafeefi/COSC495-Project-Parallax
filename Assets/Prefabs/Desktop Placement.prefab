@@ -51,6 +51,8 @@ MonoBehaviour:
   zoomSpeed: 100
   minDistance: 12
   maxDistance: 20
+  touchDragThresholdPx: 40
+  pinchZoomMultiplier: 0.2
   focusDistance: 9
   focusSmoothSpeed: 4
   focusedOrbitMultiplier: 0.3

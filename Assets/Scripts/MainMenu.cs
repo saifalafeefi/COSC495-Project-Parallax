@@ -151,10 +151,12 @@ public class MainMenu : MonoBehaviour
                 break;
 
             case MenuState.FadeToTutorial:
-                // tutorial skips difficulty select — fade the main panel straight out into the game scene
+                // tutorial skips difficulty select — fade the main panel straight out into the game scene.
+                // always load the desktop scene regardless of platform: the tutorial is a scripted walkthrough
+                // that doesn't benefit from AR placement, and keeping it on one scene avoids double-maintaining steps
                 mainPanel.alpha = Mathf.MoveTowards(mainPanel.alpha, 0f, t);
                 if (mainPanel.alpha <= 0.01f)
-                    SceneManager.LoadScene(IsMobilePlatform() ? arSceneName : desktopSceneName);
+                    SceneManager.LoadScene(desktopSceneName);
                 break;
 
             case MenuState.FadeToSettings:
