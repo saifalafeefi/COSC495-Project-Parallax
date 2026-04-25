@@ -4273,10 +4273,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 83520fe9896157d48932085fc9e8e9cd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SettingsDisplay
-  panelWidth: 700
-  panelHeight: 1080
+  panelWidth: 1000
+  panelHeight: 700
   panelColor: {r: 0.08, g: 0.08, b: 0.12, a: 0.96}
+  panelBorderColor: {r: 0.9, g: 0.7, b: 0.1, a: 1}
+  panelBorderWidth: 3
   backdropColor: {r: 0, g: 0, b: 0, a: 0.6}
+  tabHeight: 42
+  tabWidth: 170
+  tabSpacing: 8
+  tabFontSize: 20
+  tabActiveColor: {r: 0.9, g: 0.7, b: 0.1, a: 1}
+  tabInactiveColor: {r: 0.3, g: 0.3, b: 0.35, a: 1}
+  titleFontSize: 32
   headerFontSize: 26
   headerColor: {r: 0.9, g: 0.75, b: 0.3, a: 1}
   labelFontSize: 20

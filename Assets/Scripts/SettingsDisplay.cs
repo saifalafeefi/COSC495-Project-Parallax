@@ -8,10 +8,23 @@ using TMPro;
 public class SettingsDisplay : MonoBehaviour
 {
     [Header("Panel")]
-    [SerializeField] private float panelWidth = 700f;
-    [SerializeField] private float panelHeight = 850f;
+    [SerializeField] private float panelWidth = 1100f;
+    [SerializeField] private float panelHeight = 600f;
     [SerializeField] private Color panelColor = new Color(0.08f, 0.08f, 0.12f, 0.96f);
+    [SerializeField] private Color panelBorderColor = new Color(0.9f, 0.7f, 0.1f, 1f);
+    [SerializeField] private float panelBorderWidth = 3f;
     [SerializeField] private Color backdropColor = new Color(0f, 0f, 0f, 0.6f);
+
+    [Header("Tab Bar")]
+    [SerializeField] private float tabHeight = 42f;
+    [SerializeField] private float tabWidth = 170f;
+    [SerializeField] private float tabSpacing = 8f;
+    [SerializeField] private int tabFontSize = 20;
+    [SerializeField] private Color tabActiveColor = new Color(0.9f, 0.7f, 0.1f, 1f);
+    [SerializeField] private Color tabInactiveColor = new Color(0.3f, 0.3f, 0.35f, 1f);
+
+    [Header("Title")]
+    [SerializeField] private int titleFontSize = 32;
 
     [Header("Section Headers")]
     [SerializeField] private int headerFontSize = 26;
@@ -66,6 +79,19 @@ public class SettingsDisplay : MonoBehaviour
     private TMP_Text dealSpeedText;
     private TMP_Text arModeText;
     private Image arModeBg;
+
+    // tab views — only the active one is visible, others are SetActive(false)
+    private GameObject displayView;
+    private GameObject cameraView;
+    private GameObject audioView;
+    private GameObject gameplayView;
+    private GameObject mobileView;
+    private Image displayTabImg;
+    private Image cameraTabImg;
+    private Image audioTabImg;
+    private Image gameplayTabImg;
+    private Image mobileTabImg;
+    private int currentTab = -1;
     private Slider orbitSensSlider;
     private Slider zoomSensSlider;
     private Slider masterVolSlider;
@@ -154,7 +180,7 @@ public class SettingsDisplay : MonoBehaviour
 
     void BuildUI()
     {
-        // canvas — same pattern as DashboardDisplay
+        // canvas
         root = new GameObject("SettingsUI");
         root.transform.SetParent(transform, false);
         var canvas = root.AddComponent<Canvas>();
@@ -182,6 +208,12 @@ public class SettingsDisplay : MonoBehaviour
         bdColors.selectedColor = backdropColor;
         bdBtn.colors = bdColors;
 
+        // panel border (codex-style frame)
+        var border = CreateUIObj("Border", root.transform,
+            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+            Vector2.zero, new Vector2(panelWidth + panelBorderWidth * 2f, panelHeight + panelBorderWidth * 2f));
+        border.AddComponent<Image>().color = panelBorderColor;
+
         // center panel
         var panel = CreateUIObj("Panel", root.transform,
             new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
@@ -190,135 +222,175 @@ public class SettingsDisplay : MonoBehaviour
         panelImg.color = panelColor;
         panelImg.raycastTarget = true;
 
-        // scroll view — matching DashboardDisplay pattern with separate viewport + RectMask2D
-        var scrollObj = CreateUIObj("Scroll", panel.transform,
-            Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f),
-            Vector2.zero, Vector2.zero);
-        var scrollRt = scrollObj.GetComponent<RectTransform>();
-        scrollRt.offsetMin = new Vector2(sidePadding, 60f);
-        scrollRt.offsetMax = new Vector2(-sidePadding, -topPadding);
-
-        var scrollRect = scrollObj.AddComponent<ScrollRect>();
-        scrollRect.vertical = true;
-        scrollRect.horizontal = false;
-        scrollRect.movementType = ScrollRect.MovementType.Clamped;
-        scrollRect.inertia = false;
-        scrollRect.scrollSensitivity = 30f;
-
-        // viewport — child of scroll with mask
-        var viewport = CreateUIObj("Viewport", scrollObj.transform,
-            Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f),
-            Vector2.zero, Vector2.zero);
-        viewport.AddComponent<RectMask2D>();
-        scrollRect.viewport = viewport.GetComponent<RectTransform>();
-
-        // content — child of viewport, anchored to top
-        float contentWidth = panelWidth - sidePadding * 2f;
-        float y = 0f;
-
-        // pre-calculate total content height so we can set it up front
-        // title + display(fps+res+window) + camera(orbit+zoom+invert) + audio(master+music+sfx) + gameplay(spin+deal) + mobile(ar)
-        int rowCount = 12; // all rows
-        #if UNITY_ANDROID || UNITY_IOS
-        rowCount -= 2; // no resolution/window mode on mobile
-        #endif
-        float sectionCount = 5f; // display, camera, audio, gameplay, mobile
-        float estimatedHeight = 60f + sectionCount * (sectionGap + rowHeight) + rowCount * (rowHeight + rowSpacing) + sectionGap * 2f;
-
-        var content = CreateUIObj("Content", viewport.transform,
-            new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
-            Vector2.zero, new Vector2(0f, estimatedHeight));
-        scrollRect.content = content.GetComponent<RectTransform>();
-        var contentTransform = content.transform;
-
         // --- title ---
-        y -= 10f;
-        CreateHeaderText(contentTransform, "SETTINGS", y, 32);
-        y -= 50f;
+        var titleObj = CreateUIObj("Title", panel.transform,
+            new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
+            new Vector2(0f, -10f), new Vector2(0f, 45f));
+        var titleTmp = titleObj.AddComponent<TextMeshProUGUI>();
+        titleTmp.text = "SETTINGS";
+        titleTmp.fontSize = titleFontSize;
+        titleTmp.color = panelBorderColor;
+        titleTmp.alignment = TextAlignmentOptions.Center;
+        titleTmp.fontStyle = FontStyles.Bold;
+        titleTmp.raycastTarget = false;
 
-        // === DISPLAY ===
-        y -= sectionGap * 0.5f;
-        CreateHeaderText(contentTransform, "DISPLAY", y);
-        y -= rowHeight;
+        // --- tab bar ---
+        // five tabs centered as a group below the title. always show all five even on PC, since
+        // every category has at least one row applicable everywhere.
+        const int tabCount = 5;
+        float tabBarY = -65f;
+        float totalTabsW = tabWidth * tabCount + tabSpacing * (tabCount - 1);
+        float tabStartX = -totalTabsW * 0.5f + tabWidth * 0.5f;
 
-        fpsValueText = CreateCycleRow(contentTransform, "Frame Rate", y, contentWidth, OnFpsLeft, OnFpsRight);
+        displayTabImg  = BuildTab(panel.transform, "DISPLAY",  tabStartX + 0 * (tabWidth + tabSpacing), tabBarY, () => SwitchToTab(0));
+        cameraTabImg   = BuildTab(panel.transform, "CAMERA",   tabStartX + 1 * (tabWidth + tabSpacing), tabBarY, () => SwitchToTab(1));
+        audioTabImg    = BuildTab(panel.transform, "AUDIO",    tabStartX + 2 * (tabWidth + tabSpacing), tabBarY, () => SwitchToTab(2));
+        gameplayTabImg = BuildTab(panel.transform, "GAMEPLAY", tabStartX + 3 * (tabWidth + tabSpacing), tabBarY, () => SwitchToTab(3));
+        mobileTabImg   = BuildTab(panel.transform, "MOBILE",   tabStartX + 4 * (tabWidth + tabSpacing), tabBarY, () => SwitchToTab(4));
+
+        // --- content area (below tab bar, above bottom buttons) ---
+        float contentTopOffset = -(tabBarY - tabHeight - 15f); // distance from panel top down to content top
+        float contentBottomOffset = 65f; // leaves room for Reset / Close buttons
+        float contentWidth = panelWidth - sidePadding * 2f;
+
+        // each view is a stretched rect. row builders position children top-down using y starting at 0.
+        displayView  = BuildContentView(panel.transform, "DisplayView",  contentTopOffset, contentBottomOffset);
+        cameraView   = BuildContentView(panel.transform, "CameraView",   contentTopOffset, contentBottomOffset);
+        audioView    = BuildContentView(panel.transform, "AudioView",    contentTopOffset, contentBottomOffset);
+        gameplayView = BuildContentView(panel.transform, "GameplayView", contentTopOffset, contentBottomOffset);
+        mobileView   = BuildContentView(panel.transform, "MobileView",   contentTopOffset, contentBottomOffset);
+
+        BuildDisplaySection(displayView.transform, contentWidth);
+        BuildCameraSection(cameraView.transform, contentWidth);
+        BuildAudioSection(audioView.transform, contentWidth);
+        BuildGameplaySection(gameplayView.transform, contentWidth);
+        BuildMobileSection(mobileView.transform, contentWidth);
+
+        // --- bottom buttons ---
+        float btnW = 180f;
+        float btnH = 40f;
+        CreateButton(panel.transform, "Reset Defaults", new Vector2(-btnW * 0.5f - 10f, 12f), btnW, btnH, OnResetDefaults);
+        CreateButton(panel.transform, "Close", new Vector2(btnW * 0.5f + 10f, 12f), btnW, btnH, Hide);
+
+        // start on Display
+        SwitchToTab(0);
+    }
+
+    // --- tab builders ---
+
+    Image BuildTab(Transform parent, string label, float x, float y, UnityEngine.Events.UnityAction onClick)
+    {
+        var btnObj = CreateUIObj(label + "Tab", parent,
+            new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+            new Vector2(x, y), new Vector2(tabWidth, tabHeight));
+        var img = btnObj.AddComponent<Image>();
+        img.color = tabInactiveColor;
+
+        var btn = btnObj.AddComponent<Button>();
+        btn.targetGraphic = img;
+        btn.onClick.AddListener(onClick);
+
+        var tmp = CreateText(btnObj.transform, label, tabFontSize, TextAlignmentOptions.Center, Color.white);
+        tmp.fontStyle = FontStyles.Bold;
+        StretchFill(tmp.gameObject);
+        return img;
+    }
+
+    GameObject BuildContentView(Transform parent, string name, float topOffset, float bottomOffset)
+    {
+        var view = CreateUIObj(name, parent,
+            Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f),
+            Vector2.zero, Vector2.zero);
+        var rt = view.GetComponent<RectTransform>();
+        rt.offsetMin = new Vector2(sidePadding, bottomOffset);
+        rt.offsetMax = new Vector2(-sidePadding, -topOffset);
+        return view;
+    }
+
+    void SwitchToTab(int index)
+    {
+        // only play the click on a real user-driven tab change, not the initial selection during BuildUI
+        if (currentTab != -1 && index != currentTab && AudioManager.Instance != null)
+            AudioManager.Instance.PlaySFX(AudioManager.Instance.buttonClick);
+        currentTab = index;
+
+        displayView.SetActive(index == 0);
+        cameraView.SetActive(index == 1);
+        audioView.SetActive(index == 2);
+        gameplayView.SetActive(index == 3);
+        mobileView.SetActive(index == 4);
+
+        displayTabImg.color  = index == 0 ? tabActiveColor : tabInactiveColor;
+        cameraTabImg.color   = index == 1 ? tabActiveColor : tabInactiveColor;
+        audioTabImg.color    = index == 2 ? tabActiveColor : tabInactiveColor;
+        gameplayTabImg.color = index == 3 ? tabActiveColor : tabInactiveColor;
+        mobileTabImg.color   = index == 4 ? tabActiveColor : tabInactiveColor;
+    }
+
+    // --- per-section builders ---
+
+    void BuildDisplaySection(Transform parent, float contentWidth)
+    {
+        float y = 0f;
+        fpsValueText = CreateCycleRow(parent, "Frame Rate", y, contentWidth, OnFpsLeft, OnFpsRight);
         y -= rowHeight + rowSpacing;
 
         #if !UNITY_ANDROID && !UNITY_IOS
-        resValueText = CreateCycleRow(contentTransform, "Resolution", y, contentWidth, OnResLeft, OnResRight);
+        resValueText = CreateCycleRow(parent, "Resolution", y, contentWidth, OnResLeft, OnResRight);
         y -= rowHeight + rowSpacing;
 
-        fullscreenValueText = CreateCycleRow(contentTransform, "Window Mode", y, contentWidth, OnFullscreenLeft, OnFullscreenRight);
+        fullscreenValueText = CreateCycleRow(parent, "Window Mode", y, contentWidth, OnFullscreenLeft, OnFullscreenRight);
         y -= rowHeight + rowSpacing;
         #endif
+    }
 
-        // === CAMERA ===
-        y -= sectionGap;
-        CreateHeaderText(contentTransform, "CAMERA", y);
-        y -= rowHeight;
-
-        orbitSensSlider = CreateSliderRow(contentTransform, "Orbit Sensitivity", y, contentWidth, 0.25f, 3f,
+    void BuildCameraSection(Transform parent, float contentWidth)
+    {
+        float y = 0f;
+        orbitSensSlider = CreateSliderRow(parent, "Orbit Sensitivity", y, contentWidth, 0.25f, 3f,
             out orbitSensValueText, OnOrbitSensChanged);
         y -= rowHeight + rowSpacing;
 
-        zoomSensSlider = CreateSliderRow(contentTransform, "Zoom Sensitivity", y, contentWidth, 0.25f, 3f,
+        zoomSensSlider = CreateSliderRow(parent, "Zoom Sensitivity", y, contentWidth, 0.25f, 3f,
             out zoomSensValueText, OnZoomSensChanged);
         y -= rowHeight + rowSpacing;
 
-        CreateToggleRow(contentTransform, "Invert Y-Axis", y, contentWidth, out invertYText, out invertYBg, OnInvertYToggle);
-        y -= rowHeight + rowSpacing;
+        CreateToggleRow(parent, "Invert Y-Axis", y, contentWidth, out invertYText, out invertYBg, OnInvertYToggle);
+    }
 
-        // === AUDIO ===
-        y -= sectionGap;
-        CreateHeaderText(contentTransform, "AUDIO", y);
-        y -= rowHeight;
-
-        masterVolSlider = CreateSliderRow(contentTransform, "Master Volume", y, contentWidth, 0f, 1f,
+    void BuildAudioSection(Transform parent, float contentWidth)
+    {
+        float y = 0f;
+        masterVolSlider = CreateSliderRow(parent, "Master Volume", y, contentWidth, 0f, 1f,
             out masterVolText, OnMasterVolChanged);
         y -= rowHeight + rowSpacing;
 
-        musicVolSlider = CreateSliderRow(contentTransform, "Music Volume", y, contentWidth, 0f, 1f,
+        musicVolSlider = CreateSliderRow(parent, "Music Volume", y, contentWidth, 0f, 1f,
             out musicVolText, OnMusicVolChanged);
         y -= rowHeight + rowSpacing;
 
-        sfxVolSlider = CreateSliderRow(contentTransform, "SFX Volume", y, contentWidth, 0f, 1f,
+        sfxVolSlider = CreateSliderRow(parent, "SFX Volume", y, contentWidth, 0f, 1f,
             out sfxVolText, OnSfxVolChanged);
-        y -= rowHeight + rowSpacing;
+    }
 
-        // === GAMEPLAY ===
-        y -= sectionGap;
-        CreateHeaderText(contentTransform, "GAMEPLAY", y);
-        y -= rowHeight;
-
-        spinSpeedSlider = CreateSliderRow(contentTransform, "Earth Spin Speed", y, contentWidth, 0f, 3f,
+    void BuildGameplaySection(Transform parent, float contentWidth)
+    {
+        float y = 0f;
+        spinSpeedSlider = CreateSliderRow(parent, "Earth Spin Speed", y, contentWidth, 0f, 3f,
             out spinSpeedText, OnSpinSpeedChanged);
         y -= rowHeight + rowSpacing;
 
-        dealSpeedSlider = CreateSliderRow(contentTransform, "Card Deal Speed", y, contentWidth, 0.5f, 2f,
+        dealSpeedSlider = CreateSliderRow(parent, "Card Deal Speed", y, contentWidth, 0.5f, 2f,
             out dealSpeedText, OnDealSpeedChanged);
-        y -= rowHeight + rowSpacing;
+    }
 
-        // === MOBILE ===
+    void BuildMobileSection(Transform parent, float contentWidth)
+    {
         // shown to PC users too — the toggle is harmless there since IsMobilePlatform() gates the
         // actual scene swap. label spells out "for mobile devices" so PC players know it's not for them.
-        y -= sectionGap;
-        CreateHeaderText(contentTransform, "MOBILE", y);
-        y -= rowHeight;
-
-        CreateToggleRow(contentTransform, "AR Mode (for mobile devices)", y, contentWidth,
+        float y = 0f;
+        CreateToggleRow(parent, "AR Mode (for mobile devices)", y, contentWidth,
             out arModeText, out arModeBg, OnArModeToggle);
-        y -= rowHeight + rowSpacing;
-
-        // update actual content height now that we know the real value
-        y -= sectionGap;
-        content.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, Mathf.Abs(y));
-
-        // --- bottom buttons (on panel, below scroll area) ---
-        float btnW = 180f;
-        float btnH = 40f;
-
-        CreateButton(panel.transform, "Reset Defaults", new Vector2(-btnW * 0.5f - 10f, 12f), btnW, btnH, OnResetDefaults);
-        CreateButton(panel.transform, "Close", new Vector2(btnW * 0.5f + 10f, 12f), btnW, btnH, Hide);
     }
 
     void SyncUIToSettings()
