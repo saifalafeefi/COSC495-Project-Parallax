@@ -147,7 +147,12 @@ public class MainMenu : MonoBehaviour
             case MenuState.FadeToGame:
                 previewPanel.alpha = Mathf.MoveTowards(previewPanel.alpha, 0f, t);
                 if (previewPanel.alpha <= 0.01f)
-                    SceneManager.LoadScene(IsMobilePlatform() ? arSceneName : desktopSceneName);
+                {
+                    // phones only get the AR scene when the AR Mode toggle is on; otherwise they
+                    // play the Desktop scene with touch controls. PC always gets Desktop regardless.
+                    bool useAR = IsMobilePlatform() && SettingsManager.ARMode;
+                    SceneManager.LoadScene(useAR ? arSceneName : desktopSceneName);
+                }
                 break;
 
             case MenuState.FadeToTutorial:

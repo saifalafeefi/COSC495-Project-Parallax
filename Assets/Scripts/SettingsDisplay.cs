@@ -64,6 +64,8 @@ public class SettingsDisplay : MonoBehaviour
     private TMP_Text sfxVolText;
     private TMP_Text spinSpeedText;
     private TMP_Text dealSpeedText;
+    private TMP_Text arModeText;
+    private Image arModeBg;
     private Slider orbitSensSlider;
     private Slider zoomSensSlider;
     private Slider masterVolSlider;
@@ -215,12 +217,12 @@ public class SettingsDisplay : MonoBehaviour
         float y = 0f;
 
         // pre-calculate total content height so we can set it up front
-        // title + display(fps+res+window) + camera(orbit+zoom+invert) + audio(master+music+sfx) + gameplay(spin+deal)
-        int rowCount = 11; // all rows
+        // title + display(fps+res+window) + camera(orbit+zoom+invert) + audio(master+music+sfx) + gameplay(spin+deal) + mobile(ar)
+        int rowCount = 12; // all rows
         #if UNITY_ANDROID || UNITY_IOS
         rowCount -= 2; // no resolution/window mode on mobile
         #endif
-        float sectionCount = 4f; // display, camera, audio, gameplay
+        float sectionCount = 5f; // display, camera, audio, gameplay, mobile
         float estimatedHeight = 60f + sectionCount * (sectionGap + rowHeight) + rowCount * (rowHeight + rowSpacing) + sectionGap * 2f;
 
         var content = CreateUIObj("Content", viewport.transform,
@@ -296,6 +298,17 @@ public class SettingsDisplay : MonoBehaviour
             out dealSpeedText, OnDealSpeedChanged);
         y -= rowHeight + rowSpacing;
 
+        // === MOBILE ===
+        // shown to PC users too — the toggle is harmless there since IsMobilePlatform() gates the
+        // actual scene swap. label spells out "for mobile devices" so PC players know it's not for them.
+        y -= sectionGap;
+        CreateHeaderText(contentTransform, "MOBILE", y);
+        y -= rowHeight;
+
+        CreateToggleRow(contentTransform, "AR Mode (for mobile devices)", y, contentWidth,
+            out arModeText, out arModeBg, OnArModeToggle);
+        y -= rowHeight + rowSpacing;
+
         // update actual content height now that we know the real value
         y -= sectionGap;
         content.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, Mathf.Abs(y));
@@ -345,6 +358,10 @@ public class SettingsDisplay : MonoBehaviour
 
         dealSpeedSlider.SetValueWithoutNotify(SettingsManager.DealSpeed);
         UpdateSliderValueText(dealSpeedText, SettingsManager.DealSpeed, "x");
+
+        bool ar = SettingsManager.ARMode;
+        arModeText.text = ar ? "ON" : "OFF";
+        arModeBg.color = ar ? toggleOnColor : toggleOffColor;
     }
 
     // --- callbacks ---
@@ -506,6 +523,14 @@ public class SettingsDisplay : MonoBehaviour
     {
         SettingsManager.DealSpeed = val;
         UpdateSliderValueText(dealSpeedText, val, "x");
+    }
+
+    void OnArModeToggle()
+    {
+        bool newVal = !SettingsManager.ARMode;
+        SettingsManager.ARMode = newVal;
+        arModeText.text = newVal ? "ON" : "OFF";
+        arModeBg.color = newVal ? toggleOnColor : toggleOffColor;
     }
 
     void OnResetDefaults()

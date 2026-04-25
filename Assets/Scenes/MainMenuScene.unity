@@ -4274,7 +4274,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SettingsDisplay
   panelWidth: 700
-  panelHeight: 850
+  panelHeight: 1080
   panelColor: {r: 0.08, g: 0.08, b: 0.12, a: 0.96}
   backdropColor: {r: 0, g: 0, b: 0, a: 0.6}
   headerFontSize: 26

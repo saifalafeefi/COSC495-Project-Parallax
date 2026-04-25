@@ -17,6 +17,7 @@ public static class SettingsManager
     private const string KEY_SFX_VOL = "SFXVolume";
     private const string KEY_SPIN_SPEED = "SpinSpeed";
     private const string KEY_DEAL_SPEED = "DealSpeed";
+    private const string KEY_AR_MODE = "ARMode";
 
     // --- defaults ---
     public const int DEFAULT_FPS = 60;
@@ -29,6 +30,7 @@ public static class SettingsManager
     public const float DEFAULT_SPIN_SPEED = 1f;
     public const float DEFAULT_DEAL_SPEED = 1f;
     public const int DEFAULT_FULLSCREEN = 1; // FullScreenWindow
+    public const bool DEFAULT_AR_MODE = false;
 
     // --- properties ---
 
@@ -111,6 +113,14 @@ public static class SettingsManager
         set { PlayerPrefs.SetFloat(KEY_DEAL_SPEED, Mathf.Clamp(value, 0.5f, 2f)); PlayerPrefs.Save(); }
     }
 
+    // mobile-only: when true, Start Game on a phone loads the AR scene; when false, phones get the
+    // Desktop scene (with touch controls). Setting is shown to PC players too but has no effect there.
+    public static bool ARMode
+    {
+        get => PlayerPrefs.GetInt(KEY_AR_MODE, DEFAULT_AR_MODE ? 1 : 0) == 1;
+        set { PlayerPrefs.SetInt(KEY_AR_MODE, value ? 1 : 0); PlayerPrefs.Save(); }
+    }
+
     // apply all runtime settings (call on scene load)
     public static void ApplyAll()
     {
@@ -141,6 +151,7 @@ public static class SettingsManager
         FullscreenMode = DEFAULT_FULLSCREEN;
         ResolutionW = Screen.currentResolution.width;
         ResolutionH = Screen.currentResolution.height;
+        ARMode = DEFAULT_AR_MODE;
         ApplyAll();
     }
 }
