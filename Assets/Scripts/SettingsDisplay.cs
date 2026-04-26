@@ -7,6 +7,10 @@ using TMPro;
 // builds its own Canvas (sortingOrder=16), no prefab needed
 public class SettingsDisplay : MonoBehaviour
 {
+    [Header("Context")]
+    [Tooltip("hide settings that only matter on the main menu (currently: AR Mode / Mobile tab). Enable on the in-game (pause menu) instance.")]
+    [SerializeField] private bool hideMobileTab = false;
+
     [Header("Panel")]
     [SerializeField] private float panelWidth = 1100f;
     [SerializeField] private float panelHeight = 600f;
@@ -259,8 +263,8 @@ public class SettingsDisplay : MonoBehaviour
             titleRect.anchoredPosition = new Vector2(0f, titleY);
 
         // tab bar Y — keep each tab's X (driven by tabWidth/tabSpacing) but use live tabBarY
-        const int tabCount = 5;
-        float totalTabsW = tabWidth * tabCount + tabSpacing * (tabCount - 1);
+        int visibleTabCount = hideMobileTab ? 4 : 5;
+        float totalTabsW = tabWidth * visibleTabCount + tabSpacing * (visibleTabCount - 1);
         float tabStartX = -totalTabsW * 0.5f + tabWidth * 0.5f;
         for (int i = 0; i < tabRects.Length; i++)
         {
@@ -406,23 +410,23 @@ public class SettingsDisplay : MonoBehaviour
         titleText = titleTmp;
 
         // --- tab bar ---
-        // five tabs centered as a group below the title. always show all five even on PC, since
-        // every category has at least one row applicable everywhere.
-        const int tabCount = 5;
-        float totalTabsW = tabWidth * tabCount + tabSpacing * (tabCount - 1);
+        // tabs centered as a group below the title. mobile tab is skipped on the in-game instance.
+        int visibleTabCount = hideMobileTab ? 4 : 5;
+        float totalTabsW = tabWidth * visibleTabCount + tabSpacing * (visibleTabCount - 1);
         float tabStartX = -totalTabsW * 0.5f + tabWidth * 0.5f;
 
         displayTabImg  = BuildTab(panel.transform, "DISPLAY",  tabStartX + 0 * (tabWidth + tabSpacing), tabBarY, () => SwitchToTab(0));
         cameraTabImg   = BuildTab(panel.transform, "CAMERA",   tabStartX + 1 * (tabWidth + tabSpacing), tabBarY, () => SwitchToTab(1));
         audioTabImg    = BuildTab(panel.transform, "AUDIO",    tabStartX + 2 * (tabWidth + tabSpacing), tabBarY, () => SwitchToTab(2));
         gameplayTabImg = BuildTab(panel.transform, "GAMEPLAY", tabStartX + 3 * (tabWidth + tabSpacing), tabBarY, () => SwitchToTab(3));
-        mobileTabImg   = BuildTab(panel.transform, "MOBILE",   tabStartX + 4 * (tabWidth + tabSpacing), tabBarY, () => SwitchToTab(4));
+        if (!hideMobileTab)
+            mobileTabImg = BuildTab(panel.transform, "MOBILE",   tabStartX + 4 * (tabWidth + tabSpacing), tabBarY, () => SwitchToTab(4));
 
         tabRects[0] = displayTabImg.rectTransform;
         tabRects[1] = cameraTabImg.rectTransform;
         tabRects[2] = audioTabImg.rectTransform;
         tabRects[3] = gameplayTabImg.rectTransform;
-        tabRects[4] = mobileTabImg.rectTransform;
+        tabRects[4] = mobileTabImg != null ? mobileTabImg.rectTransform : null;
 
         // --- content area (below tab bar, above bottom buttons) ---
         float contentTopOffset = -(tabBarY - tabHeight - contentTopGap); // distance from panel top down to content top
@@ -434,19 +438,21 @@ public class SettingsDisplay : MonoBehaviour
         cameraView   = BuildContentView(panel.transform, "CameraView",   contentTopOffset, contentBottomOffset);
         audioView    = BuildContentView(panel.transform, "AudioView",    contentTopOffset, contentBottomOffset);
         gameplayView = BuildContentView(panel.transform, "GameplayView", contentTopOffset, contentBottomOffset);
-        mobileView   = BuildContentView(panel.transform, "MobileView",   contentTopOffset, contentBottomOffset);
+        if (!hideMobileTab)
+            mobileView = BuildContentView(panel.transform, "MobileView",   contentTopOffset, contentBottomOffset);
 
         contentViewRects[0] = displayView.GetComponent<RectTransform>();
         contentViewRects[1] = cameraView.GetComponent<RectTransform>();
         contentViewRects[2] = audioView.GetComponent<RectTransform>();
         contentViewRects[3] = gameplayView.GetComponent<RectTransform>();
-        contentViewRects[4] = mobileView.GetComponent<RectTransform>();
+        contentViewRects[4] = mobileView != null ? mobileView.GetComponent<RectTransform>() : null;
 
         BuildDisplaySection(displayView.transform, contentWidth);
         BuildCameraSection(cameraView.transform, contentWidth);
         BuildAudioSection(audioView.transform, contentWidth);
         BuildGameplaySection(gameplayView.transform, contentWidth);
-        BuildMobileSection(mobileView.transform, contentWidth);
+        if (!hideMobileTab)
+            BuildMobileSection(mobileView.transform, contentWidth);
 
         // --- bottom buttons ---
         float btnW = 180f;
@@ -503,13 +509,13 @@ public class SettingsDisplay : MonoBehaviour
         cameraView.SetActive(index == 1);
         audioView.SetActive(index == 2);
         gameplayView.SetActive(index == 3);
-        mobileView.SetActive(index == 4);
+        if (mobileView != null) mobileView.SetActive(index == 4);
 
         displayTabImg.color  = index == 0 ? tabActiveColor : tabInactiveColor;
         cameraTabImg.color   = index == 1 ? tabActiveColor : tabInactiveColor;
         audioTabImg.color    = index == 2 ? tabActiveColor : tabInactiveColor;
         gameplayTabImg.color = index == 3 ? tabActiveColor : tabInactiveColor;
-        mobileTabImg.color   = index == 4 ? tabActiveColor : tabInactiveColor;
+        if (mobileTabImg != null) mobileTabImg.color = index == 4 ? tabActiveColor : tabInactiveColor;
     }
 
     // --- per-section builders ---
@@ -616,9 +622,12 @@ public class SettingsDisplay : MonoBehaviour
         dealSpeedSlider.SetValueWithoutNotify(SettingsManager.DealSpeed);
         UpdateSliderValueText(dealSpeedText, SettingsManager.DealSpeed, "x");
 
-        bool ar = SettingsManager.ARMode;
-        arModeText.text = ar ? "ON" : "OFF";
-        arModeBg.color = ar ? toggleOnColor : toggleOffColor;
+        if (arModeText != null && arModeBg != null)
+        {
+            bool ar = SettingsManager.ARMode;
+            arModeText.text = ar ? "ON" : "OFF";
+            arModeBg.color = ar ? toggleOnColor : toggleOffColor;
+        }
     }
 
     // --- callbacks ---

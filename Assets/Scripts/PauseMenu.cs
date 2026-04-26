@@ -18,6 +18,12 @@ public class PauseMenu : MonoBehaviour
     [Tooltip("main menu button inside the pause overlay")]
     [SerializeField] private Button mainMenuButton;
 
+    [Tooltip("settings button inside the pause overlay (opens the in-game SettingsDisplay)")]
+    [SerializeField] private Button settingsButton;
+
+    [Tooltip("in-game SettingsDisplay instance (separate from main menu's; should have Hide Mobile Tab enabled)")]
+    [SerializeField] private SettingsDisplay settingsDisplay;
+
     [Header("Scene Names")]
     [SerializeField] private string mainMenuSceneName = "MainMenuScene";
 
@@ -45,6 +51,8 @@ public class PauseMenu : MonoBehaviour
             pauseRestartButton.onClick.AddListener(DoRestart);
         if (mainMenuButton != null)
             mainMenuButton.onClick.AddListener(GoToMainMenu);
+        if (settingsButton != null)
+            settingsButton.onClick.AddListener(OpenSettings);
         if (gameOverRestartButton != null)
             gameOverRestartButton.onClick.AddListener(DoRestart);
         if (gameOverMainMenuButton != null)
@@ -78,6 +86,13 @@ public class PauseMenu : MonoBehaviour
         // ESC priority: unfocus region first, then toggle pause
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
+            // settings panel is always the top-most modal — ESC closes it instead of touching pause state
+            if (settingsDisplay != null && settingsDisplay.IsShowing)
+            {
+                settingsDisplay.Hide();
+                return;
+            }
+
             // block all ESC while skip confirm popup is showing (popup handles its own ESC)
             var skipPopup = FindFirstObjectByType<SkipConfirmPopup>();
             if (skipPopup != null && skipPopup.IsShowing)
@@ -200,6 +215,11 @@ public class PauseMenu : MonoBehaviour
 
         if (gameManager != null)
             gameManager.RestartGame();
+    }
+
+    public void OpenSettings()
+    {
+        if (settingsDisplay != null) settingsDisplay.Show();
     }
 
     public void GoToMainMenu()

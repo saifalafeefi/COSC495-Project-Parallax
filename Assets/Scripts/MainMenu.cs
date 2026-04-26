@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using TMPro;
 
@@ -68,6 +69,21 @@ public class MainMenu : MonoBehaviour
 
     void Update()
     {
+        // ESC closes any open overlay (settings / codex) before any other handling
+        if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+        {
+            if (settingsDisplay != null && settingsDisplay.IsShowing)
+            {
+                settingsDisplay.Hide();
+                return;
+            }
+            if (codexDisplay != null && codexDisplay.IsShowing)
+            {
+                codexDisplay.Hide();
+                return;
+            }
+        }
+
         // spin the decorative earth
         if (earthObject != null)
         {
