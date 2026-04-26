@@ -79,7 +79,9 @@ public class MainMenu : MonoBehaviour
             }
             if (codexDisplay != null && codexDisplay.IsShowing)
             {
-                codexDisplay.Hide();
+                // route through OnCodexBack — codex isn't a pure overlay, the state machine
+                // also has to fade the main panel's alpha back up
+                OnCodexBack();
                 return;
             }
         }

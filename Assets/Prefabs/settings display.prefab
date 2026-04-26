@@ -65,7 +65,8 @@ MonoBehaviour:
   sliderFillColor: {r: 0.3, g: 0.6, b: 0.9, a: 1}
   sliderBgColor: {r: 0.2, g: 0.2, b: 0.25, a: 1}
   sliderHandleColor: {r: 1, g: 1, b: 1, a: 1}
-  sliderHeight: 11.9
+  sliderHeight: 14
+  sliderRowHeight: 70
   buttonColor: {r: 0.2, g: 0.2, b: 0.28, a: 1}
   buttonTextColor: {r: 1, g: 1, b: 1, a: 1}
   buttonFontSize: 45

@@ -42,7 +42,10 @@ public class SettingsDisplay : MonoBehaviour
     [SerializeField] private Color sliderFillColor = new Color(0.3f, 0.6f, 0.9f);
     [SerializeField] private Color sliderBgColor = new Color(0.2f, 0.2f, 0.25f);
     [SerializeField] private Color sliderHandleColor = Color.white;
+    [Tooltip("track / handle thickness in pixels — bump up for fat fingers on mobile")]
     [SerializeField] private float sliderHeight = 20f;
+    [Tooltip("vertical space the entire slider row takes (controls touch hit area). Set higher than rowHeight on mobile so taps anywhere on the track register.")]
+    [SerializeField] private float sliderRowHeight = 40f;
 
     [Header("Buttons")]
     [SerializeField] private Color buttonColor = new Color(0.2f, 0.2f, 0.28f);
@@ -97,6 +100,9 @@ public class SettingsDisplay : MonoBehaviour
     // slider rects so sliderHeight + handle size live-updates
     private readonly List<RectTransform> sliderRects = new List<RectTransform>();
     private readonly List<RectTransform> sliderHandleRects = new List<RectTransform>();
+    // row rects so row heights live-update and rows can be re-flowed top-to-bottom per section
+    private readonly List<RectTransform> sliderRowRects = new List<RectTransform>();
+    private readonly List<RectTransform> regularRowRects = new List<RectTransform>();
 
     // per-button auto-fit data: every frame, button is resized to text preferred + padding
     private struct StyledButton
@@ -232,6 +238,26 @@ public class SettingsDisplay : MonoBehaviour
             if (sr != null) { var sd = sr.sizeDelta; sd.y = sliderHeight; sr.sizeDelta = sd; }
         foreach (var hr in sliderHandleRects)
             if (hr != null) hr.sizeDelta = new Vector2(sliderHeight, sliderHeight * 1.4f);
+
+        // row heights (regular vs slider — slider rows can be made taller for mobile touch hit area)
+        foreach (var r in regularRowRects)
+            if (r != null) { var sd = r.sizeDelta; sd.y = rowHeight; r.sizeDelta = sd; }
+        foreach (var r in sliderRowRects)
+            if (r != null) { var sd = r.sizeDelta; sd.y = sliderRowHeight; r.sizeDelta = sd; }
+
+        // re-flow each section's rows top-to-bottom so taller slider rows push subsequent rows down
+        foreach (var view in contentViewRects)
+        {
+            if (view == null) continue;
+            float yPos = 0f;
+            for (int i = 0; i < view.childCount; i++)
+            {
+                var child = view.GetChild(i) as RectTransform;
+                if (child == null) continue;
+                child.anchoredPosition = new Vector2(child.anchoredPosition.x, yPos);
+                yPos -= child.sizeDelta.y + rowSpacing;
+            }
+        }
 
         // auto-fit every styled button to its text preferred size + padding
         foreach (var sb in styledButtons)
@@ -878,6 +904,7 @@ public class SettingsDisplay : MonoBehaviour
         var row = CreateUIObj(label + "Row", parent,
             new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
             new Vector2(0f, y), new Vector2(0f, rowHeight));
+        regularRowRects.Add(row.GetComponent<RectTransform>());
 
         // label on left half
         var lbl = CreateText(row.transform, label, labelFontSize, TextAlignmentOptions.Left, labelColor);
@@ -944,7 +971,8 @@ public class SettingsDisplay : MonoBehaviour
     {
         var row = CreateUIObj(label + "Row", parent,
             new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
-            new Vector2(0f, y), new Vector2(0f, rowHeight));
+            new Vector2(0f, y), new Vector2(0f, sliderRowHeight));
+        sliderRowRects.Add(row.GetComponent<RectTransform>());
 
         // label on left
         var lbl = CreateText(row.transform, label, labelFontSize, TextAlignmentOptions.Left, labelColor);
@@ -975,6 +1003,7 @@ public class SettingsDisplay : MonoBehaviour
             Vector2.zero, Vector2.zero);
         var bgImg = bgObj.AddComponent<Image>();
         bgImg.color = sliderBgColor;
+        bgImg.raycastTarget = true; // make the track itself a tap target so click-anywhere-to-jump works
         sliderBgImages.Add(bgImg);
 
         // fill area
@@ -1019,6 +1048,7 @@ public class SettingsDisplay : MonoBehaviour
         var row = CreateUIObj(label + "Row", parent,
             new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
             new Vector2(0f, y), new Vector2(0f, rowHeight));
+        regularRowRects.Add(row.GetComponent<RectTransform>());
 
         // label
         var lbl = CreateText(row.transform, label, labelFontSize, TextAlignmentOptions.Left, labelColor);
