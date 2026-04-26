@@ -26,10 +26,6 @@ public class SettingsDisplay : MonoBehaviour
     [Header("Title")]
     [SerializeField] private int titleFontSize = 32;
 
-    [Header("Section Headers")]
-    [SerializeField] private int headerFontSize = 26;
-    [SerializeField] private Color headerColor = new Color(0.9f, 0.75f, 0.3f);
-
     [Header("Labels")]
     [SerializeField] private int labelFontSize = 20;
     [SerializeField] private Color labelColor = new Color(0.85f, 0.85f, 0.85f);
@@ -61,8 +57,72 @@ public class SettingsDisplay : MonoBehaviour
     [SerializeField] private float topPadding = 20f;
     [SerializeField] private float sidePadding = 40f;
 
+    [Header("Layout Positions (live-tunable)")]
+    [Tooltip("Y offset of the SETTINGS title from the panel top (negative = lower)")]
+    [SerializeField] private float titleY = -10f;
+    [Tooltip("Y offset of the tab bar from the panel top (negative = lower)")]
+    [SerializeField] private float tabBarY = -65f;
+    [Tooltip("Gap between bottom of tab bar and top of content area")]
+    [SerializeField] private float contentTopGap = 15f;
+    [Tooltip("Vertical space at the panel bottom reserved for Reset / Close buttons")]
+    [SerializeField] private float contentBottomMargin = 65f;
+    [Tooltip("Reset button anchored position (relative to panel bottom-center)")]
+    [SerializeField] private Vector2 resetButtonPos = new Vector2(-100f, 12f);
+    [Tooltip("Close button anchored position (relative to panel bottom-center)")]
+    [SerializeField] private Vector2 closeButtonPos = new Vector2(100f, 12f);
+
     private GameObject root;
     private CanvasGroup canvasGroup;
+
+    // live-tuning caches — populated in BuildUI, re-applied every frame in ApplyLiveSettings
+    private Image panelImg;
+    private Image borderImg;
+    private RectTransform borderRect;
+    private RectTransform panelRect;
+    private Image backdropImg;
+    private TMP_Text titleText;
+    private readonly List<TMP_Text> tabTexts = new List<TMP_Text>();
+    private readonly List<TMP_Text> labelTexts = new List<TMP_Text>();
+    private readonly List<TMP_Text> valueTexts = new List<TMP_Text>();
+    private readonly List<TMP_Text> buttonTexts = new List<TMP_Text>();
+    private readonly List<Image> cycleButtonImages = new List<Image>();
+    private readonly List<Image> buttonImages = new List<Image>();
+    private readonly List<Image> sliderFillImages = new List<Image>();
+    private readonly List<Image> sliderBgImages = new List<Image>();
+    private readonly List<Image> sliderHandleImages = new List<Image>();
+    // slider rects so sliderHeight + handle size live-updates
+    private readonly List<RectTransform> sliderRects = new List<RectTransform>();
+    private readonly List<RectTransform> sliderHandleRects = new List<RectTransform>();
+
+    // per-button auto-fit data: every frame, button is resized to text preferred + padding
+    private struct StyledButton
+    {
+        public RectTransform rect;
+        public TMP_Text text;
+        public Vector2 padding;
+        public bool square;        // force width = height (for < > arrows)
+        public float minWidth;
+        public float minHeight;
+    }
+    private readonly List<StyledButton> styledButtons = new List<StyledButton>();
+
+    // cycle row layout: position of value + < depends on > button's actual width
+    private struct CycleRow
+    {
+        public RectTransform leftBtn;
+        public RectTransform rightBtn;
+        public RectTransform valueRect;
+        public float valueWidth;
+        public float gap;
+    }
+    private readonly List<CycleRow> cycleRows = new List<CycleRow>();
+
+    // layout-position caches
+    private RectTransform titleRect;
+    private RectTransform[] tabRects = new RectTransform[5];
+    private RectTransform[] contentViewRects = new RectTransform[5];
+    private RectTransform resetBtnRect;
+    private RectTransform closeBtnRect;
 
     // ui references we need to update
     private TMP_Text fpsValueText;
@@ -118,6 +178,110 @@ public class SettingsDisplay : MonoBehaviour
     {
         deviceMaxFps = Mathf.Max(60, (int)Screen.currentResolution.refreshRateRatio.value);
         CacheResolutions();
+    }
+
+    void Update()
+    {
+        // re-apply inspector style fields every frame so designers can tune live in play mode
+        if (root == null || !isShowing) return;
+        ApplyLiveSettings();
+    }
+
+    void ApplyLiveSettings()
+    {
+        // panel + backdrop
+        if (panelImg != null) panelImg.color = panelColor;
+        if (borderImg != null) borderImg.color = panelBorderColor;
+        if (backdropImg != null) backdropImg.color = backdropColor;
+        if (panelRect != null) panelRect.sizeDelta = new Vector2(panelWidth, panelHeight);
+        if (borderRect != null) borderRect.sizeDelta = new Vector2(panelWidth + panelBorderWidth * 2f, panelHeight + panelBorderWidth * 2f);
+
+        // title (color follows the border palette)
+        if (titleText != null) { titleText.fontSize = titleFontSize; titleText.color = panelBorderColor; }
+
+        // tabs — text size + active/inactive color follow the current selection
+        foreach (var t in tabTexts) if (t != null) t.fontSize = tabFontSize;
+        if (displayTabImg != null)  displayTabImg.color  = currentTab == 0 ? tabActiveColor : tabInactiveColor;
+        if (cameraTabImg != null)   cameraTabImg.color   = currentTab == 1 ? tabActiveColor : tabInactiveColor;
+        if (audioTabImg != null)    audioTabImg.color    = currentTab == 2 ? tabActiveColor : tabInactiveColor;
+        if (gameplayTabImg != null) gameplayTabImg.color = currentTab == 3 ? tabActiveColor : tabInactiveColor;
+        if (mobileTabImg != null)   mobileTabImg.color   = currentTab == 4 ? tabActiveColor : tabInactiveColor;
+
+        // text styling
+        foreach (var t in labelTexts)  if (t != null) { t.fontSize = labelFontSize;  t.color = labelColor; }
+        foreach (var t in valueTexts)  if (t != null) { t.fontSize = valueFontSize;  t.color = valueColor; }
+        foreach (var t in buttonTexts) if (t != null) { t.fontSize = buttonFontSize; t.color = buttonTextColor; }
+
+        // image colors
+        foreach (var i in cycleButtonImages)  if (i != null) i.color = cycleButtonColor;
+        foreach (var i in buttonImages)       if (i != null) i.color = buttonColor;
+        foreach (var i in sliderFillImages)   if (i != null) i.color = sliderFillColor;
+        foreach (var i in sliderBgImages)     if (i != null) i.color = sliderBgColor;
+        foreach (var i in sliderHandleImages) if (i != null) i.color = sliderHandleColor;
+
+        // toggle bg follows current value (so re-tinting toggleOn/Off reflects immediately)
+        if (invertYBg != null) invertYBg.color = SettingsManager.InvertY ? toggleOnColor : toggleOffColor;
+        if (arModeBg != null)  arModeBg.color  = SettingsManager.ARMode  ? toggleOnColor : toggleOffColor;
+
+        // slider thickness (track + handle) — handle stays slightly taller than track
+        foreach (var sr in sliderRects)
+            if (sr != null) { var sd = sr.sizeDelta; sd.y = sliderHeight; sr.sizeDelta = sd; }
+        foreach (var hr in sliderHandleRects)
+            if (hr != null) hr.sizeDelta = new Vector2(sliderHeight, sliderHeight * 1.4f);
+
+        // auto-fit every styled button to its text preferred size + padding
+        foreach (var sb in styledButtons)
+        {
+            if (sb.rect == null || sb.text == null) continue;
+            sb.text.ForceMeshUpdate();
+            float w = sb.text.preferredWidth + sb.padding.x * 2f;
+            float h = sb.text.preferredHeight + sb.padding.y * 2f;
+            if (sb.square) { float s = Mathf.Max(w, h); w = s; h = s; }
+            w = Mathf.Max(w, sb.minWidth);
+            h = Mathf.Max(h, sb.minHeight);
+            sb.rect.sizeDelta = new Vector2(w, h);
+        }
+
+        // re-position cycle row contents so value + < button track the > button's actual width
+        foreach (var cr in cycleRows)
+        {
+            if (cr.rightBtn == null || cr.valueRect == null || cr.leftBtn == null) continue;
+            float rightW = cr.rightBtn.sizeDelta.x;
+            float leftW = cr.leftBtn.sizeDelta.x;
+            // value sits to the left of the > button
+            cr.valueRect.anchoredPosition = new Vector2(-rightW - cr.gap, 0f);
+            // < button sits to the left of the value box
+            cr.leftBtn.anchoredPosition = new Vector2(-rightW - cr.valueWidth - cr.gap * 2f, 0f);
+        }
+
+        // --- layout positions ---
+        if (titleRect != null)
+            titleRect.anchoredPosition = new Vector2(0f, titleY);
+
+        // tab bar Y — keep each tab's X (driven by tabWidth/tabSpacing) but use live tabBarY
+        const int tabCount = 5;
+        float totalTabsW = tabWidth * tabCount + tabSpacing * (tabCount - 1);
+        float tabStartX = -totalTabsW * 0.5f + tabWidth * 0.5f;
+        for (int i = 0; i < tabRects.Length; i++)
+        {
+            if (tabRects[i] == null) continue;
+            tabRects[i].anchoredPosition = new Vector2(tabStartX + i * (tabWidth + tabSpacing), tabBarY);
+            tabRects[i].sizeDelta = new Vector2(tabWidth, tabHeight);
+        }
+
+        // content area top/bottom margins
+        float contentTopOffset = -(tabBarY - tabHeight - contentTopGap);
+        float contentBottomOffset = contentBottomMargin;
+        foreach (var cv in contentViewRects)
+        {
+            if (cv == null) continue;
+            cv.offsetMin = new Vector2(sidePadding, contentBottomOffset);
+            cv.offsetMax = new Vector2(-sidePadding, -contentTopOffset);
+        }
+
+        // bottom buttons
+        if (resetBtnRect != null) resetBtnRect.anchoredPosition = resetButtonPos;
+        if (closeBtnRect != null) closeBtnRect.anchoredPosition = closeButtonPos;
     }
 
     void CacheResolutions()
@@ -199,6 +363,7 @@ public class SettingsDisplay : MonoBehaviour
         var backdrop = CreateStretchChild(root, "Backdrop");
         var bdImg = backdrop.AddComponent<Image>();
         bdImg.color = backdropColor;
+        backdropImg = bdImg;
         bdImg.raycastTarget = true;
         var bdBtn = backdrop.AddComponent<Button>();
         bdBtn.onClick.AddListener(Hide);
@@ -212,20 +377,25 @@ public class SettingsDisplay : MonoBehaviour
         var border = CreateUIObj("Border", root.transform,
             new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
             Vector2.zero, new Vector2(panelWidth + panelBorderWidth * 2f, panelHeight + panelBorderWidth * 2f));
-        border.AddComponent<Image>().color = panelBorderColor;
+        borderImg = border.AddComponent<Image>();
+        borderImg.color = panelBorderColor;
+        borderRect = border.GetComponent<RectTransform>();
 
         // center panel
         var panel = CreateUIObj("Panel", root.transform,
             new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
             Vector2.zero, new Vector2(panelWidth, panelHeight));
-        var panelImg = panel.AddComponent<Image>();
-        panelImg.color = panelColor;
-        panelImg.raycastTarget = true;
+        var panelImage = panel.AddComponent<Image>();
+        panelImage.color = panelColor;
+        panelImage.raycastTarget = true;
+        panelImg = panelImage;
+        panelRect = panel.GetComponent<RectTransform>();
 
         // --- title ---
         var titleObj = CreateUIObj("Title", panel.transform,
             new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
-            new Vector2(0f, -10f), new Vector2(0f, 45f));
+            new Vector2(0f, titleY), new Vector2(0f, 45f));
+        titleRect = titleObj.GetComponent<RectTransform>();
         var titleTmp = titleObj.AddComponent<TextMeshProUGUI>();
         titleTmp.text = "SETTINGS";
         titleTmp.fontSize = titleFontSize;
@@ -233,12 +403,12 @@ public class SettingsDisplay : MonoBehaviour
         titleTmp.alignment = TextAlignmentOptions.Center;
         titleTmp.fontStyle = FontStyles.Bold;
         titleTmp.raycastTarget = false;
+        titleText = titleTmp;
 
         // --- tab bar ---
         // five tabs centered as a group below the title. always show all five even on PC, since
         // every category has at least one row applicable everywhere.
         const int tabCount = 5;
-        float tabBarY = -65f;
         float totalTabsW = tabWidth * tabCount + tabSpacing * (tabCount - 1);
         float tabStartX = -totalTabsW * 0.5f + tabWidth * 0.5f;
 
@@ -248,9 +418,15 @@ public class SettingsDisplay : MonoBehaviour
         gameplayTabImg = BuildTab(panel.transform, "GAMEPLAY", tabStartX + 3 * (tabWidth + tabSpacing), tabBarY, () => SwitchToTab(3));
         mobileTabImg   = BuildTab(panel.transform, "MOBILE",   tabStartX + 4 * (tabWidth + tabSpacing), tabBarY, () => SwitchToTab(4));
 
+        tabRects[0] = displayTabImg.rectTransform;
+        tabRects[1] = cameraTabImg.rectTransform;
+        tabRects[2] = audioTabImg.rectTransform;
+        tabRects[3] = gameplayTabImg.rectTransform;
+        tabRects[4] = mobileTabImg.rectTransform;
+
         // --- content area (below tab bar, above bottom buttons) ---
-        float contentTopOffset = -(tabBarY - tabHeight - 15f); // distance from panel top down to content top
-        float contentBottomOffset = 65f; // leaves room for Reset / Close buttons
+        float contentTopOffset = -(tabBarY - tabHeight - contentTopGap); // distance from panel top down to content top
+        float contentBottomOffset = contentBottomMargin; // leaves room for Reset / Close buttons
         float contentWidth = panelWidth - sidePadding * 2f;
 
         // each view is a stretched rect. row builders position children top-down using y starting at 0.
@@ -259,6 +435,12 @@ public class SettingsDisplay : MonoBehaviour
         audioView    = BuildContentView(panel.transform, "AudioView",    contentTopOffset, contentBottomOffset);
         gameplayView = BuildContentView(panel.transform, "GameplayView", contentTopOffset, contentBottomOffset);
         mobileView   = BuildContentView(panel.transform, "MobileView",   contentTopOffset, contentBottomOffset);
+
+        contentViewRects[0] = displayView.GetComponent<RectTransform>();
+        contentViewRects[1] = cameraView.GetComponent<RectTransform>();
+        contentViewRects[2] = audioView.GetComponent<RectTransform>();
+        contentViewRects[3] = gameplayView.GetComponent<RectTransform>();
+        contentViewRects[4] = mobileView.GetComponent<RectTransform>();
 
         BuildDisplaySection(displayView.transform, contentWidth);
         BuildCameraSection(cameraView.transform, contentWidth);
@@ -269,8 +451,10 @@ public class SettingsDisplay : MonoBehaviour
         // --- bottom buttons ---
         float btnW = 180f;
         float btnH = 40f;
-        CreateButton(panel.transform, "Reset Defaults", new Vector2(-btnW * 0.5f - 10f, 12f), btnW, btnH, OnResetDefaults);
-        CreateButton(panel.transform, "Close", new Vector2(btnW * 0.5f + 10f, 12f), btnW, btnH, Hide);
+        var resetBtnObj  = CreateButton(panel.transform, "Reset Defaults", resetButtonPos, btnW, btnH, OnResetDefaults);
+        var closeBtnObj  = CreateButton(panel.transform, "Close",          closeButtonPos, btnW, btnH, Hide);
+        resetBtnRect = resetBtnObj.GetComponent<RectTransform>();
+        closeBtnRect = closeBtnObj.GetComponent<RectTransform>();
 
         // start on Display
         SwitchToTab(0);
@@ -293,6 +477,7 @@ public class SettingsDisplay : MonoBehaviour
         var tmp = CreateText(btnObj.transform, label, tabFontSize, TextAlignmentOptions.Center, Color.white);
         tmp.fontStyle = FontStyles.Bold;
         StretchFill(tmp.gameObject);
+        tabTexts.Add(tmp);
         return img;
     }
 
@@ -661,7 +846,8 @@ public class SettingsDisplay : MonoBehaviour
         text.color = color;
         text.raycastTarget = false;
         text.enableWordWrapping = false;
-        text.overflowMode = TextOverflowModes.Ellipsis;
+        // Overflow (not Ellipsis) so live font-size tweaks never collapse text into "..." / empty
+        text.overflowMode = TextOverflowModes.Overflow;
         return text;
     }
 
@@ -686,6 +872,7 @@ public class SettingsDisplay : MonoBehaviour
 
         // label on left half
         var lbl = CreateText(row.transform, label, labelFontSize, TextAlignmentOptions.Left, labelColor);
+        labelTexts.Add(lbl);
         var lblRt = lbl.GetComponent<RectTransform>();
         lblRt.anchorMin = new Vector2(0f, 0f);
         lblRt.anchorMax = new Vector2(0.5f, 1f);
@@ -701,11 +888,15 @@ public class SettingsDisplay : MonoBehaviour
             Vector2.zero, new Vector2(btnSize, btnSize));
         var rbImg = rightBtn.AddComponent<Image>();
         rbImg.color = cycleButtonColor;
+        cycleButtonImages.Add(rbImg);
         var rbText = CreateText(rightBtn.transform, ">", buttonFontSize, TextAlignmentOptions.Center, buttonTextColor);
         StretchFill(rbText.gameObject);
+        buttonTexts.Add(rbText);
         var rbBtn = rightBtn.AddComponent<Button>();
         rbBtn.targetGraphic = rbImg;
         rbBtn.onClick.AddListener(onRight);
+        var rbRect = rightBtn.GetComponent<RectTransform>();
+        styledButtons.Add(new StyledButton { rect = rbRect, text = rbText, padding = new Vector2(8f, 4f), square = true, minWidth = 28f, minHeight = 28f });
 
         // value text in the middle-right
         float valWidth = 140f;
@@ -714,6 +905,8 @@ public class SettingsDisplay : MonoBehaviour
             new Vector2(-btnSize - 4f, 0f), new Vector2(valWidth, 0f));
         var valText = CreateText(valObj.transform, "---", valueFontSize, TextAlignmentOptions.Center, valueColor);
         StretchFill(valText.gameObject);
+        valueTexts.Add(valText);
+        var valRect = valObj.GetComponent<RectTransform>();
 
         // < button to the left of value
         var leftBtn = CreateUIObj("<Btn", row.transform,
@@ -721,11 +914,18 @@ public class SettingsDisplay : MonoBehaviour
             new Vector2(-btnSize - valWidth - 8f, 0f), new Vector2(btnSize, btnSize));
         var lbImg = leftBtn.AddComponent<Image>();
         lbImg.color = cycleButtonColor;
+        cycleButtonImages.Add(lbImg);
         var lbText = CreateText(leftBtn.transform, "<", buttonFontSize, TextAlignmentOptions.Center, buttonTextColor);
         StretchFill(lbText.gameObject);
+        buttonTexts.Add(lbText);
         var lbBtn = leftBtn.AddComponent<Button>();
         lbBtn.targetGraphic = lbImg;
         lbBtn.onClick.AddListener(onLeft);
+        var lbRect = leftBtn.GetComponent<RectTransform>();
+        styledButtons.Add(new StyledButton { rect = lbRect, text = lbText, padding = new Vector2(8f, 4f), square = true, minWidth = 28f, minHeight = 28f });
+
+        // remember the row so ApplyLiveSettings can re-position value + left button when right button resizes
+        cycleRows.Add(new CycleRow { leftBtn = lbRect, rightBtn = rbRect, valueRect = valRect, valueWidth = valWidth, gap = 4f });
 
         return valText;
     }
@@ -739,6 +939,7 @@ public class SettingsDisplay : MonoBehaviour
 
         // label on left
         var lbl = CreateText(row.transform, label, labelFontSize, TextAlignmentOptions.Left, labelColor);
+        labelTexts.Add(lbl);
         var lblRt = lbl.GetComponent<RectTransform>();
         lblRt.anchorMin = new Vector2(0f, 0f);
         lblRt.anchorMax = new Vector2(0.45f, 1f);
@@ -751,11 +952,13 @@ public class SettingsDisplay : MonoBehaviour
             Vector2.zero, Vector2.zero);
         valueText = CreateText(valObj.transform, "---", valueFontSize, TextAlignmentOptions.Right, valueColor);
         StretchFill(valueText.gameObject);
+        valueTexts.Add(valueText);
 
         // slider in middle area
         var sliderObj = CreateUIObj(label + "Slider", row.transform,
             new Vector2(0.46f, 0.5f), new Vector2(0.87f, 0.5f), new Vector2(0.5f, 0.5f),
             Vector2.zero, new Vector2(0f, sliderHeight));
+        sliderRects.Add(sliderObj.GetComponent<RectTransform>());
 
         // background track
         var bgObj = CreateUIObj("Bg", sliderObj.transform,
@@ -763,6 +966,7 @@ public class SettingsDisplay : MonoBehaviour
             Vector2.zero, Vector2.zero);
         var bgImg = bgObj.AddComponent<Image>();
         bgImg.color = sliderBgColor;
+        sliderBgImages.Add(bgImg);
 
         // fill area
         var fillArea = CreateUIObj("Fill Area", sliderObj.transform,
@@ -774,6 +978,7 @@ public class SettingsDisplay : MonoBehaviour
             Vector2.zero, Vector2.zero);
         var fillImg = fillObj.AddComponent<Image>();
         fillImg.color = sliderFillColor;
+        sliderFillImages.Add(fillImg);
 
         // handle area
         var handleArea = CreateUIObj("Handle Slide Area", sliderObj.transform,
@@ -785,6 +990,8 @@ public class SettingsDisplay : MonoBehaviour
             Vector2.zero, new Vector2(sliderHeight, sliderHeight * 1.4f));
         var handleImg = handleObj.AddComponent<Image>();
         handleImg.color = sliderHandleColor;
+        sliderHandleImages.Add(handleImg);
+        sliderHandleRects.Add(handleObj.GetComponent<RectTransform>());
 
         var slider = sliderObj.AddComponent<Slider>();
         slider.fillRect = fillObj.GetComponent<RectTransform>();
@@ -806,6 +1013,7 @@ public class SettingsDisplay : MonoBehaviour
 
         // label
         var lbl = CreateText(row.transform, label, labelFontSize, TextAlignmentOptions.Left, labelColor);
+        labelTexts.Add(lbl);
         var lblRt = lbl.GetComponent<RectTransform>();
         lblRt.anchorMin = new Vector2(0f, 0f);
         lblRt.anchorMax = new Vector2(0.5f, 1f);
@@ -824,26 +1032,24 @@ public class SettingsDisplay : MonoBehaviour
         valueText = CreateText(btnObj.transform, "OFF", valueFontSize, TextAlignmentOptions.Center, valueColor);
         StretchFill(valueText.gameObject);
         valueText.raycastTarget = false;
+        valueTexts.Add(valueText);
 
         var btn = btnObj.AddComponent<Button>();
         btn.targetGraphic = bgImage;
         btn.onClick.AddListener(onClick);
+
+        // auto-fit toggle to its label (ON/OFF) + padding
+        styledButtons.Add(new StyledButton {
+            rect = btnObj.GetComponent<RectTransform>(),
+            text = valueText,
+            padding = new Vector2(20f, 10f),
+            square = false,
+            minWidth = 70f,
+            minHeight = 28f,
+        });
     }
 
-    void CreateHeaderText(Transform contentTransform, string text, float y, int size = -1)
-    {
-        if (size < 0) size = headerFontSize;
-
-        var obj = CreateUIObj(text + "Header", contentTransform,
-            new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f),
-            new Vector2(0f, y), new Vector2(0f, rowHeight));
-
-        var tmp = CreateText(obj.transform, text, size, TextAlignmentOptions.Left, headerColor);
-        tmp.fontStyle = FontStyles.Bold;
-        StretchFill(tmp.gameObject);
-    }
-
-    void CreateButton(Transform parent, string text, Vector2 pos, float w, float h,
+GameObject CreateButton(Transform parent, string text, Vector2 pos, float w, float h,
         UnityEngine.Events.UnityAction onClick)
     {
         var obj = CreateUIObj(text + "Btn", parent,
@@ -851,12 +1057,25 @@ public class SettingsDisplay : MonoBehaviour
             pos, new Vector2(w, h));
         var img = obj.AddComponent<Image>();
         img.color = buttonColor;
+        buttonImages.Add(img);
 
         var tmp = CreateText(obj.transform, text, buttonFontSize, TextAlignmentOptions.Center, buttonTextColor);
         StretchFill(tmp.gameObject);
+        buttonTexts.Add(tmp);
 
         var btn = obj.AddComponent<Button>();
         btn.targetGraphic = img;
         btn.onClick.AddListener(onClick);
+
+        // auto-fit bottom buttons to their text + padding
+        styledButtons.Add(new StyledButton {
+            rect = obj.GetComponent<RectTransform>(),
+            text = tmp,
+            padding = new Vector2(28f, 12f),
+            square = false,
+            minWidth = w,
+            minHeight = h,
+        });
+        return obj;
     }
 }

@@ -2374,6 +2374,9 @@ MonoBehaviour:
   gameplayMusic: {fileID: 8300000, guid: 02477674cd4bc6f4897af82844d4b4a0, type: 3}
   gameOverMusic: {fileID: 0}
   crossfadeDuration: 1
+  menuMusicGain: 1
+  gameplayMusicGain: 0.67
+  gameOverMusicGain: 1
 --- !u!4 &1025703934
 Transform:
   m_ObjectHideFlags: 0
@@ -4279,26 +4282,24 @@ MonoBehaviour:
   panelBorderColor: {r: 0.9, g: 0.7, b: 0.1, a: 1}
   panelBorderWidth: 3
   backdropColor: {r: 0, g: 0, b: 0, a: 0.6}
-  tabHeight: 42
+  tabHeight: 49.4
   tabWidth: 170
-  tabSpacing: 8
-  tabFontSize: 20
+  tabSpacing: 23.3
+  tabFontSize: 27
   tabActiveColor: {r: 0.9, g: 0.7, b: 0.1, a: 1}
   tabInactiveColor: {r: 0.3, g: 0.3, b: 0.35, a: 1}
-  titleFontSize: 32
-  headerFontSize: 26
-  headerColor: {r: 0.9, g: 0.75, b: 0.3, a: 1}
-  labelFontSize: 20
+  titleFontSize: 62
+  labelFontSize: 44
   labelColor: {r: 0.85, g: 0.85, b: 0.85, a: 1}
-  valueFontSize: 20
+  valueFontSize: 35
   valueColor: {r: 1, g: 1, b: 1, a: 1}
   sliderFillColor: {r: 0.3, g: 0.6, b: 0.9, a: 1}
   sliderBgColor: {r: 0.2, g: 0.2, b: 0.25, a: 1}
   sliderHandleColor: {r: 1, g: 1, b: 1, a: 1}
-  sliderHeight: 20
+  sliderHeight: 11.9
   buttonColor: {r: 0.2, g: 0.2, b: 0.28, a: 1}
   buttonTextColor: {r: 1, g: 1, b: 1, a: 1}
-  buttonFontSize: 20
+  buttonFontSize: 45
   cycleButtonColor: {r: 0.25, g: 0.25, b: 0.32, a: 1}
   toggleOnColor: {r: 0.3, g: 0.7, b: 0.3, a: 1}
   toggleOffColor: {r: 0.4, g: 0.2, b: 0.2, a: 1}
@@ -4307,6 +4308,12 @@ MonoBehaviour:
   rowSpacing: 6
   topPadding: 20
   sidePadding: 40
+  titleY: -15.92
+  tabBarY: -82.5
+  contentTopGap: 30.8
+  contentBottomMargin: 65
+  resetButtonPos: {x: -185.7, y: 12}
+  closeButtonPos: {x: 221.7, y: 12}
 --- !u!4 &1725846851
 Transform:
   m_ObjectHideFlags: 0

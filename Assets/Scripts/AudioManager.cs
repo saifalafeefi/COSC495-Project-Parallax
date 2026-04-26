@@ -94,6 +94,14 @@ public class AudioManager : MonoBehaviour
     [Tooltip("how long music crossfades take in seconds")]
     [SerializeField] private float crossfadeDuration = 1f;
 
+    [Header("Music Gain (developer-side per-clip balance)")]
+    [Tooltip("multiplier applied to menu music on top of the player's Music Volume — use to match dB across tracks")]
+    [Range(0f, 2f)] [SerializeField] private float menuMusicGain = 1f;
+    [Tooltip("multiplier applied to gameplay music on top of the player's Music Volume")]
+    [Range(0f, 2f)] [SerializeField] private float gameplayMusicGain = 1f;
+    [Tooltip("multiplier applied to game over music on top of the player's Music Volume")]
+    [Range(0f, 2f)] [SerializeField] private float gameOverMusicGain = 1f;
+
     // audio sources created in Awake — no Inspector wiring needed
     private AudioSource musicSourceA;
     private AudioSource musicSourceB;
@@ -131,9 +139,19 @@ public class AudioManager : MonoBehaviour
         if (menuMusic != null)
         {
             activeMusicSource.clip = menuMusic;
-            activeMusicSource.volume = SettingsManager.MusicVolume;
+            activeMusicSource.volume = SettingsManager.MusicVolume * GetGainForClip(menuMusic);
             activeMusicSource.Play();
         }
+    }
+
+    // returns the developer-balanced gain multiplier for the given music clip (1.0 if unrecognized)
+    float GetGainForClip(AudioClip clip)
+    {
+        if (clip == null) return 1f;
+        if (clip == menuMusic) return menuMusicGain;
+        if (clip == gameplayMusic) return gameplayMusicGain;
+        if (clip == gameOverMusic) return gameOverMusicGain;
+        return 1f;
     }
 
     void OnEnable()
@@ -157,12 +175,11 @@ public class AudioManager : MonoBehaviour
 
     void Update()
     {
-        // keep music volume in sync with settings slider
+        // keep music volume in sync with settings slider AND the per-clip developer gain
         if (!isCrossfading)
         {
-            float musicVol = SettingsManager.MusicVolume;
             if (activeMusicSource != null)
-                activeMusicSource.volume = musicVol;
+                activeMusicSource.volume = SettingsManager.MusicVolume * GetGainForClip(activeMusicSource.clip);
         }
     }
 
@@ -263,9 +280,9 @@ public class AudioManager : MonoBehaviour
         newSource.volume = 0f;
         newSource.Play();
 
-        float musicVol = SettingsManager.MusicVolume;
         float startVolume = oldSource.volume;
         float elapsed = 0f;
+        float newGain = GetGainForClip(newClip);
 
         while (elapsed < crossfadeDuration)
         {
@@ -273,15 +290,15 @@ public class AudioManager : MonoBehaviour
             float t = Mathf.Clamp01(elapsed / crossfadeDuration);
 
             // read live volume so slider changes during crossfade feel responsive
-            musicVol = SettingsManager.MusicVolume;
+            float musicVol = SettingsManager.MusicVolume;
             oldSource.volume = Mathf.Lerp(startVolume, 0f, t);
-            newSource.volume = Mathf.Lerp(0f, musicVol, t);
+            newSource.volume = Mathf.Lerp(0f, musicVol * newGain, t);
             yield return null;
         }
 
         oldSource.Stop();
         oldSource.volume = 0f;
-        newSource.volume = SettingsManager.MusicVolume;
+        newSource.volume = SettingsManager.MusicVolume * newGain;
         activeMusicSource = newSource;
         isCrossfading = false;
     }
