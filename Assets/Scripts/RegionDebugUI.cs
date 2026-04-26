@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 
 public class RegionDebugUI : MonoBehaviour
@@ -9,6 +10,27 @@ public class RegionDebugUI : MonoBehaviour
     [SerializeField] private TMP_Text gameStateText;
     [SerializeField] private TMP_Text gameOverText;
     [SerializeField] private TMP_Text globalStatsText;
+
+    [Header("Region Info Background")]
+    [Tooltip("optional semi-transparent panel behind the region info text. auto-hides when no region is hovered/selected.")]
+    [SerializeField] private Image regionInfoBackground;
+    [Tooltip("inner fill color (alpha controls transparency)")]
+    [SerializeField] private Color bgFillColor = new Color(0.05f, 0.07f, 0.12f, 0.78f);
+    [Tooltip("border / outline color")]
+    [SerializeField] private Color bgBorderColor = new Color(0.85f, 0.7f, 0.35f, 0.95f);
+    [Tooltip("subtle inner accent line color (set alpha=0 to disable)")]
+    [SerializeField] private Color bgAccentColor = new Color(1f, 1f, 1f, 0.08f);
+    [Tooltip("corner radius in pixels (rounded corners)")]
+    [SerializeField, Range(0, 64)] private int bgCornerRadius = 14;
+    [Tooltip("border thickness in pixels")]
+    [SerializeField, Range(0, 12)] private int bgBorderThickness = 2;
+    [Tooltip("sprite resolution — leave 64 unless you need huge corners")]
+    [SerializeField] private int bgSpriteSize = 64;
+    [Tooltip("padding around the text (x = left/right, y = top/bottom) in pixels")]
+    [SerializeField] private Vector2 bgPadding = new Vector2(24f, 16f);
+
+    private Sprite generatedBgSprite;
+    private int cachedBgKey = -1;
 
     [Header("Display Durations")]
     [Tooltip("how long the card play text stays fully visible before fading")]
@@ -37,8 +59,8 @@ public class RegionDebugUI : MonoBehaviour
     private RegionSelector regionSelector;
     private HandDisplay handDisplay;
 
-    // shop slide state per text element
-    private Dictionary<TMP_Text, Vector2> originalPositions = new Dictionary<TMP_Text, Vector2>();
+    // shop slide state per rect element
+    private Dictionary<RectTransform, Vector2> originalPositions = new Dictionary<RectTransform, Vector2>();
     private float shopSlideBlend; // 0 = normal, 1 = fully hidden
 
     void Update()
@@ -160,6 +182,129 @@ public class RegionDebugUI : MonoBehaviour
         {
             displayText.text = "";
         }
+
+        // hide background when there's nothing to show + apply live styling
+        if (regionInfoBackground != null)
+        {
+            regionInfoBackground.enabled = !string.IsNullOrEmpty(displayText.text);
+            ApplyBackgroundStyle();
+            SyncBackgroundToText();
+        }
+    }
+
+    // resize + reposition the background so it hugs the text with padding.
+    // copies anchors/pivot from the text once so designers only have to position the text.
+    void SyncBackgroundToText()
+    {
+        if (regionInfoBackground == null || displayText == null) return;
+        if (!regionInfoBackground.enabled) return;
+
+        var textRect = displayText.rectTransform;
+        var bgRect = regionInfoBackground.rectTransform;
+
+        // height-only auto-fit: keep whatever width was set in the inspector,
+        // only resize height to match text + padding
+        displayText.ForceMeshUpdate();
+        float h = displayText.preferredHeight + bgPadding.y * 2f;
+        Vector2 size = bgRect.sizeDelta;
+        size.y = h;
+        bgRect.sizeDelta = size;
+    }
+
+    // builds a 9-sliced rounded-rect sprite with border + accent and assigns it to the bg image.
+    // re-runs only when style fields change (cheap on most frames).
+    void ApplyBackgroundStyle()
+    {
+        if (regionInfoBackground == null) return;
+
+        int size = Mathf.Max(16, bgSpriteSize);
+        int radius = Mathf.Clamp(bgCornerRadius, 0, size / 2 - 1);
+        int border = Mathf.Clamp(bgBorderThickness, 0, radius);
+
+        // hash inputs so we only rebuild when something visible changes
+        int key = size * 73856093 ^ radius * 19349663 ^ border * 83492791
+            ^ bgFillColor.GetHashCode() ^ bgBorderColor.GetHashCode() ^ bgAccentColor.GetHashCode();
+        if (key != cachedBgKey || generatedBgSprite == null)
+        {
+            generatedBgSprite = BuildRoundedRectSprite(size, radius, border, bgFillColor, bgBorderColor, bgAccentColor);
+            cachedBgKey = key;
+        }
+
+        regionInfoBackground.sprite = generatedBgSprite;
+        regionInfoBackground.type = Image.Type.Sliced;
+        regionInfoBackground.pixelsPerUnitMultiplier = 1f;
+        // color tinting kept neutral — actual colors are baked into the sprite
+        regionInfoBackground.color = Color.white;
+    }
+
+    static Sprite BuildRoundedRectSprite(int size, int radius, int border, Color fill, Color borderCol, Color accent)
+    {
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Bilinear;
+
+        var pixels = new Color[size * size];
+        float r = radius;
+        float r2 = r * r;
+        float innerR = Mathf.Max(0f, r - border);
+        float innerR2 = innerR * innerR;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                // distance from nearest corner center (only relevant inside the corner box)
+                float dx = 0f, dy = 0f;
+                if (x < radius) dx = radius - 0.5f - x;
+                else if (x >= size - radius) dx = x - (size - radius) + 0.5f;
+                if (y < radius) dy = radius - 0.5f - y;
+                else if (y >= size - radius) dy = y - (size - radius) + 0.5f;
+
+                float d2 = dx * dx + dy * dy;
+                bool inCorner = (x < radius || x >= size - radius) && (y < radius || y >= size - radius);
+
+                Color c;
+                if (inCorner)
+                {
+                    if (d2 > r2) c = new Color(0, 0, 0, 0);                // outside the rounded corner → transparent
+                    else if (d2 > innerR2 && border > 0) c = borderCol;    // border ring
+                    else c = fill;                                          // inside corner fill
+                }
+                else
+                {
+                    // straight edges
+                    int edgeDist = Mathf.Min(x, y, size - 1 - x, size - 1 - y);
+                    if (edgeDist < border && border > 0) c = borderCol;
+                    else c = fill;
+                }
+
+                // soft inner accent: thin highlight line just inside the border (top edge only feel)
+                if (accent.a > 0f && c.a > 0f)
+                {
+                    int edgeDist = Mathf.Min(x, y, size - 1 - x, size - 1 - y);
+                    if (edgeDist == border + 1)
+                        c = Color.Lerp(c, accent, accent.a);
+                }
+
+                pixels[y * size + x] = c;
+            }
+        }
+
+        tex.SetPixels(pixels);
+        tex.Apply();
+
+        // 9-slice borders just outside the corner radius so the middle stretches cleanly
+        int slice = radius + border + 1;
+        var sprite = Sprite.Create(
+            tex,
+            new Rect(0, 0, size, size),
+            new Vector2(0.5f, 0.5f),
+            100f,
+            0,
+            SpriteMeshType.FullRect,
+            new Vector4(slice, slice, slice, slice));
+        sprite.name = "RegionInfoBgGenerated";
+        return sprite;
     }
 
     void UpdateCardPlayText(bool isGameOver)
@@ -264,23 +409,25 @@ public class RegionDebugUI : MonoBehaviour
         globalStatsText.gameObject.SetActive(true);
     }
 
-    void CacheOriginalPosition(TMP_Text text)
+    void CacheOriginalPosition(RectTransform rect)
     {
-        if (text == null || originalPositions.ContainsKey(text)) return;
-        var rect = text.GetComponent<RectTransform>();
-        if (rect != null)
-            originalPositions[text] = rect.anchoredPosition;
+        if (rect == null || originalPositions.ContainsKey(rect)) return;
+        originalPositions[rect] = rect.anchoredPosition;
+    }
+
+    void SlideRect(RectTransform rect, float offsetX, float offsetY)
+    {
+        if (rect == null) return;
+        CacheOriginalPosition(rect);
+        Vector2 origin = originalPositions[rect];
+        Vector2 target = origin + new Vector2(offsetX * shopSlideBlend, offsetY * shopSlideBlend);
+        rect.anchoredPosition = target;
     }
 
     void SlideElement(TMP_Text text, float offsetX, float offsetY)
     {
         if (text == null) return;
-        CacheOriginalPosition(text);
-        var rect = text.GetComponent<RectTransform>();
-        if (rect == null) return;
-        Vector2 origin = originalPositions[text];
-        Vector2 target = origin + new Vector2(offsetX * shopSlideBlend, offsetY * shopSlideBlend);
-        rect.anchoredPosition = target;
+        SlideRect(text.GetComponent<RectTransform>(), offsetX, offsetY);
     }
 
     void UpdateShopSlide()
@@ -300,6 +447,8 @@ public class RegionDebugUI : MonoBehaviour
         SlideElement(globalStatsText, 0f, -bottomSlideDistance);
         // region info → slide left
         SlideElement(displayText, -leftSlideDistance, 0f);
+        if (regionInfoBackground != null)
+            SlideRect(regionInfoBackground.rectTransform, -leftSlideDistance, 0f);
         // card play text → slide down
         SlideElement(cardPlayText, 0f, -bottomSlideDistance);
     }
