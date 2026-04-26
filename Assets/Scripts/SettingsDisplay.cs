@@ -52,6 +52,7 @@ public class SettingsDisplay : MonoBehaviour
     [SerializeField] private Color buttonTextColor = Color.white;
     [SerializeField] private int buttonFontSize = 20;
     [SerializeField] private Color cycleButtonColor = new Color(0.25f, 0.25f, 0.32f);
+    [SerializeField] private float cycleButtonGap = 4f;
 
     [Header("Toggle")]
     [SerializeField] private Color toggleOnColor = new Color(0.3f, 0.7f, 0.3f);
@@ -279,9 +280,9 @@ public class SettingsDisplay : MonoBehaviour
             float rightW = cr.rightBtn.sizeDelta.x;
             float leftW = cr.leftBtn.sizeDelta.x;
             // value sits to the left of the > button
-            cr.valueRect.anchoredPosition = new Vector2(-rightW - cr.gap, 0f);
+            cr.valueRect.anchoredPosition = new Vector2(-rightW - cycleButtonGap, 0f);
             // < button sits to the left of the value box
-            cr.leftBtn.anchoredPosition = new Vector2(-rightW - cr.valueWidth - cr.gap * 2f, 0f);
+            cr.leftBtn.anchoredPosition = new Vector2(-rightW - cr.valueWidth - cycleButtonGap * 2f, 0f);
         }
 
         // --- layout positions ---

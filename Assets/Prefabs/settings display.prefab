@@ -71,11 +71,12 @@ MonoBehaviour:
   buttonTextColor: {r: 1, g: 1, b: 1, a: 1}
   buttonFontSize: 45
   cycleButtonColor: {r: 0.25, g: 0.25, b: 0.32, a: 1}
+  cycleButtonGap: 60
   toggleOnColor: {r: 0.3, g: 0.7, b: 0.3, a: 1}
   toggleOffColor: {r: 0.4, g: 0.2, b: 0.2, a: 1}
   sectionGap: 24
-  rowHeight: 40
-  rowSpacing: 6
+  rowHeight: 75
+  rowSpacing: 14
   topPadding: 20
   sidePadding: 40
   titleY: -15.92

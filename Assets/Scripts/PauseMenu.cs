@@ -219,7 +219,11 @@ public class PauseMenu : MonoBehaviour
 
     public void OpenSettings()
     {
-        if (settingsDisplay != null) settingsDisplay.Show();
+        if (settingsDisplay == null) return;
+        settingsDisplay.Show();
+        // lift above pause overlay so settings draws on top
+        var canvas = settingsDisplay.GetComponentInChildren<Canvas>();
+        if (canvas != null) canvas.sortingOrder = 51;
     }
 
     public void GoToMainMenu()
