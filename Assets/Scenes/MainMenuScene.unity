@@ -2325,26 +2325,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d114c50175d4f2148a1fc4d7ed8b36cc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AudioManager
-  buttonClick: {fileID: 0}
+  buttonClick: {fileID: 8300000, guid: da4a7747305113d4bb52d4abbd49f6c5, type: 3}
   buttonHover: {fileID: 0}
-  panelOpen: {fileID: 0}
-  panelClose: {fileID: 0}
+  panelOpen: {fileID: 8300000, guid: da4a7747305113d4bb52d4abbd49f6c5, type: 3}
+  panelClose: {fileID: 8300000, guid: da4a7747305113d4bb52d4abbd49f6c5, type: 3}
   sliderTick: {fileID: 0}
-  cardDeal: {fileID: 0}
+  cardDeal: {fileID: 8300000, guid: 83560695931802a48be9155addf32fa2, type: 3}
   cardHover: {fileID: 0}
-  cardSelect: {fileID: 0}
+  cardSelect: {fileID: 8300000, guid: da4a7747305113d4bb52d4abbd49f6c5, type: 3}
   cardDeselect: {fileID: 0}
-  cardPlay: {fileID: 0}
-  cardReject: {fileID: 0}
+  cardPlay: {fileID: 8300000, guid: 83560695931802a48be9155addf32fa2, type: 3}
+  cardReject: {fileID: 8300000, guid: 56172ff3016167243b94ef7b86cbc6c2, type: 3}
   regionHover: {fileID: 0}
-  regionSelect: {fileID: 0}
+  regionSelect: {fileID: 8300000, guid: 04e126699bfac8c4ea4a2e4c358244a2, type: 3}
   regionDeselect: {fileID: 0}
-  regionFocus: {fileID: 0}
+  regionFocus: {fileID: 8300000, guid: 749522d998875f542839a41e5967ebb9, type: 3}
   regionUnfocus: {fileID: 0}
-  shopOpen: {fileID: 0}
-  shopClose: {fileID: 0}
-  shopPurchase: {fileID: 0}
-  shopPurchaseFail: {fileID: 0}
+  shopOpen: {fileID: 8300000, guid: aa4b32708777e694592dfeb0a02e9197, type: 3}
+  shopClose: {fileID: 8300000, guid: 749522d998875f542839a41e5967ebb9, type: 3}
+  shopPurchase: {fileID: 8300000, guid: 3fda311848b412747bacffc2dd64520a, type: 3}
+  shopPurchaseFail: {fileID: 8300000, guid: 2b04818ccb65fa94eb519396ec0ae041, type: 3}
   shopkeeperGreet: {fileID: 0}
   rewardPopup: {fileID: 0}
   rewardClaim: {fileID: 0}

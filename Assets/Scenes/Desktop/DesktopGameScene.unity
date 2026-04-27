@@ -1580,10 +1580,10 @@ MonoBehaviour:
     textboxPositionStep: {x: -200, y: 320}
     showCustomHighlights: 1
     customHighlights:
-    - position: {x: -613.8, y: 464.7}
-      size: {x: 600, y: 75}
+    - position: {x: -585.5, y: 454.1}
+      size: {x: 632.3, y: 118}
     - position: {x: 735.1, y: 464.7}
-      size: {x: 350, y: 75}
+      size: {x: 425.4, y: 75}
   - mascotText: Now, select the highlighted region to inspect it (RMB).
     requiredAction: 3
     allowFreeInteraction: 0
@@ -1604,8 +1604,8 @@ MonoBehaviour:
     textboxPositionStep: {x: -570, y: -328}
     showCustomHighlights: 1
     customHighlights:
-    - position: {x: -752.3, y: -72.8}
-      size: {x: 350, y: 250}
+    - position: {x: -728.8, y: -98.1}
+      size: {x: 404.5, y: 312.9}
   - mascotText: You will have policy actions card that improve certain stats on the
       region.
     requiredAction: 0
@@ -1698,8 +1698,8 @@ MonoBehaviour:
     textboxPositionStep: {x: -542.7, y: -319}
     showCustomHighlights: 1
     customHighlights:
-    - position: {x: -799.9, y: -90.51}
-      size: {x: 258.4, y: 34.7}
+    - position: {x: -784.1, y: -103.6}
+      size: {x: 258.4, y: 69.5}
   - mascotText: There's a chance that, if the region is focused too much, it will
       have opposite effects and cause penalty events to occur.
     requiredAction: 0
@@ -1842,8 +1842,8 @@ MonoBehaviour:
     textboxPositionStep: {x: -229.4, y: 315.6}
     showCustomHighlights: 1
     customHighlights:
-    - position: {x: -390.1, y: 470.35}
-      size: {x: 164.5, y: 58.49}
+    - position: {x: -778.4, y: 426.8}
+      size: {x: 240.3, y: 58.49}
   - mascotText: The higher the avg economy, the more Funds we receive at the start
       of each round
     requiredAction: 0
@@ -1855,8 +1855,8 @@ MonoBehaviour:
     textboxPositionStep: {x: -229.4, y: 315.6}
     showCustomHighlights: 1
     customHighlights:
-    - position: {x: -390.1, y: 470.35}
-      size: {x: 164.5, y: 58.49}
+    - position: {x: -778.4, y: 426.8}
+      size: {x: 240.3, y: 58.49}
   - mascotText: With enough Funds, we can purchase cards from THE MOON shop (where
       I reside!)
     requiredAction: 7
