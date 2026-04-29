@@ -2,6 +2,11 @@
 
 A single-player AR/desktop sustainability strategy game built in Unity. Place a holographic Earth on a real surface, then manage carbon, economy, and stability across its regions — one policy card at a time.
 
+# GROUP MEMBERS
+- Fahad Alhashimi
+- Mohamed Almehairbi
+- Saif Alafeefi
+
 ---
 
 ## What It Is
